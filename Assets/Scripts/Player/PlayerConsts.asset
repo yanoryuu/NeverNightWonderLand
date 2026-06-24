@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5bddaccde8393241a3d9c02871c463a, type: 3}
+  m_Name: PlayerConsts
+  m_EditorClassIdentifier: 
+  _moveSpeed: 8
+  _runSpeed: 12
+  _dashSpeed: 20
+  _dashDuration: 0.18
+  _dashCooldown: 0.4
+  _attackDuration: 0.35
+  _attackHitDelay: 0.1
+  _attackDamage: 1
+  _attackOffset: {x: 0.7, y: 0}
+  _attackBoxSize: {x: 1.2, y: 1}
+  _attackTargetLayer:
+    serializedVersion: 2
+    m_Bits: 0
+  _jumpHeight: 3.5
+  _timeToApex: 0.4
+  _fallGravityMultiplier: 1.8
+  _lowJumpMultiplier: 2.5
+  _maxFallSpeed: 20
+  _coyoteTime: 0.1
+  _jumpBufferTime: 0.1
+  _groundCheckRadius: 0.2
+  _groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295

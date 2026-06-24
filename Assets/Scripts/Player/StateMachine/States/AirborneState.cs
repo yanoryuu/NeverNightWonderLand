@@ -1,0 +1,28 @@
+/// <summary>
+/// 空中ステートの共通基底。Jump / Fall が継承する。
+/// 共通遷移: 攻撃・ダッシュ → アクション、コヨーテ中のジャンプ → Jump、接地したら → 地上ステート。
+/// </summary>
+public abstract class AirborneState : PlayerState
+{
+    protected AirborneState(PlayerController player, PlayerStateMachine stateMachine)
+        : base(player, stateMachine) { }
+
+    public override void LogicUpdate()
+    {
+        if (TryActionTransitions())
+            return;
+
+        // コヨーテタイム中なら空中でもジャンプを許可する
+        if (TryJumpTransition())
+            return;
+
+        if (Player.IsGrounded)
+            StateMachine.ChangeState(Player.GetGroundedState());
+    }
+
+    public override void PhysicsUpdate()
+    {
+        Player.ApplyHorizontalMovement();
+        Player.ApplyGravity();
+    }
+}
