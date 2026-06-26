@@ -1,3 +1,4 @@
+using R3;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -23,7 +24,8 @@ public class PlayerController : MonoBehaviour
     private static readonly int ParamYVelocity = Animator.StringToHash("YVelocity");
     private static readonly int ParamIsDashing = Animator.StringToHash("IsDashing");
     private static readonly int ParamIsAttacking = Animator.StringToHash("IsAttacking");
-
+    
+    private CompositeDisposable _playerDisposables = new CompositeDisposable();
     #endregion
 
     #region Serialized Fields
@@ -39,7 +41,6 @@ public class PlayerController : MonoBehaviour
     #region Components
 
     private Rigidbody2D _rb;
-    private SpriteRenderer _spriteRenderer;
     private Animator _animator;
 
     #endregion
@@ -69,7 +70,11 @@ public class PlayerController : MonoBehaviour
     #region Runtime State
 
     private bool _isGrounded;
-    private int _facing = 1;         // 1 = 右, -1 = 左
+    private readonly ReactiveProperty<int> _facing = new(1);  // 1 = 右, -1 = 左
+
+    private float _originalScaleX;
+    private float _originalScaleY;
+    private float _originalScaleZ;
 
     private float _coyoteTimer;      // 地面を離れてからの残り猶予
     private float _jumpBufferTimer;  // 先行入力の残り時間
@@ -87,7 +92,7 @@ public class PlayerController : MonoBehaviour
     public Rigidbody2D Rb => _rb;
     public float MoveInput => _moveInput;
     public bool IsGrounded => _isGrounded;
-    public int Facing => _facing;
+    public int Facing => _facing.Value;
 
     #endregion
 
@@ -96,8 +101,15 @@ public class PlayerController : MonoBehaviour
     private void Awake()
     {
         _rb = GetComponent<Rigidbody2D>();
-        _spriteRenderer = GetComponent<SpriteRenderer>();
         _animator = GetComponent<Animator>();
+
+        _originalScaleX = transform.localScale.x;
+        _originalScaleY = transform.localScale.y;
+        _originalScaleZ = transform.localScale.z;
+
+        _facing.Subscribe(f =>
+            transform.localScale = new Vector3(_originalScaleX * f, _originalScaleY, _originalScaleZ))
+            .AddTo(_playerDisposables);
 
         // 重力は自前で適用するので Rigidbody2D 側の重力は切る
         _rb.gravityScale = 0f;
@@ -155,7 +167,7 @@ public class PlayerController : MonoBehaviour
 
         // 攻撃判定ボックス
         Gizmos.color = Color.red;
-        var dir = Application.isPlaying ? _facing : 1;
+        var dir = Application.isPlaying ? _facing.Value : 1;
         var center = (Vector2)transform.position
                      + new Vector2(_consts.AttackOffset.x * dir, _consts.AttackOffset.y);
         Gizmos.DrawWireCube(center, _consts.AttackBoxSize);
@@ -340,7 +352,7 @@ public class PlayerController : MonoBehaviour
     public void ApplyDashMovement()
     {
         // 向いている方向へ一定速度で飛び出す。重力は無効
-        _rb.linearVelocity = new Vector2(_facing * _consts.DashSpeed, 0f);
+        _rb.linearVelocity = new Vector2(_facing.Value * _consts.DashSpeed, 0f);
     }
 
     public void EndDash()
@@ -369,7 +381,7 @@ public class PlayerController : MonoBehaviour
     public void PerformAttackHit()
     {
         var center = (Vector2)transform.position
-                     + new Vector2(_consts.AttackOffset.x * _facing, _consts.AttackOffset.y);
+                     + new Vector2(_consts.AttackOffset.x * _facing.Value, _consts.AttackOffset.y);
 
         var hits = Physics2D.OverlapBoxAll(center, _consts.AttackBoxSize, 0f, _consts.AttackTargetLayer);
         foreach (var hit in hits)
@@ -392,10 +404,9 @@ public class PlayerController : MonoBehaviour
         if (_isDashing || _isAttacking)
             return;
 
-        if (_moveInput > 0.01f) _facing = 1;
-        else if (_moveInput < -0.01f) _facing = -1;
-
-        _spriteRenderer.flipX = _facing < 0;
+        if (_moveInput > 0.01f) _facing.Value = 1;
+        else if (_moveInput < -0.01f) _facing.Value = -1;
+        // localScale の更新は _facing の購読側で行うため、ここでは値のセットのみ
     }
 
     /// <summary>
