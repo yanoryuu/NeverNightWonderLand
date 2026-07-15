@@ -16,6 +16,13 @@ public abstract class AirborneState : PlayerState
         if (TryJumpTransition())
             return;
 
+        // 二段ジャンプ (赤ハサミ取得後)
+        if (Player.TryConsumeDoubleJump())
+        {
+            StateMachine.ChangeState(Player.JumpState);
+            return;
+        }
+
         if (Player.IsGrounded)
             StateMachine.ChangeState(Player.GetGroundedState());
     }

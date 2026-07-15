@@ -15,14 +15,17 @@ public class DashState : PlayerState
         _timer = Player.Consts.DashDuration;
     }
 
+    public override void Exit()
+    {
+        // 被弾などの割り込みでも確実にダッシュ状態を解除できるよう Exit で行う
+        Player.EndDash();
+    }
+
     public override void LogicUpdate()
     {
         _timer -= UnityEngine.Time.deltaTime;
         if (_timer <= 0f)
-        {
-            Player.EndDash();
             StateMachine.ChangeState(Player.GetLocomotionState());
-        }
     }
 
     public override void PhysicsUpdate()

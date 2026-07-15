@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a56b22f88f0cbe0469693aa7e93fbe5d, type: 3}
+  m_Name: EnemyConsts
+  m_EditorClassIdentifier: 
+  _maxHp: 10
+  _maxGuard: 6
+  _breakDuration: 3
+  _breakHpDamageMultiplier: 1.5
+  _moveSpeed: 2
+  _patrolHalfWidth: 3
+  _contactDamage: 1
+  _chaseRange: 0
+  _chaseSpeed: 0
+  _threadDrop: 2
+  _knockbackOnHit: 3
+  _hitStunTime: 0.15
+  _hitFlashTime: 0.1
+  _deathFadeTime: 0.4

@@ -1,16 +1,11 @@
-using UnityEngine;
-
 /// <summary>
 /// ダメージを受けられるオブジェクトが実装するインターフェース。
-/// プレイヤーの攻撃判定はこのインターフェースを介してダメージを与える。
+/// プレイヤーの攻撃判定・敵の接触攻撃はこのインターフェースを介してダメージを与える。
 /// </summary>
 public interface IDamageable
 {
     /// <summary>
-    /// ダメージを与える。
+    /// ダメージを与える。HP/防御値の配分は <see cref="DamageInfo"/> を参照。
     /// </summary>
-    /// <param name="amount">ダメージ量</param>
-    /// <param name="hitPoint">被弾位置 (ノックバックやエフェクト用)</param>
-    /// <param name="source">攻撃元の GameObject</param>
-    void TakeDamage(int amount, Vector2 hitPoint, GameObject source);
+    void TakeDamage(in DamageInfo info);
 }

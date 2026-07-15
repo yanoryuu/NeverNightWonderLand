@@ -17,14 +17,66 @@ MonoBehaviour:
   _dashSpeed: 20
   _dashDuration: 0.18
   _dashCooldown: 0.4
-  _attackDuration: 0.35
-  _attackHitDelay: 0.1
-  _attackDamage: 1
-  _attackOffset: {x: 0.7, y: 0}
-  _attackBoxSize: {x: 1.2, y: 1}
+  _dualAttack:
+    _duration: 0.25
+    _hitDelay: 0.06
+    _hpDamage: 2
+    _guardDamage: 1
+    _offset: {x: 0.7, y: 0}
+    _boxSize: {x: 1.2, y: 1}
+  _heavyAttack:
+    _duration: 0.5
+    _hitDelay: 0.2
+    _hpDamage: 1
+    _guardDamage: 3
+    _offset: {x: 0.8, y: 0}
+    _boxSize: {x: 1.5, y: 1.4}
+  _splitSwitchAttack:
+    _duration: 0.3
+    _hitDelay: 0.05
+    _hpDamage: 2
+    _guardDamage: 1
+    _offset: {x: 0.9, y: 0}
+    _boxSize: {x: 2.2, y: 0.8}
+  _mergeSwitchAttack:
+    _duration: 0.4
+    _hitDelay: 0.15
+    _hpDamage: 1
+    _guardDamage: 3
+    _offset: {x: 0.7, y: 0.2}
+    _boxSize: {x: 1, y: 1.6}
   _attackTargetLayer:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 1536
+  _finisherProfile:
+    _duration: 0.7
+    _hitDelay: 0.25
+    _hpDamage: 10
+    _guardDamage: 0
+    _offset: {x: 0.9, y: 0}
+    _boxSize: {x: 1.8, y: 1.6}
+  _finisherRange: {x: 5, y: 2.4}
+  _maxHp: 10
+  _hurtDuration: 0.3
+  _invincibleTime: 1
+  _knockbackVelocity: {x: 8, y: 6}
+  _respawnDelay: 1.5
+  _healGaugeMax: 3
+  _healChargePerHit: 0.25
+  _healAmount: 3
+  _healDuration: 0.5
+  _interactRadius: 1.5
+  _interactableLayer:
+    serializedVersion: 2
+    m_Bits: 2048
+  _refillThreadCost: 3
+  _slashWaveHpDamage: 1
+  _slashWaveGuardDamage: 1
+  _slashWaveSpeed: 13
+  _slashWaveLifetime: 0.7
+  _grappleRange: 9
+  _grappleSpeed: 22
+  _glideFallSpeed: 2.5
   _jumpHeight: 3.5
   _timeToApex: 0.4
   _fallGravityMultiplier: 1.8
@@ -35,4 +87,4 @@ MonoBehaviour:
   _groundCheckRadius: 0.2
   _groundLayer:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 1025

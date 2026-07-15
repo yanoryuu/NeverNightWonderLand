@@ -41,11 +41,25 @@ public abstract class PlayerState
     #region Shared Transition Helpers
 
     /// <summary>
-    /// 攻撃・ダッシュへの遷移を試みる。どの状態からでも発生しうる共通アクション。
+    /// 裁断・スタイル切替・攻撃・ダッシュへの遷移を試みる。どの状態からでも発生しうる共通アクション。
     /// 遷移したら true を返す。
     /// </summary>
     protected bool TryActionTransitions()
     {
+        // 裁断はブレイク中の敵が範囲内にいる時のみ発動できる
+        if (Player.TryConsumeFinisher() && Player.CanFinisher())
+        {
+            StateMachine.ChangeState(Player.FinisherState);
+            return true;
+        }
+
+        // スタイル切替は切り替え攻撃を兼ねる
+        if (Player.TryConsumeStyleSwitch())
+        {
+            StateMachine.ChangeState(Player.StyleSwitchState);
+            return true;
+        }
+
         if (Player.TryConsumeAttack())
         {
             StateMachine.ChangeState(Player.AttackState);
@@ -55,6 +69,43 @@ public abstract class PlayerState
         if (Player.TryConsumeDash())
         {
             StateMachine.ChangeState(Player.DashState);
+            return true;
+        }
+
+        // アイテム使用 (ホロウナイト形式: 下/左/右+ボタンでスロットのアイテムを使う)
+        if (Player.TryConsumeItemUse() && Player.Inventory != null)
+        {
+            var slot = Player.SelectSlotByDirection();
+            if (slot == null)
+            {
+                Notifier.Notify("下/左/右を入力しながらアイテムボタンで使用する");
+            }
+            else
+            {
+                var item = Player.Inventory.GetSlotItem(slot.Value);
+                if (item == null)
+                {
+                    Notifier.Notify($"{slot.Value.DisplayName()}は空だ (メニューでセットできる)");
+                }
+                else if (Player.Inventory.TryConsume(item))
+                {
+                    Player.SetPendingItem(item);
+                    StateMachine.ChangeState(item.Motion == ItemUseMotion.Dash
+                        ? Player.ItemDashState
+                        : (PlayerState)Player.ItemThrowState);
+                    return true;
+                }
+                else
+                {
+                    Notifier.Notify($"{item.DisplayName}を使い切った (拠点で補充できる)");
+                }
+            }
+        }
+
+        // 糸移動 (青ハサミ取得後)
+        if (Player.TryConsumeGrapple() && Player.CanGrapple())
+        {
+            StateMachine.ChangeState(Player.GrappleState);
             return true;
         }
 
