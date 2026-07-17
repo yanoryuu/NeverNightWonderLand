@@ -142,18 +142,15 @@ public class PlayerConsts : ScriptableObject
     [Tooltip("拠点でのアイテム補充 (再生成) に必要な糸の数")]
     [SerializeField] private int _refillThreadCost = 3;
 
-    [Header("ハサミ強化: 黄 (斬撃波)")]
-    [Tooltip("斬撃波の HP ダメージ")]
-    [SerializeField] private int _slashWaveHpDamage = 1;
+    [Header("ハサミ強化: 黄 (壁張り付き)")]
+    [Tooltip("壁張り付き中のずり落ち速度 (units/sec)")]
+    [SerializeField] private float _wallSlideSpeed = 1.5f;
 
-    [Tooltip("斬撃波の防御値ダメージ")]
-    [SerializeField] private int _slashWaveGuardDamage = 1;
+    [Tooltip("壁ジャンプの初速 (x は壁と反対方向へ適用)")]
+    [SerializeField] private Vector2 _wallJumpVelocity = new Vector2(9f, 14f);
 
-    [Tooltip("斬撃波の速度 (units/sec)")]
-    [SerializeField] private float _slashWaveSpeed = 13f;
-
-    [Tooltip("斬撃波の寿命 (sec)。速度×寿命が射程になる")]
-    [SerializeField] private float _slashWaveLifetime = 0.7f;
+    [Tooltip("壁検出レイの距離 (units)。プレイヤー中心から横方向")]
+    [SerializeField] private float _wallCheckDistance = 0.45f;
 
     [Header("ハサミ強化: 青 (糸移動)")]
     [Tooltip("グラップルの射程 (units)")]
@@ -232,10 +229,9 @@ public class PlayerConsts : ScriptableObject
 
     public int RefillThreadCost => _refillThreadCost;
 
-    public int SlashWaveHpDamage => _slashWaveHpDamage;
-    public int SlashWaveGuardDamage => _slashWaveGuardDamage;
-    public float SlashWaveSpeed => _slashWaveSpeed;
-    public float SlashWaveLifetime => _slashWaveLifetime;
+    public float WallSlideSpeed => _wallSlideSpeed;
+    public Vector2 WallJumpVelocity => _wallJumpVelocity;
+    public float WallCheckDistance => _wallCheckDistance;
 
     public float GrappleRange => _grappleRange;
     public float GrappleSpeed => _grappleSpeed;

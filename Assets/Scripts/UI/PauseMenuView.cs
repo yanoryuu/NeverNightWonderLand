@@ -3,10 +3,13 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
+using VContainer;
 
 /// <summary>
 /// ポーズメニュー。Esc / Menu ボタンで開閉し、ゲームを一時停止する。
 /// 再開 / アイテム切替 / ハサミ強化状況 / 操作方法 / タイトルへ。
+/// メニュー UI を Additive シーンに分離できるよう、プレイヤーは実行時に解決する
+/// (PlayerRuntime 注入 → シリアライズ参照 → シーン検索 の順)。
 /// </summary>
 public class PauseMenuView : MonoBehaviour
 {
@@ -15,27 +18,49 @@ public class PauseMenuView : MonoBehaviour
     [Tooltip("メニューに使う日本語フォント (無ければ TMP デフォルト)")]
     [SerializeField] private TMP_FontAsset _font;
 
-    [Tooltip("参照するプレイヤー")]
+    [Tooltip("参照するプレイヤー (任意。未設定なら実行時に解決する)")]
     [SerializeField] private PlayerController _player;
 
     [Tooltip("タイトルシーン名")]
     [SerializeField] private string _titleSceneName = "TitleScene";
 
-    private MenuPanelView _menu;
+    [Tooltip("メニューパネル (プレハブ上で事前配置)")]
+    [SerializeField] private MenuPanelView _menu;
+
     private Page _page;
     private ItemSlot _editingSlot; // アイテムセットで編集中のスロット
 
+    private PlayerRuntime _playerRuntime;
+
+    [Inject]
+    public void Construct(PlayerRuntime playerRuntime)
+    {
+        _playerRuntime = playerRuntime;
+    }
+
+    /// <summary>現在のプレイヤー。Additive シーン運用でもシーンをまたいで解決できる。</summary>
+    private PlayerController Player
+    {
+        get
+        {
+            if (_playerRuntime != null && _playerRuntime.Current.CurrentValue != null)
+                return _playerRuntime.Current.CurrentValue;
+
+            if (_player == null)
+                _player = FindAnyObjectByType<PlayerController>();
+            return _player;
+        }
+    }
+
     private void Awake()
     {
-        var menuGo = new GameObject("PauseMenu", typeof(RectTransform));
-        menuGo.transform.SetParent(transform, false);
-        var rt = (RectTransform)menuGo.transform;
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = Vector2.zero;
-        rt.offsetMax = Vector2.zero;
+        if (_menu == null)
+        {
+            Debug.LogError($"[{nameof(PauseMenuView)}] MenuPanelView が設定されていません。", this);
+            enabled = false;
+            return;
+        }
 
-        _menu = menuGo.AddComponent<MenuPanelView>();
         _menu.Initialize(_font);
         _menu.OnCancelled += OnCancel;
     }
@@ -49,7 +74,8 @@ public class PauseMenuView : MonoBehaviour
         if (MenuPanelView.AnyOpen)
             return;
 
-        if (_player != null && _player.IsDead)
+        var player = Player;
+        if (player != null && player.IsDead)
             return;
 
         var pressed = (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
@@ -112,7 +138,8 @@ public class PauseMenuView : MonoBehaviour
         _page = Page.Items;
         _menu.SetTitle("アイテム");
 
-        var inventory = _player != null ? _player.Inventory : null;
+        var player = Player;
+        var inventory = player != null ? player.Inventory : null;
         var body = "";
         if (inventory != null)
         {
@@ -135,9 +162,9 @@ public class PauseMenuView : MonoBehaviour
     {
         _page = Page.SlotSelect;
         _menu.SetTitle("アイテムセット");
-        _menu.SetBody("セットするスロットを選ぶ (下/左/右+アイテムボタンで使用)");
+        _menu.SetBody("セットするスロットを選ぶ (アイテムボタンを押しながら 下/左/右 で使用)");
 
-        var inventory = _player.Inventory;
+        var inventory = Player.Inventory;
         var entries = new List<MenuPanelView.Entry>();
         for (var i = 0; i < ItemSlotExtensions.SlotCount; i++)
         {
@@ -163,7 +190,7 @@ public class PauseMenuView : MonoBehaviour
         _menu.SetTitle($"{_editingSlot.Glyph()} {_editingSlot.DisplayName()} にセット");
         _menu.SetBody("");
 
-        var inventory = _player.Inventory;
+        var inventory = Player.Inventory;
         var entries = new List<MenuPanelView.Entry>();
         foreach (var item in inventory.Catalog)
         {
@@ -194,12 +221,13 @@ public class PauseMenuView : MonoBehaviour
         _page = Page.Upgrades;
         _menu.SetTitle("ハサミ強化状況");
 
-        var progression = _player != null ? _player.Progression : null;
+        var player = Player;
+        var progression = player != null ? player.Progression : null;
         string Line(ScissorUpgrade u, string effect) =>
             $"{(progression != null && progression.Has(u) ? "○" : "×")} {u.DisplayName()} — {effect}";
 
         _menu.SetBody(
-            Line(ScissorUpgrade.Yellow, "斬撃を飛ばす") + "\n" +
+            Line(ScissorUpgrade.Yellow, "壁に張り付き、壁ジャンプできる") + "\n" +
             Line(ScissorUpgrade.Blue, "糸でハサミを飛ばして移動 [F]") + "\n" +
             Line(ScissorUpgrade.Red, "二段ジャンプ・滑空"));
         _menu.SetEntries(new List<MenuPanelView.Entry> { new("戻る", ShowMain) });
@@ -211,11 +239,11 @@ public class PauseMenuView : MonoBehaviour
         _menu.SetTitle("操作方法");
         _menu.SetBody(
             "移動: A/D  ジャンプ: Space  ダッシュ: Shift (敵をすり抜ける)\n" +
-            "攻撃: J  スタイル切替: K  裁断: L\n" +
+            "近接攻撃: J  特殊攻撃: K  裁断: L\n" +
             "回復: S  糸移動: F  しらべる: E  ポーズ: Esc\n" +
-            "アイテム: 下/左/右+I (スロットのアイテムを使う)\n" +
-            "パッド: ジャンプ× 攻撃□ 切替△ 回復○ ダッシュR2\n" +
-            "裁断R1 アイテム 下/左/右+L1 糸移動L2 しらべる↑ ポーズMenu");
+            "アイテム: I を押しながら 下/左/右\n" +
+            "パッド: ジャンプ× 近接□ 特殊△ 回復○ ダッシュR2\n" +
+            "裁断R1 アイテム L1押しながら十字 糸移動L2 しらべる↑ ポーズMenu");
         _menu.SetEntries(new List<MenuPanelView.Entry> { new("戻る", ShowMain) });
     }
 

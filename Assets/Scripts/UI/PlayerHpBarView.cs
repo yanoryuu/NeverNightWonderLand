@@ -1,35 +1,26 @@
-using R3;
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>HP バーの Passive View 抽象 (Presenter が参照する)。</summary>
+public interface IPlayerHpBarView
+{
+    /// <summary>残量割合 (0..1) を表示に反映する。</summary>
+    void SetRatio(float ratio);
+}
+
 /// <summary>
-/// HUD のプレイヤー HP バー(赤)。PlayerHealth.Hp を購読して fillAmount に反映する。
+/// HUD のプレイヤー HP バー(赤)。表示のみを担い、
+/// HP の購読と割合計算は PlayerHpBarPresenter が行う。
 /// 見た目は Prefab 側 (Image) の差し替えで変更できる。
 /// </summary>
-public class PlayerHpBarView : MonoBehaviour
+public class PlayerHpBarView : MonoBehaviour, IPlayerHpBarView
 {
-    [Tooltip("参照するプレイヤーの体力")]
-    [SerializeField] private PlayerHealth _health;
-
     [Tooltip("残量を表すフィル画像 (Image Type = Filled)")]
     [SerializeField] private Image _fill;
 
-    private System.IDisposable _subscription;
-
-    private void Start()
+    public void SetRatio(float ratio)
     {
-        if (_health == null || _fill == null)
-        {
-            Debug.LogError($"[{nameof(PlayerHpBarView)}] 参照が設定されていません。", this);
-            return;
-        }
-
-        _subscription = _health.Hp.Subscribe(hp =>
-            _fill.fillAmount = Mathf.Clamp01((float)hp / _health.MaxHp));
-    }
-
-    private void OnDestroy()
-    {
-        _subscription?.Dispose();
+        if (_fill != null)
+            _fill.fillAmount = Mathf.Clamp01(ratio);
     }
 }

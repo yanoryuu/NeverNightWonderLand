@@ -27,6 +27,7 @@ public class Projectile : MonoBehaviour
     private LayerMask _groundLayer;
     private float _lifetime;
     private float _bindDuration; // 敵を拘束する時間 (糸玉用。0 なら拘束なし)
+    private System.Action _onDamageDealt; // ダメージを与えた時の通知 (回復ゲージ蓄積用)
     private bool _stuck;
 
     private void Awake()
@@ -59,7 +60,8 @@ public class Projectile : MonoBehaviour
     /// <param name="groundLayer">壁とみなすレイヤー</param>
     public void Launch(Vector2 velocity, float gravityScale, float lifetime,
         int hpDamage, int guardDamage, GameObject source, bool stickAsPlatform,
-        LayerMask damageLayer, LayerMask groundLayer, float bindDuration = 0f)
+        LayerMask damageLayer, LayerMask groundLayer, float bindDuration = 0f,
+        System.Action onDamageDealt = null)
     {
         _hpDamage = hpDamage;
         _guardDamage = guardDamage;
@@ -69,6 +71,7 @@ public class Projectile : MonoBehaviour
         _groundLayer = groundLayer;
         _lifetime = lifetime;
         _bindDuration = bindDuration;
+        _onDamageDealt = onDamageDealt;
 
         _rb.gravityScale = gravityScale;
         _rb.linearVelocity = velocity;
@@ -119,6 +122,7 @@ public class Projectile : MonoBehaviour
         {
             var info = new DamageInfo(_hpDamage, _guardDamage, transform.position, _source);
             damageable.TakeDamage(info);
+            _onDamageDealt?.Invoke();
 
             // 糸玉: 当たった敵を糸で絡めて拘束する
             if (_bindDuration > 0f && other.TryGetComponent<EnemyController>(out var enemy))

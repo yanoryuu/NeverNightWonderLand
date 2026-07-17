@@ -14,26 +14,24 @@ public class GameOverView : MonoBehaviour
     [Tooltip("タイトルシーン名")]
     [SerializeField] private string _titleSceneName = "TitleScene";
 
-    private MenuPanelView _menu;
+    [Tooltip("メニューパネル (プレハブ上で事前配置)")]
+    [SerializeField] private MenuPanelView _menu;
 
     private void Awake()
     {
-        var menuGo = new GameObject("GameOverMenu", typeof(RectTransform));
-        menuGo.transform.SetParent(transform, false);
-        var rt = (RectTransform)menuGo.transform;
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = Vector2.zero;
-        rt.offsetMax = Vector2.zero;
+        if (_menu == null)
+        {
+            Debug.LogError($"[{nameof(GameOverView)}] MenuPanelView が設定されていません。", this);
+            return;
+        }
 
-        _menu = menuGo.AddComponent<MenuPanelView>();
         _menu.Initialize(_font);
         _menu.AllowCancel = false; // ゲームオーバーは選択必須
     }
 
     public void Show()
     {
-        if (_menu.IsOpen)
+        if (_menu == null || _menu.IsOpen)
             return;
 
         _menu.SetTitle("ゲームオーバー");
@@ -48,14 +46,24 @@ public class GameOverView : MonoBehaviour
 
     private void Retry()
     {
-        var activeScene = SceneManager.GetActiveScene().name;
+        var stageName = StageLoader.Instance != null
+            ? StageLoader.Instance.CurrentStageName
+            : SceneManager.GetActiveScene().name;
 
-        // セーブが現在のシーンのものなら拠点から再開する
+        // セーブが現在のステージのものなら拠点から再開する
         var save = SaveSystem.TryLoad();
-        GameSession.PendingLoad = (save != null && save.sceneName == activeScene) ? save : null;
+        GameSession.PendingLoad = (save != null && save.sceneName == stageName) ? save : null;
 
-        GamePause.Reset();
-        SceneManager.LoadScene(activeScene);
+        if (StageLoader.Instance != null)
+        {
+            // PlayerScene ごと読み直して全リセットする
+            StageLoader.LoadWithPlayerScene(stageName);
+        }
+        else
+        {
+            GamePause.Reset();
+            SceneManager.LoadScene(stageName);
+        }
     }
 
     private void GoTitle()

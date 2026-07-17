@@ -27,4 +27,13 @@ public class SaveData
 
     /// <summary>素材「糸」の所持数。</summary>
     public int thread;
+
+    /// <summary>装備中の近接攻撃 (□) の ID (AttackDefinition のアセット名。空は未装備)。</summary>
+    public string equippedMeleeId;
+
+    /// <summary>装備中の特殊攻撃 (△) の ID (空は未装備)。</summary>
+    public string equippedSpecialId;
+
+    /// <summary>解放済みの攻撃方法の ID。</summary>
+    public string[] unlockedAttackIds;
 }

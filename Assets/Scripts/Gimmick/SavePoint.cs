@@ -1,8 +1,9 @@
 using UnityEngine;
 
 /// <summary>
-/// 拠点 (セーブポイント)。インタラクトで拠点メニュー
-/// (HP全回復 / アイテム補充 / アイテム切替 / セーブ) を開く。
+/// 拠点 (セーブポイント)。インタラクトでホーム画面
+/// (HP全回復 / アイテム補充 / 攻撃方法の入れ替え / セーブ) を開く。
+/// ホーム画面は HomeUI シーン (Additive) 側にあり、FindFirstObjectByType で見つける。
 /// </summary>
 [RequireComponent(typeof(SpriteRenderer))]
 public class SavePoint : MonoBehaviour, IInteractable
@@ -16,13 +17,13 @@ public class SavePoint : MonoBehaviour, IInteractable
 
     public void Interact(GameObject interactor)
     {
-        var menu = Object.FindFirstObjectByType<SavePointMenuView>();
-        if (menu == null)
+        var home = Object.FindFirstObjectByType<HomeUIView>();
+        if (home == null)
         {
-            Debug.LogWarning("[SavePoint] SavePointMenuView がシーンにありません。", this);
+            Debug.LogWarning("[SavePoint] HomeUIView が見つかりません。HomeUI シーンがロードされているか確認してください。", this);
             return;
         }
 
-        menu.Open(interactor, this);
+        home.Open(interactor, this);
     }
 }

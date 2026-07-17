@@ -14,26 +14,24 @@ public class ResultView : MonoBehaviour
     [Tooltip("タイトルシーン名")]
     [SerializeField] private string _titleSceneName = "TitleScene";
 
-    private MenuPanelView _menu;
+    [Tooltip("メニューパネル (プレハブ上で事前配置)")]
+    [SerializeField] private MenuPanelView _menu;
 
     private void Awake()
     {
-        var menuGo = new GameObject("ResultMenu", typeof(RectTransform));
-        menuGo.transform.SetParent(transform, false);
-        var rt = (RectTransform)menuGo.transform;
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = Vector2.zero;
-        rt.offsetMax = Vector2.zero;
+        if (_menu == null)
+        {
+            Debug.LogError($"[{nameof(ResultView)}] MenuPanelView が設定されていません。", this);
+            return;
+        }
 
-        _menu = menuGo.AddComponent<MenuPanelView>();
         _menu.Initialize(_font);
         _menu.AllowCancel = false;
     }
 
     public void Show(GameObject playerGo)
     {
-        if (_menu.IsOpen)
+        if (_menu == null || _menu.IsOpen)
             return;
 
         var inventory = playerGo != null ? playerGo.GetComponent<PlayerItemInventory>() : null;
@@ -61,8 +59,21 @@ public class ResultView : MonoBehaviour
     private void Replay()
     {
         GameSession.PendingLoad = null;
-        GamePause.Reset();
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+
+        var stageName = StageLoader.Instance != null
+            ? StageLoader.Instance.CurrentStageName
+            : SceneManager.GetActiveScene().name;
+
+        if (StageLoader.Instance != null)
+        {
+            // PlayerScene ごと読み直して全リセットする
+            StageLoader.LoadWithPlayerScene(stageName);
+        }
+        else
+        {
+            GamePause.Reset();
+            SceneManager.LoadScene(stageName);
+        }
     }
 
     private void GoTitle()

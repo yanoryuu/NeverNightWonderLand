@@ -36,8 +36,10 @@ public class DebugStatusView : MonoBehaviour
             _sb.Append($"  糸 {inventory.Thread.CurrentValue}");
         _sb.AppendLine();
 
-        var style = _player.Style == ScissorStyle.DualBlades ? "二刀流" : "両手持ち";
-        _sb.AppendLine($"スタイル: {style}  ステート: {_player.CurrentStateName}");
+        var loadout = _player.AttackLoadout;
+        var melee = loadout != null && loadout.CurrentMelee != null ? loadout.CurrentMelee.DisplayName : "---";
+        var special = loadout != null && loadout.CurrentSpecial != null ? loadout.CurrentSpecial.DisplayName : "---";
+        _sb.AppendLine($"攻撃: □{melee} △{special}  ステート: {_player.CurrentStateName}");
 
         if (progression != null)
         {

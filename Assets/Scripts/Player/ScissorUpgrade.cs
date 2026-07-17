@@ -4,7 +4,7 @@
 /// </summary>
 public enum ScissorUpgrade
 {
-    /// <summary>黄色 (カブトムシの鍛冶師): 斬撃を飛ばす。遠距離対応。</summary>
+    /// <summary>黄色 (カブトムシの鍛冶師): 壁に張り付き、壁ジャンプできる。</summary>
     Yellow = 0,
 
     /// <summary>青色 (クモの鍛冶師): 特殊な糸でハサミを飛ばして移動。壁に刺さると張り付く。</summary>

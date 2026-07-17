@@ -30,6 +30,8 @@ public class DeadState : PlayerState
             var gameOver = UnityEngine.Object.FindFirstObjectByType<GameOverView>();
             if (gameOver != null)
                 gameOver.Show();
+            else if (StageLoader.Instance != null)
+                StageLoader.LoadWithPlayerScene(StageLoader.Instance.CurrentStageName);
             else
                 SceneManager.LoadScene(SceneManager.GetActiveScene().name);
         }

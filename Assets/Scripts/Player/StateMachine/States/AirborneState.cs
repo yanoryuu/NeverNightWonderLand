@@ -23,6 +23,13 @@ public abstract class AirborneState : PlayerState
             return;
         }
 
+        // 壁張り付き (黄ハサミ取得後): 壁方向へ入力しながら壁に触れている
+        if (Player.CanWallCling())
+        {
+            StateMachine.ChangeState(Player.WallClingState);
+            return;
+        }
+
         if (Player.IsGrounded)
             StateMachine.ChangeState(Player.GetGroundedState());
     }

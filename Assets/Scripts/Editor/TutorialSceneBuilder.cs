@@ -5,14 +5,19 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
+using VContainer.Unity;
 
 /// <summary>
-/// チュートリアル「準備室」シーンを自動構築するエディタ拡張。
-/// メニュー "NeverNight/Setup" から実行する。
+/// ゲームのセットアップ用エディタ拡張。メニュー "NeverNight/Setup" から実行する。
 /// 1. レイヤー(Player/Enemy/Ground/Interactable)と衝突マトリクスの設定
-/// 2. アセット(EnemyConsts、PlayerConsts の新項目)と Prefab(Player/Enemy/Box/Lever/Door/DamageFloater)の生成
-/// 3. TutorialScene.unity の構築(地形・敵・ギミック・HUD・チュートリアル進行の配線)
-/// 何度実行しても安全なように、既存のアセットは再利用する。
+/// 2. アセット(Consts/アイテム/攻撃定義/DI設定)と Prefab(Player/Enemy/ギミック/HUD)の生成
+/// 3〜5. サンプルシーン(チュートリアル/フィールド/サンドボックス)の自動構築
+/// 6. PlayerUI(HUD) / 8. PauseUI / 9. HomeUI / 10. GameOverUI / 11. ResultUI の各 UI シーン構築
+/// 7. 手作業で作成したステージシーンのセットアップ(スポーン地点/ブートストラップ/エリア名)
+/// 12. PlayerScene(プレイヤー常駐シーン)の構築
+/// 本編は「PlayerScene を土台に、ステージと UI を Additive で重ねる」方式。
+/// ステージは手作業で作成して 7 で配線する。ステージ入替 (StageLoader.TransitionTo) では
+/// プレイヤーが破棄されないため、ステータスが維持される。既存のアセットは再利用する。
 /// </summary>
 public static class TutorialSceneBuilder
 {
@@ -28,7 +33,6 @@ public static class TutorialSceneBuilder
     private const string ThreadBallPrefabPath = PrefabDir + "/ThreadBall.prefab";
     private const string BombPrefabPath = PrefabDir + "/BobbinBomb.prefab";
     private const string PinCushionPrefabPath = PrefabDir + "/PinCushion.prefab";
-    private const string SlashWavePrefabPath = PrefabDir + "/SlashWave.prefab";
 
     private const string ItemDir = "Assets/Items";
     private const string SavePointPrefabPath = PrefabDir + "/SavePoint.prefab";
@@ -39,6 +43,22 @@ public static class TutorialSceneBuilder
     private const string EnemyConstsHeavyPath = "Assets/Scripts/Enemy/EnemyConsts_Heavy.asset";
     private const string EnemyConstsSwiftPath = "Assets/Scripts/Enemy/EnemyConsts_Swift.asset";
     private const string PlayerConstsPath = "Assets/Scripts/Player/PlayerConsts.asset";
+    private const string GameScopePrefabPath = "Assets/Prefabs/GameLifetimeScope.prefab";
+    private const string VContainerSettingsPath = "Assets/VContainerSettings.asset";
+    private const string AttackDir = "Assets/Attacks";
+    private const string NeedleShotPrefabPath = PrefabDir + "/NeedleShot.prefab";
+    private const string HudPrefabPath = PrefabDir + "/HUD.prefab";
+    private const string PauseUIPrefabPath = PrefabDir + "/PauseUI.prefab";
+    private const string HomeUIPrefabPath = PrefabDir + "/HomeUI.prefab";
+    private const string GameOverUIPrefabPath = PrefabDir + "/GameOverUI.prefab";
+    private const string ResultUIPrefabPath = PrefabDir + "/ResultUI.prefab";
+    private const string PlayerScenePath = "Assets/Scenes/PlayerScene.unity";
+    private const string UISceneDir = "Assets/Scenes/UI";
+    private const string PlayerUIScenePath = UISceneDir + "/PlayerUI.unity";
+    private const string PauseUIScenePath = UISceneDir + "/PauseUI.unity";
+    private const string HomeUIScenePath = UISceneDir + "/HomeUI.unity";
+    private const string GameOverUIScenePath = UISceneDir + "/GameOverUI.unity";
+    private const string ResultUIScenePath = UISceneDir + "/ResultUI.unity";
     private const string SourceScenePath = "Assets/Scenes/IngameTestScene.unity";
     private const string ScenePath = "Assets/Scenes/TutorialScene.unity";
     private const string TitleScenePath = "Assets/Scenes/TitleScene.unity";
@@ -91,6 +111,7 @@ public static class TutorialSceneBuilder
         EnsureDirectory(PrefabDir);
 
         UpdatePlayerConsts();
+        EnsureGameLifetimeScopePrefab();
         GetOrCreateEnemyConsts();
         CreateEnemyVariantConsts();
 
@@ -98,12 +119,15 @@ public static class TutorialSceneBuilder
         CreateProjectilePrefab(MachiNeedlePrefabPath, new Color(0.92f, 0.92f, 0.98f), new Vector2(0.6f, 0.1f));
         CreateProjectilePrefab(MishinNeedlePrefabPath, new Color(0.7f, 0.8f, 1f), new Vector2(0.4f, 0.14f));
         CreateProjectilePrefab(ThreadBallPrefabPath, new Color(0.85f, 0.6f, 1f), new Vector2(0.3f, 0.3f));
-        CreateProjectilePrefab(SlashWavePrefabPath, new Color(0.5f, 1f, 0.9f, 0.85f), new Vector2(0.8f, 0.5f));
+        CreateProjectilePrefab(NeedleShotPrefabPath, new Color(0.95f, 0.9f, 0.5f), new Vector2(0.5f, 0.12f));
         CreateBombPrefab();
         CreatePinCushionPrefab();
 
         // アイテム定義 (ScriptableObject)。Player Prefab のカタログが参照する
         CreateItemDefinitions();
+
+        // 攻撃方法の定義 (ScriptableObject)。Player Prefab のロードアウトが参照する
+        CreateAttackDefinitions();
 
         GetOrCreatePlayerPrefab();
         CreateEnemyPrefab();
@@ -265,6 +289,31 @@ public static class TutorialSceneBuilder
         var titleGo = new GameObject("TitleScreen");
         var title = titleGo.AddComponent<TitleScreen>();
         SetRef(title, "_font", jpFont);
+
+        // ---- タイトル UI (事前配置。ロゴやメニューの素材はシーン上で差し替え可能) ----
+        var canvasGo = new GameObject("TitleCanvas");
+        var canvas = canvasGo.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        var scaler = canvasGo.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
+        scaler.matchWidthOrHeight = 0.5f;
+        var canvasRt = (RectTransform)canvasGo.transform;
+
+        var titleLabel = CreateHudText(canvasRt, "GameTitle", "Never Night Wonderland", 84f,
+            new Color(0.9f, 0.9f, 1f), jpFont);
+        titleLabel.fontStyle = FontStyles.Bold;
+        var titleLabelRt = titleLabel.rectTransform;
+        titleLabelRt.anchorMin = new Vector2(0.5f, 1f);
+        titleLabelRt.anchorMax = new Vector2(0.5f, 1f);
+        titleLabelRt.pivot = new Vector2(0.5f, 1f);
+        titleLabelRt.anchoredPosition = new Vector2(0f, -120f);
+        titleLabelRt.sizeDelta = new Vector2(1400f, 120f);
+
+        var titleMenu = CreateMenuPanel(canvasRt, "TitleMenu", jpFont);
+
+        SetRef(title, "_titleLabel", titleLabel);
+        SetRef(title, "_menu", titleMenu);
 
         EditorSceneManager.SaveScene(scene, TitleScenePath);
         AddSceneToBuildSettings(TitleScenePath);
@@ -687,6 +736,61 @@ public static class TutorialSceneBuilder
 
     #region Assets & Prefabs
 
+    /// <summary>
+    /// ルート DI スコープ (GameLifetimeScope) のプレハブと VContainerSettings を用意する。
+    /// VContainerSettings の RootLifetimeScope に登録しておくと、各シーンの
+    /// 子スコープ (Stage/UI) の Build 時にルートが自動生成・接続されるため、
+    /// GameLifetimeScope を手動でシーンに置く必要はない。
+    /// </summary>
+    private static void EnsureGameLifetimeScopePrefab()
+    {
+        var consts = AssetDatabase.LoadAssetAtPath<PlayerConsts>(PlayerConstsPath);
+        if (consts == null)
+            Debug.LogError($"[TutorialSceneBuilder] {PlayerConstsPath} が見つかりません。GameLifetimeScope の PlayerConsts が未設定になります。");
+
+        // ルートスコープのプレハブを用意して PlayerConsts を配線する
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(GameScopePrefabPath);
+        if (prefab != null && prefab.TryGetComponent<GameLifetimeScope>(out var existingScope))
+        {
+            SetRef(existingScope, "_playerConsts", consts);
+        }
+        else
+        {
+            EnsureDirectory(PrefabDir);
+            var go = new GameObject("GameLifetimeScope");
+            try
+            {
+                var scope = go.AddComponent<GameLifetimeScope>();
+                SetRef(scope, "_playerConsts", consts);
+                prefab = PrefabUtility.SaveAsPrefabAsset(go, GameScopePrefabPath);
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        // VContainerSettings に RootLifetimeScope として登録する
+        var settings = AssetDatabase.LoadAssetAtPath<VContainerSettings>(VContainerSettingsPath);
+        if (settings == null)
+        {
+            settings = ScriptableObject.CreateInstance<VContainerSettings>();
+            AssetDatabase.CreateAsset(settings, VContainerSettingsPath);
+        }
+
+        settings.RootLifetimeScope = prefab.GetComponent<GameLifetimeScope>();
+        EditorUtility.SetDirty(settings);
+
+        // Preloaded Assets に登録する (実行時に VContainerSettings.Instance として読まれる)
+        var preloadedAssets = PlayerSettings.GetPreloadedAssets().ToList();
+        if (!preloadedAssets.Contains(settings))
+        {
+            preloadedAssets.RemoveAll(x => x is VContainerSettings);
+            preloadedAssets.Add(settings);
+            PlayerSettings.SetPreloadedAssets(preloadedAssets.ToArray());
+        }
+    }
+
     private static void UpdatePlayerConsts()
     {
         var consts = AssetDatabase.LoadAssetAtPath<PlayerConsts>(PlayerConstsPath);
@@ -906,6 +1010,79 @@ public static class TutorialSceneBuilder
     }
 
     /// <summary>Assets/Items 配下の全アイテム定義を読み込む。</summary>
+    /// <summary>
+    /// 攻撃方法の定義 (AttackDefinition) を生成する。
+    /// □=近接 (スラッシュ=HP寄り / 重断ち=防御値寄り)、△=特殊 (針弾=遠距離・防御値寄り)。
+    /// 数値は実行のたびに上書きして最新に保つ。
+    /// </summary>
+    private static void CreateAttackDefinitions()
+    {
+        EnsureDirectory(AttackDir);
+
+        var slash = GetOrCreateAttack<MeleeAttackDefinition>("Slash", "スラッシュ",
+            "素早い斬撃。HP(赤)を削りやすい", new Color(0.4f, 0.8f, 1f));
+        SetAttackProfile(slash, "_profile", 0.25f, 0.06f, 2, 1, new Vector2(0.7f, 0f), new Vector2(1.2f, 1f));
+
+        var heavy = GetOrCreateAttack<MeleeAttackDefinition>("HeavyCut", "重断ち",
+            "大振りの一撃。防御値(白)を削りやすい", new Color(1f, 0.55f, 0.25f));
+        SetAttackProfile(heavy, "_profile", 0.5f, 0.2f, 1, 3, new Vector2(0.8f, 0f), new Vector2(1.5f, 1.4f));
+
+        var needle = GetOrCreateAttack<RangedSpecialDefinition>("NeedleShot", "針弾",
+            "前方へ針を飛ばす遠距離攻撃。防御値(白)を削りやすい", new Color(0.95f, 0.9f, 0.5f));
+        var so = new SerializedObject(needle);
+        so.FindProperty("_projectilePrefab").objectReferenceValue = LoadComponent<Projectile>(NeedleShotPrefabPath);
+        so.FindProperty("_speed").floatValue = 14f;
+        so.FindProperty("_lifetime").floatValue = 0.6f;
+        so.FindProperty("_hpDamage").intValue = 1;
+        so.FindProperty("_guardDamage").intValue = 2;
+        so.FindProperty("_useDuration").floatValue = 0.3f;
+        so.FindProperty("_useDelay").floatValue = 0.1f;
+        so.FindProperty("_cooldown").floatValue = 0.8f;
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    private static T GetOrCreateAttack<T>(string assetName, string displayName, string description, Color iconColor)
+        where T : AttackDefinition
+    {
+        var path = $"{AttackDir}/{assetName}.asset";
+        var attack = AssetDatabase.LoadAssetAtPath<T>(path);
+        if (attack == null)
+        {
+            attack = ScriptableObject.CreateInstance<T>();
+            AssetDatabase.CreateAsset(attack, path);
+        }
+
+        var so = new SerializedObject(attack);
+        so.FindProperty("_displayName").stringValue = displayName;
+        so.FindProperty("_description").stringValue = description;
+        so.FindProperty("_iconColor").colorValue = iconColor;
+        so.ApplyModifiedPropertiesWithoutUndo();
+        return attack;
+    }
+
+    /// <summary>ネストされた AttackProfile ([SerializeField]) の各フィールドへ値を書き込む。</summary>
+    private static void SetAttackProfile(Object target, string fieldName, float duration, float hitDelay,
+        int hpDamage, int guardDamage, Vector2 offset, Vector2 boxSize)
+    {
+        var so = new SerializedObject(target);
+        so.FindProperty($"{fieldName}._duration").floatValue = duration;
+        so.FindProperty($"{fieldName}._hitDelay").floatValue = hitDelay;
+        so.FindProperty($"{fieldName}._hpDamage").intValue = hpDamage;
+        so.FindProperty($"{fieldName}._guardDamage").intValue = guardDamage;
+        so.FindProperty($"{fieldName}._offset").vector2Value = offset;
+        so.FindProperty($"{fieldName}._boxSize").vector2Value = boxSize;
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    private static Object[] LoadAttackCatalog()
+    {
+        var guids = AssetDatabase.FindAssets("t:AttackDefinition", new[] { AttackDir });
+        var attacks = new Object[guids.Length];
+        for (var i = 0; i < guids.Length; i++)
+            attacks[i] = AssetDatabase.LoadAssetAtPath<AttackDefinition>(AssetDatabase.GUIDToAssetPath(guids[i]));
+        return attacks;
+    }
+
     private static Object[] LoadItemCatalog()
     {
         var guids = AssetDatabase.FindAssets("t:ItemDefinition", new[] { ItemDir });
@@ -1043,12 +1220,9 @@ public static class TutorialSceneBuilder
         if (root.GetComponent<PlayerHealGauge>() == null) root.AddComponent<PlayerHealGauge>();
         if (root.GetComponent<PlayerInteractor>() == null) root.AddComponent<PlayerInteractor>();
         if (root.GetComponent<PlayerSaveBridge>() == null) root.AddComponent<PlayerSaveBridge>();
+        if (root.GetComponent<PlayerLifetimeScope>() == null) root.AddComponent<PlayerLifetimeScope>();
 
-        var progression = root.GetComponent<PlayerProgression>();
-        if (progression == null) progression = root.AddComponent<PlayerProgression>();
-        var slashWave = AssetDatabase.LoadAssetAtPath<GameObject>(SlashWavePrefabPath);
-        if (slashWave != null)
-            SetRef(progression, "_slashWavePrefab", slashWave.GetComponent<Projectile>());
+        if (root.GetComponent<PlayerProgression>() == null) root.AddComponent<PlayerProgression>();
 
         var inventory = root.GetComponent<PlayerItemInventory>();
         if (inventory == null) inventory = root.AddComponent<PlayerItemInventory>();
@@ -1062,6 +1236,16 @@ public static class TutorialSceneBuilder
             FindItem(catalog, "MachiNeedle"),
             FindItem(catalog, "MishinNeedle"),
         });
+
+        // 攻撃方法のロードアウト (□=スラッシュ / △=針弾)。
+        // 解放ギミック (入手イベント) ができるまでは全攻撃を初期解放にしておく
+        var attackLoadout = root.GetComponent<PlayerAttackLoadout>();
+        if (attackLoadout == null) attackLoadout = root.AddComponent<PlayerAttackLoadout>();
+        var attackCatalog = LoadAttackCatalog();
+        SetArray(attackLoadout, "_catalog", attackCatalog);
+        SetArray(attackLoadout, "_defaultUnlocked", attackCatalog);
+        SetRef(attackLoadout, "_defaultMelee", FindItem(attackCatalog, "Slash"));
+        SetRef(attackLoadout, "_defaultSpecial", FindItem(attackCatalog, "NeedleShot"));
 
         PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
         PrefabUtility.UnloadPrefabContents(root);
@@ -1344,15 +1528,20 @@ public static class TutorialSceneBuilder
     }
 
     /// <summary>
-    /// HUD を構築する。HPバー・回復ゲージ・スタイル表示・裁断プロンプト・チュートリアルメッセージに加え、
-    /// アイテムスロット・糸カウント・通知・エリア名・ミニマップと各メニュー
-    /// (ポーズ/ゲームオーバー/拠点/リザルト) を配線する。
+    /// 共通 HUD プレハブ (Assets/Prefabs/HUD.prefab) を用意する。
+    /// HPバー・回復ゲージ・装備表示・クールダウン円・アイテムスロット・糸カウント・
+    /// 裁断プロンプト・通知と UILifetimeScope を含み、DI 駆動なのでシーン参照は不要。
+    /// **既にプレハブがあれば再生成しない** — 見た目 (スプライト・配置) はプレハブを
+    /// 直接編集すれば全シーンに反映される (素材差し替え用)。作り直す時はプレハブを削除して再実行。
     /// </summary>
-    private static GameObject BuildHud(PlayerController player, PlayerHealth health, PlayerHealGauge gauge,
-        PlayerItemInventory inventory, string areaName,
-        TMP_FontAsset jpFont, out TutorialMessageView messageView)
+    private static GameObject GetOrCreateHudPrefab(TMP_FontAsset jpFont)
     {
+        var existing = AssetDatabase.LoadAssetAtPath<GameObject>(HudPrefabPath);
+        if (existing != null)
+            return existing;
+
         var square = GetSquareSprite();
+        var circle = GetCircleSprite();
 
         var hudGo = new GameObject("HUD");
         var canvas = hudGo.AddComponent<Canvas>();
@@ -1374,7 +1563,6 @@ public static class TutorialSceneBuilder
         StretchWithPadding(hpFill.rectTransform, 3f);
         MakeFilled(hpFill);
         var hpView = hpBar.gameObject.AddComponent<PlayerHpBarView>();
-        SetRef(hpView, "_health", health);
         SetRef(hpView, "_fill", hpFill);
 
         // ---- 回復ゲージ (HP バーの下、メモリ×3) ----
@@ -1394,21 +1582,39 @@ public static class TutorialSceneBuilder
         }
 
         var healView = healRoot.gameObject.AddComponent<HealGaugeView>();
-        SetRef(healView, "_gauge", gauge);
         SetArray(healView, "_pipFills", pipFills.Select(p => (Object)p).ToArray());
 
-        // ---- スタイル表示 (回復ゲージの下) ----
-        var styleRoot = CreateUIObject("StyleIndicator", root);
-        AnchorTopLeft(styleRoot, new Vector2(30f, -96f), new Vector2(220f, 44f));
-        var styleBg = styleRoot.gameObject.AddComponent<Image>();
-        styleBg.color = new Color(0.4f, 0.8f, 1f, 0.25f);
-        styleBg.sprite = square;
-        var styleLabel = CreateHudText(styleRoot, "Label", "二刀流", 28f, Color.white, jpFont);
-        StretchWithPadding(styleLabel.rectTransform, 0f);
-        var styleView = styleRoot.gameObject.AddComponent<StyleIndicatorView>();
-        SetRef(styleView, "_player", player);
-        SetRef(styleView, "_label", styleLabel);
-        SetRef(styleView, "_background", styleBg);
+        // ---- 装備中の攻撃方法表示 (回復ゲージの下: □近接 / △特殊) ----
+        var loadoutRoot = CreateUIObject("AttackLoadout", root);
+        AnchorTopLeft(loadoutRoot, new Vector2(30f, -96f), new Vector2(260f, 64f));
+        var loadoutBg = loadoutRoot.gameObject.AddComponent<Image>();
+        loadoutBg.color = new Color(0.4f, 0.8f, 1f, 0.25f);
+        loadoutBg.sprite = square;
+        var loadoutLabel = CreateHudText(loadoutRoot, "Label", "□ ---\n△ ---", 22f, Color.white, jpFont);
+        StretchWithPadding(loadoutLabel.rectTransform, 0f);
+        var loadoutView = loadoutRoot.gameObject.AddComponent<AttackLoadoutView>();
+        SetRef(loadoutView, "_label", loadoutLabel);
+        SetRef(loadoutView, "_background", loadoutBg);
+
+        // ---- 特殊攻撃クールダウン (装備表示の右、円形) ----
+        var cooldownRoot = CreateUIObject("SpecialCooldown", root);
+        AnchorTopLeft(cooldownRoot, new Vector2(300f, -96f), new Vector2(64f, 64f));
+        var cooldownIcon = cooldownRoot.gameObject.AddComponent<Image>();
+        cooldownIcon.color = new Color(0.95f, 0.9f, 0.5f);
+        cooldownIcon.sprite = circle;
+        var cooldownFill = CreateUIImage(cooldownRoot, "CooldownFill", new Color(0f, 0f, 0f, 0.6f), circle);
+        StretchWithPadding(cooldownFill.rectTransform, 0f);
+        cooldownFill.type = Image.Type.Filled;
+        cooldownFill.fillMethod = Image.FillMethod.Radial360;
+        cooldownFill.fillOrigin = (int)Image.Origin360.Top;
+        cooldownFill.fillClockwise = false;
+        cooldownFill.fillAmount = 0f;
+        var cooldownLabel = CreateHudText(cooldownRoot, "Label", "△", 30f, Color.white, jpFont);
+        StretchWithPadding(cooldownLabel.rectTransform, 0f);
+        var cooldownView = cooldownRoot.gameObject.AddComponent<SpecialCooldownView>();
+        SetRef(cooldownView, "_icon", cooldownIcon);
+        SetRef(cooldownView, "_cooldownFill", cooldownFill);
+        SetRef(cooldownView, "_label", cooldownLabel);
 
         // ---- 裁断プロンプト (画面中央やや下) ----
         var finisherRoot = CreateUIObject("FinisherPrompt", root);
@@ -1419,25 +1625,8 @@ public static class TutorialSceneBuilder
         StretchWithPadding(finisherLabel.rectTransform, 0f);
         finisherLabel.fontStyle = FontStyles.Bold;
         var finisherView = finisherRoot.gameObject.AddComponent<FinisherPromptView>();
-        SetRef(finisherView, "_player", player);
         SetRef(finisherView, "_root", finisherContent.gameObject);
         SetRef(finisherView, "_label", finisherLabel);
-
-        // ---- チュートリアルメッセージ (上部中央) ----
-        var messageRoot = CreateUIObject("TutorialMessage", root);
-        messageRoot.anchorMin = new Vector2(0.5f, 1f);
-        messageRoot.anchorMax = new Vector2(0.5f, 1f);
-        messageRoot.pivot = new Vector2(0.5f, 1f);
-        messageRoot.anchoredPosition = new Vector2(0f, -40f);
-        messageRoot.sizeDelta = new Vector2(1100f, 70f);
-        var messageBg = messageRoot.gameObject.AddComponent<Image>();
-        messageBg.color = new Color(0f, 0f, 0f, 0.55f);
-        messageBg.sprite = square;
-        var messageLabel = CreateHudText(messageRoot, "Label", "", 30f, Color.white, jpFont);
-        StretchWithPadding(messageLabel.rectTransform, 8f);
-        messageRoot.gameObject.AddComponent<CanvasGroup>();
-        messageView = messageRoot.gameObject.AddComponent<TutorialMessageView>();
-        SetRef(messageView, "_label", messageLabel);
 
         // ---- アイテム表示 (左下、3種すべて + 使用方向) ----
         var itemSlot = CreateUIObject("ItemSlot", root);
@@ -1460,17 +1649,15 @@ public static class TutorialSceneBuilder
         }
 
         var itemView = itemSlot.gameObject.AddComponent<ItemSlotView>();
-        SetRef(itemView, "_inventory", inventory);
         SetArray(itemView, "_labels", itemLabels.Select(l => (Object)l).ToArray());
 
-        // ---- 糸カウント (スタイル表示の下) ----
+        // ---- 糸カウント (装備表示の下) ----
         var threadRoot = CreateUIObject("ThreadCount", root);
-        AnchorTopLeft(threadRoot, new Vector2(30f, -146f), new Vector2(220f, 30f));
+        AnchorTopLeft(threadRoot, new Vector2(30f, -170f), new Vector2(220f, 30f));
         var threadLabel = CreateHudText(threadRoot, "Label", "糸 x0", 24f, new Color(0.9f, 0.9f, 0.7f), jpFont);
         threadLabel.alignment = TextAlignmentOptions.Left;
         StretchWithPadding(threadLabel.rectTransform, 0f);
         var threadView = threadRoot.gameObject.AddComponent<ThreadCountView>();
-        SetRef(threadView, "_inventory", inventory);
         SetRef(threadView, "_label", threadLabel);
 
         // ---- 通知トースト (下部中央) ----
@@ -1488,6 +1675,78 @@ public static class TutorialSceneBuilder
         notifyRoot.gameObject.AddComponent<CanvasGroup>();
         var notifyView = notifyRoot.gameObject.AddComponent<NotificationView>();
         SetRef(notifyView, "_label", notifyLabel);
+
+        // ---- DI スコープ: View を登録し Presenter を起動する ----
+        var uiScope = hudGo.AddComponent<UILifetimeScope>();
+        SetRef(uiScope, "_hpBarView", hpView);
+        SetRef(uiScope, "_healGaugeView", healView);
+        SetRef(uiScope, "_attackLoadoutView", loadoutView);
+        SetRef(uiScope, "_specialCooldownView", cooldownView);
+        SetRef(uiScope, "_itemSlotView", itemView);
+        SetRef(uiScope, "_threadCountView", threadView);
+        SetRef(uiScope, "_finisherPromptView", finisherView);
+
+        EnsureDirectory(PrefabDir);
+        var prefab = PrefabUtility.SaveAsPrefabAsset(hudGo, HudPrefabPath);
+        Object.DestroyImmediate(hudGo);
+        return prefab;
+    }
+
+    /// <summary>
+    /// 自動生成シーンへ HUD を構築する。共通 HUD はプレハブ (GetOrCreateHudPrefab) を埋め込み、
+    /// シーン固有 UI (BuildSceneUI) を配置する。DI はプレイヤープレハブの PlayerLifetimeScope が担う。
+    /// 戻り値は SceneUI (デバッグ表示などの親に使う)。
+    /// </summary>
+    private static GameObject BuildHud(PlayerController player, PlayerHealth health, PlayerHealGauge gauge,
+        PlayerItemInventory inventory, string areaName,
+        TMP_FontAsset jpFont, out TutorialMessageView messageView)
+    {
+        // サンプルシーンは自己完結にするため、UI プレハブ一式を直接埋め込む
+        // (本編の手作りステージは UISceneBootstrap による Additive ロードを使う)
+        PrefabUtility.InstantiatePrefab(GetOrCreateHudPrefab(jpFont));
+        PrefabUtility.InstantiatePrefab(GetOrCreatePauseUIPrefab(jpFont));
+        PrefabUtility.InstantiatePrefab(GetOrCreateHomeUIPrefab(jpFont));
+        PrefabUtility.InstantiatePrefab(GetOrCreateGameOverUIPrefab(jpFont));
+        PrefabUtility.InstantiatePrefab(GetOrCreateResultUIPrefab(jpFont));
+
+        return BuildSceneUI(player, areaName, jpFont, out messageView);
+    }
+
+    /// <summary>
+    /// シーン固有 UI を構築する。プレイヤーやステージへの参照が必要な UI
+    /// (チュートリアルメッセージ・エリア名・ミニマップ・各メニュー) を
+    /// SceneUI キャンバスとしてシーン側に生成する。
+    /// </summary>
+    private static GameObject BuildSceneUI(PlayerController player, string areaName,
+        TMP_FontAsset jpFont, out TutorialMessageView messageView)
+    {
+        var square = GetSquareSprite();
+
+        var sceneUiGo = new GameObject("SceneUI");
+        var canvas = sceneUiGo.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        var scaler = sceneUiGo.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
+        scaler.matchWidthOrHeight = 0.5f;
+
+        var root = (RectTransform)sceneUiGo.transform;
+
+        // ---- チュートリアルメッセージ (上部中央) ----
+        var messageRoot = CreateUIObject("TutorialMessage", root);
+        messageRoot.anchorMin = new Vector2(0.5f, 1f);
+        messageRoot.anchorMax = new Vector2(0.5f, 1f);
+        messageRoot.pivot = new Vector2(0.5f, 1f);
+        messageRoot.anchoredPosition = new Vector2(0f, -40f);
+        messageRoot.sizeDelta = new Vector2(1100f, 70f);
+        var messageBg = messageRoot.gameObject.AddComponent<Image>();
+        messageBg.color = new Color(0f, 0f, 0f, 0.55f);
+        messageBg.sprite = square;
+        var messageLabel = CreateHudText(messageRoot, "Label", "", 30f, Color.white, jpFont);
+        StretchWithPadding(messageLabel.rectTransform, 8f);
+        messageRoot.gameObject.AddComponent<CanvasGroup>();
+        messageView = messageRoot.gameObject.AddComponent<TutorialMessageView>();
+        SetRef(messageView, "_label", messageLabel);
 
         // ---- エリア名タイトル (中央上寄り) ----
         var areaRoot = CreateUIObject("AreaTitle", root);
@@ -1518,21 +1777,459 @@ public static class TutorialSceneBuilder
         SetRef(minimapView, "_image", minimapImage);
         SetRef(minimapView, "_target", player.transform);
 
-        // ---- 各メニュー (ポーズ / ゲームオーバー / 拠点 / リザルト) ----
-        var pauseView = hudGo.AddComponent<PauseMenuView>();
+        return sceneUiGo;
+    }
+
+    /// <summary>
+    /// ポーズ UI プレハブ (Assets/Prefabs/PauseUI.prefab) を用意する。
+    /// ポーズメニューと、プレイヤー解決用の LifetimeScope (PlayerRuntime 注入) を含む。
+    /// UI はすべて事前配置 (MenuPanelView)。
+    /// **既にプレハブがあれば再生成しない** — 調整はプレハブを直接編集する。
+    /// </summary>
+    private static GameObject GetOrCreatePauseUIPrefab(TMP_FontAsset jpFont)
+    {
+        var existing = AssetDatabase.LoadAssetAtPath<GameObject>(PauseUIPrefabPath);
+        if (existing != null)
+            return existing;
+
+        var menuGo = new GameObject("PauseUI");
+        var canvas = menuGo.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 10; // HUD より手前に描画する
+        var scaler = menuGo.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
+        scaler.matchWidthOrHeight = 0.5f;
+
+        var menuRoot = (RectTransform)menuGo.transform;
+
+        // ポーズメニュー (ゲームオーバー/リザルトはそれぞれ専用プレハブ・シーンに分離)
+        var pauseView = menuGo.AddComponent<PauseMenuView>();
         SetRef(pauseView, "_font", jpFont);
-        SetRef(pauseView, "_player", player);
+        SetRef(pauseView, "_menu", CreateMenuPanel(menuRoot, "PauseMenu", jpFont));
 
-        var gameOverView = hudGo.AddComponent<GameOverView>();
-        SetRef(gameOverView, "_font", jpFont);
+        // PauseMenuView へ PlayerRuntime を注入するスコープ
+        menuGo.AddComponent<PauseLifetimeScope>();
 
-        var savePointView = hudGo.AddComponent<SavePointMenuView>();
-        SetRef(savePointView, "_font", jpFont);
+        EnsureDirectory(PrefabDir);
+        var prefab = PrefabUtility.SaveAsPrefabAsset(menuGo, PauseUIPrefabPath);
+        Object.DestroyImmediate(menuGo);
+        return prefab;
+    }
 
-        var resultView = hudGo.AddComponent<ResultView>();
-        SetRef(resultView, "_font", jpFont);
+    /// <summary>
+    /// メニュー所有者 1 つ + 事前配置パネルだけの UI プレハブ (GameOverUI / ResultUI) を用意する。
+    /// **既にプレハブがあれば再生成しない** — 調整はプレハブを直接編集する。
+    /// </summary>
+    private static GameObject GetOrCreateMenuOwnerPrefab<T>(string prefabPath, string rootName,
+        string panelName, TMP_FontAsset jpFont) where T : Component
+    {
+        var existing = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+        if (existing != null)
+            return existing;
 
-        return hudGo;
+        var go = new GameObject(rootName);
+        var canvas = go.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 11; // ポーズ (10) より手前に描画する
+        var scaler = go.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
+        scaler.matchWidthOrHeight = 0.5f;
+
+        var owner = go.AddComponent<T>();
+        SetRef(owner, "_font", jpFont);
+        SetRef(owner, "_menu", CreateMenuPanel((RectTransform)go.transform, panelName, jpFont));
+
+        EnsureDirectory(PrefabDir);
+        var prefab = PrefabUtility.SaveAsPrefabAsset(go, prefabPath);
+        Object.DestroyImmediate(go);
+        return prefab;
+    }
+
+    private static GameObject GetOrCreateGameOverUIPrefab(TMP_FontAsset jpFont) =>
+        GetOrCreateMenuOwnerPrefab<GameOverView>(GameOverUIPrefabPath, "GameOverUI", "GameOverMenu", jpFont);
+
+    private static GameObject GetOrCreateResultUIPrefab(TMP_FontAsset jpFont) =>
+        GetOrCreateMenuOwnerPrefab<ResultView>(ResultUIPrefabPath, "ResultUI", "ResultMenu", jpFont);
+
+    /// <summary>
+    /// ホーム画面 UI プレハブ (Assets/Prefabs/HomeUI.prefab) を用意する。
+    /// 拠点 (SavePoint) のインタラクトで開かれ、HP回復/アイテム補充/攻撃入れ替え/セーブを行う
+    /// HomeUIView と、その事前配置パネル (MenuPanelView) を含む。
+    /// **既にプレハブがあれば再生成しない** — 調整はプレハブを直接編集する。
+    /// </summary>
+    private static GameObject GetOrCreateHomeUIPrefab(TMP_FontAsset jpFont)
+    {
+        var existing = AssetDatabase.LoadAssetAtPath<GameObject>(HomeUIPrefabPath);
+        if (existing != null)
+            return existing;
+
+        var homeGo = new GameObject("HomeUI");
+        var canvas = homeGo.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 5; // HUD より手前、メニュー (10) より奥
+        var scaler = homeGo.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
+        scaler.matchWidthOrHeight = 0.5f;
+
+        var homeRoot = (RectTransform)homeGo.transform;
+
+        // 拠点画面 (HP回復/アイテム補充/攻撃入れ替え/セーブ)
+        var homeView = homeGo.AddComponent<HomeUIView>();
+        SetRef(homeView, "_font", jpFont);
+        SetRef(homeView, "_menu", CreateMenuPanel(homeRoot, "HomePanel", jpFont));
+
+        // ホームの View へ PlayerRuntime や Model を注入するスコープ
+        homeGo.AddComponent<HomeLifetimeScope>();
+
+        EnsureDirectory(PrefabDir);
+        var prefab = PrefabUtility.SaveAsPrefabAsset(homeGo, HomeUIPrefabPath);
+        Object.DestroyImmediate(homeGo);
+        return prefab;
+    }
+
+    /// <summary>
+    /// MenuPanelView の UI 一式 (暗幕/ウィンドウ/タイトル/本文/行テンプレート) を
+    /// 事前配置で構築して配線する。実行時生成はしないので、
+    /// 枠などの素材はプレハブ/シーン上の Image・行テンプレートを差し替えれば反映される。
+    /// </summary>
+    private static MenuPanelView CreateMenuPanel(RectTransform parent, string objectName, TMP_FontAsset jpFont)
+    {
+        var square = GetSquareSprite();
+
+        var panelRt = CreateUIObject(objectName, parent);
+        StretchWithPadding(panelRt, 0f);
+        var view = panelRt.gameObject.AddComponent<MenuPanelView>();
+
+        // 全面の暗幕 (開閉のルート)
+        var rootRt = CreateUIObject("MenuRoot", panelRt);
+        StretchWithPadding(rootRt, 0f);
+        var dim = rootRt.gameObject.AddComponent<Image>();
+        dim.color = new Color(0f, 0f, 0f, 0.6f);
+        dim.sprite = square;
+
+        // ウィンドウ (枠素材の差し替え先)
+        var windowRt = CreateUIObject("Window", rootRt);
+        windowRt.sizeDelta = new Vector2(680f, 560f);
+        var windowImage = windowRt.gameObject.AddComponent<Image>();
+        windowImage.color = new Color(0.08f, 0.08f, 0.12f, 0.95f);
+        windowImage.sprite = square;
+
+        // タイトル
+        var titleText = CreateHudText(windowRt, "Title", "", 40f, Color.white, jpFont);
+        titleText.fontStyle = FontStyles.Bold;
+        var titleRt = titleText.rectTransform;
+        titleRt.anchorMin = new Vector2(0f, 1f);
+        titleRt.anchorMax = new Vector2(1f, 1f);
+        titleRt.pivot = new Vector2(0.5f, 1f);
+        titleRt.anchoredPosition = new Vector2(0f, -24f);
+        titleRt.sizeDelta = new Vector2(0f, 60f);
+
+        // 本文
+        var bodyText = CreateHudText(windowRt, "Body", "", 26f, Color.white, jpFont);
+        bodyText.alignment = TextAlignmentOptions.Top;
+        var bodyRt = bodyText.rectTransform;
+        bodyRt.anchorMin = new Vector2(0f, 1f);
+        bodyRt.anchorMax = new Vector2(1f, 1f);
+        bodyRt.pivot = new Vector2(0.5f, 1f);
+        bodyRt.anchoredPosition = new Vector2(0f, -92f);
+        bodyRt.sizeDelta = new Vector2(-60f, 190f);
+
+        // 行コンテナ
+        var rowsRt = CreateUIObject("Rows", windowRt);
+        rowsRt.anchorMin = new Vector2(0f, 0f);
+        rowsRt.anchorMax = new Vector2(1f, 1f);
+        rowsRt.offsetMin = new Vector2(60f, 30f);
+        rowsRt.offsetMax = new Vector2(-60f, -100f);
+
+        // 行テキスト (HUD と同様にすべて事前配置し、実行時は表示切替のみ)
+        const int rowCount = 10;
+        var rows = new TMP_Text[rowCount];
+        for (var i = 0; i < rowCount; i++)
+        {
+            var row = CreateHudText(rowsRt, $"Row{i}", "", 30f, Color.white, jpFont);
+            row.alignment = TextAlignmentOptions.Left;
+            var rowRt = row.rectTransform;
+            rowRt.anchorMin = new Vector2(0f, 1f);
+            rowRt.anchorMax = new Vector2(1f, 1f);
+            rowRt.pivot = new Vector2(0.5f, 1f);
+            rowRt.anchoredPosition = new Vector2(0f, -i * 48f);
+            rowRt.sizeDelta = new Vector2(0f, 44f);
+            row.gameObject.SetActive(false);
+            rows[i] = row;
+        }
+
+        // 閉じた状態で保存する
+        rootRt.gameObject.SetActive(false);
+
+        SetRef(view, "_root", rootRt.gameObject);
+        SetRef(view, "_title", titleText);
+        SetRef(view, "_body", bodyText);
+        SetArray(view, "_rows", rows.Select(r => (Object)r).ToArray());
+
+        return view;
+    }
+
+    /// <summary>
+    /// PlayerUI シーンへ共通 HUD (プレハブ) を配置する。
+    /// UISceneBootstrap で Additive ロードする UI 専用シーンを作る/更新するためのメニュー。
+    /// 既存の PlayerUI.unity があれば HUD だけを置き直し、他のオブジェクトは保持する。
+    /// </summary>
+    [MenuItem("NeverNight/Setup/6. Build PlayerUI Scene (HUD)", false, 25)]
+    public static void BuildPlayerUIScene()
+    {
+        var hudPrefab = GetOrCreateHudPrefab(GetOrCreateJapaneseFont());
+        RebuildUIScene(PlayerUIScenePath, hudPrefab);
+        Debug.Log($"[TutorialSceneBuilder] {PlayerUIScenePath} に HUD を配置しました。" +
+                  "ステージシーン側に UISceneBootstrap を置くと Additive でロードされます。");
+    }
+
+    /// <summary>
+    /// PauseUI シーンへポーズメニュー (プレハブ) を配置する。
+    /// UISceneBootstrap で Additive ロードするポーズ専用シーンを作る/更新するためのメニュー。
+    /// </summary>
+    [MenuItem("NeverNight/Setup/8. Build PauseUI Scene (Pause)", false, 27)]
+    public static void BuildPauseUIScene()
+    {
+        var pausePrefab = GetOrCreatePauseUIPrefab(GetOrCreateJapaneseFont());
+        RebuildUIScene(PauseUIScenePath, pausePrefab);
+        Debug.Log($"[TutorialSceneBuilder] {PauseUIScenePath} にポーズ UI を配置しました。" +
+                  "ステージシーン側に UISceneBootstrap を置くと Additive でロードされます。");
+    }
+
+    /// <summary>
+    /// HomeUI シーンへホーム画面 UI (プレハブ) を配置する。
+    /// UISceneBootstrap で Additive ロードするホーム専用シーンを作る/更新するためのメニュー。
+    /// </summary>
+    [MenuItem("NeverNight/Setup/9. Build HomeUI Scene (Home)", false, 28)]
+    public static void BuildHomeUIScene()
+    {
+        var homePrefab = GetOrCreateHomeUIPrefab(GetOrCreateJapaneseFont());
+        RebuildUIScene(HomeUIScenePath, homePrefab);
+        Debug.Log($"[TutorialSceneBuilder] {HomeUIScenePath} にホーム画面 UI を配置しました。" +
+                  "ステージシーン側に UISceneBootstrap を置くと Additive でロードされます。");
+    }
+
+    [MenuItem("NeverNight/Setup/10. Build GameOverUI Scene", false, 29)]
+    public static void BuildGameOverUIScene()
+    {
+        var prefab = GetOrCreateGameOverUIPrefab(GetOrCreateJapaneseFont());
+        RebuildUIScene(GameOverUIScenePath, prefab);
+        Debug.Log($"[TutorialSceneBuilder] {GameOverUIScenePath} にゲームオーバー UI を配置しました。");
+    }
+
+    [MenuItem("NeverNight/Setup/11. Build ResultUI Scene", false, 30)]
+    public static void BuildResultUIScene()
+    {
+        var prefab = GetOrCreateResultUIPrefab(GetOrCreateJapaneseFont());
+        RebuildUIScene(ResultUIScenePath, prefab);
+        Debug.Log($"[TutorialSceneBuilder] {ResultUIScenePath} にリザルト UI を配置しました。");
+    }
+
+    /// <summary>
+    /// UI 専用シーンへプレハブを配置し直す。既存シーンなら同名ルートだけ置き換え、
+    /// 他のオブジェクトは保持する。シーンが無ければ新規作成する。
+    /// </summary>
+    private static void RebuildUIScene(string scenePath, GameObject prefab)
+    {
+        UnityEngine.SceneManagement.Scene scene;
+        if (File.Exists(scenePath))
+        {
+            scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+            foreach (var sceneRoot in scene.GetRootGameObjects())
+            {
+                if (sceneRoot.name == prefab.name)
+                    Object.DestroyImmediate(sceneRoot);
+            }
+        }
+        else
+        {
+            scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        }
+
+        PrefabUtility.InstantiatePrefab(prefab);
+        EditorSceneManager.SaveScene(scene, scenePath);
+        AddSceneToBuildSettings(scenePath);
+    }
+
+    /// <summary>
+    /// 手作業で作成したステージシーンをセットアップする (PlayerScene 方式)。開いているシーンに対して:
+    /// - PlayerSpawnPoint: 開始位置マーカーを配置 (プレイヤー本体は PlayerScene に常駐するため置かない)
+    /// - PlayerSceneBootstrap: エディタでこのステージから直接再生しても PlayerScene が Additive で乗る
+    /// - UI シーン (PlayerUI/PauseUI/HomeUI/GameOverUI/ResultUI) の確保
+    /// - SceneUI: エリア名 (既にあれば保持)
+    /// を整え、Build Settings へ登録する。何度実行しても安全。実行前にシーンを保存しておくこと。
+    /// </summary>
+    [MenuItem("NeverNight/Setup/7. Setup Current Stage Scene", false, 26)]
+    public static void SetupCurrentStageScene()
+    {
+        var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+        if (string.IsNullOrEmpty(scene.path))
+        {
+            Debug.LogError("[TutorialSceneBuilder] シーンが未保存です。先に保存してから実行してください。");
+            return;
+        }
+
+        var jpFont = GetOrCreateJapaneseFont();
+
+        // ---- PlayerScene 方式: ステージにはプレイヤーとカメラを置かない ----
+        if (Object.FindAnyObjectByType<PlayerController>(FindObjectsInactive.Include) != null)
+            Debug.LogWarning("[TutorialSceneBuilder] ステージ内にプレイヤーが居ます。PlayerScene 方式ではプレイヤーは PlayerScene 側に常駐するため、ステージからは削除してください。");
+        if (Camera.main != null)
+            Debug.LogWarning("[TutorialSceneBuilder] ステージ内にカメラが居ます。PlayerScene 側のカメラと重複するため削除を推奨します。");
+
+        // ---- 開始位置マーカー (StageLoader がステージロード後にプレイヤーを移動する) ----
+        if (Object.FindAnyObjectByType<PlayerSpawnPoint>(FindObjectsInactive.Include) == null)
+        {
+            var spawn = new GameObject("PlayerSpawnPoint");
+            spawn.AddComponent<PlayerSpawnPoint>();
+            spawn.transform.position = new Vector3(0f, 1.5f, 0f);
+            Debug.Log("[TutorialSceneBuilder] PlayerSpawnPoint を配置しました。開始位置へ移動してください。" +
+                      "入り口を増やす場合は複製して _id を設定し、出口 (SceneTransitionZone) の EntranceId と対応させます。");
+        }
+
+        // ---- PlayerScene / UI シーンの確保 ----
+        if (File.Exists(PlayerScenePath))
+            AddSceneToBuildSettings(PlayerScenePath);
+        else
+            Debug.LogWarning("[TutorialSceneBuilder] PlayerScene がありません。\"12. Build Player Scene\" を実行してください。");
+
+        EnsureUIScene(PlayerUIScenePath, GetOrCreateHudPrefab(jpFont));
+        EnsureUIScene(PauseUIScenePath, GetOrCreatePauseUIPrefab(jpFont));
+        EnsureUIScene(HomeUIScenePath, GetOrCreateHomeUIPrefab(jpFont));
+        EnsureUIScene(GameOverUIScenePath, GetOrCreateGameOverUIPrefab(jpFont));
+        EnsureUIScene(ResultUIScenePath, GetOrCreateResultUIPrefab(jpFont));
+
+        // ---- ブートストラップ: エディタでこのステージから直接再生しても PlayerScene が乗る
+        //      (PlayerScene 側の UISceneBootstrap が UI シーンをロードする) ----
+        if (Object.FindAnyObjectByType<UISceneBootstrap>(FindObjectsInactive.Include) == null)
+        {
+            var bootstrap = new GameObject("PlayerSceneBootstrap").AddComponent<UISceneBootstrap>();
+            SetStringArray(bootstrap, "_uiSceneNames", new[] { StageLoader.PlayerSceneName });
+        }
+
+        // ---- シーン固有 UI (エリア名)。手直しを保持するため既存なら触らない ----
+        if (GameObject.Find("SceneUI") == null)
+            BuildStageSceneUI(scene.name, jpFont);
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        AddSceneToBuildSettings(scene.path);
+        Debug.Log($"[TutorialSceneBuilder] ステージシーン '{scene.name}' をセットアップしました。");
+    }
+
+    /// <summary>ステージシーン用の SceneUI (エリア名のみ。ミニマップ等は PlayerScene 側)。</summary>
+    private static void BuildStageSceneUI(string areaName, TMP_FontAsset jpFont)
+    {
+        var sceneUiGo = new GameObject("SceneUI");
+        var canvas = sceneUiGo.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        var scaler = sceneUiGo.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
+        scaler.matchWidthOrHeight = 0.5f;
+
+        var root = (RectTransform)sceneUiGo.transform;
+
+        var areaRoot = CreateUIObject("AreaTitle", root);
+        AnchorCenter(areaRoot, new Vector2(0f, 160f), new Vector2(1200f, 100f));
+        var areaLabel = CreateHudText(areaRoot, "Label", "", 64f, new Color(0.95f, 0.95f, 1f), jpFont);
+        areaLabel.fontStyle = FontStyles.Bold;
+        StretchWithPadding(areaLabel.rectTransform, 0f);
+        areaRoot.gameObject.AddComponent<CanvasGroup>();
+        var areaView = areaRoot.gameObject.AddComponent<AreaTitleView>();
+        SetString(areaView, "_areaName", areaName);
+        SetRef(areaView, "_label", areaLabel);
+    }
+
+    /// <summary>
+    /// PlayerScene (プレイヤー常駐シーン) を構築する。プレイヤー・カメラ・StageLoader・
+    /// UISceneBootstrap・ミニマップを含み、この上へステージと UI が Additive で重なる。
+    /// ステージ入替でプレイヤーが破棄されないため、ステータスが維持される。
+    /// </summary>
+    [MenuItem("NeverNight/Setup/12. Build Player Scene", false, 31)]
+    public static void BuildPlayerScene()
+    {
+        var playerPrefab = GetOrCreatePlayerPrefab();
+        if (playerPrefab == null)
+        {
+            Debug.LogError("[TutorialSceneBuilder] Player プレハブを用意できません。先に \"2. Create Assets & Prefabs\" を実行してください。");
+            return;
+        }
+
+        var jpFont = GetOrCreateJapaneseFont();
+        var square = GetSquareSprite();
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+        // ---- プレイヤー (常駐) ----
+        var player = (GameObject)PrefabUtility.InstantiatePrefab(playerPrefab);
+        player.transform.position = new Vector3(0f, 1.5f, 0f);
+
+        // ---- カメラ ----
+        var cameraGo = new GameObject("Main Camera") { tag = "MainCamera" };
+        var camera = cameraGo.AddComponent<Camera>();
+        camera.orthographic = true;
+        camera.orthographicSize = 5.5f;
+        camera.clearFlags = CameraClearFlags.SolidColor;
+        camera.backgroundColor = new Color(0.14f, 0.14f, 0.2f);
+        cameraGo.AddComponent<AudioListener>();
+        var follow = cameraGo.AddComponent<CameraFollow>();
+        cameraGo.transform.position = new Vector3(0f, 3.5f, -10f);
+        SetRef(follow, "_target", player.transform);
+
+        // ---- ステージ / UI シーンのロード ----
+        new GameObject("StageLoader").AddComponent<StageLoader>();
+        new GameObject("UISceneBootstrap").AddComponent<UISceneBootstrap>();
+
+        // ---- ミニマップ (プレイヤー追従なので PlayerScene 側に持つ) ----
+        var uiGo = new GameObject("PlayerSceneUI");
+        var uiCanvas = uiGo.AddComponent<Canvas>();
+        uiCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        var uiScaler = uiGo.AddComponent<CanvasScaler>();
+        uiScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        uiScaler.referenceResolution = new Vector2(1920f, 1080f);
+        uiScaler.matchWidthOrHeight = 0.5f;
+
+        var minimapRoot = CreateUIObject("Minimap", (RectTransform)uiGo.transform);
+        minimapRoot.anchorMin = new Vector2(1f, 1f);
+        minimapRoot.anchorMax = new Vector2(1f, 1f);
+        minimapRoot.pivot = new Vector2(1f, 1f);
+        minimapRoot.anchoredPosition = new Vector2(-24f, -24f);
+        minimapRoot.sizeDelta = new Vector2(240f, 240f);
+        var minimapBorder = minimapRoot.gameObject.AddComponent<Image>();
+        minimapBorder.color = new Color(0.1f, 0.1f, 0.1f, 0.9f);
+        minimapBorder.sprite = square;
+        var minimapImageGo = new GameObject("Map", typeof(RectTransform));
+        minimapImageGo.transform.SetParent(minimapRoot, false);
+        StretchWithPadding((RectTransform)minimapImageGo.transform, 4f);
+        var minimapImage = minimapImageGo.AddComponent<RawImage>();
+        var minimapView = minimapRoot.gameObject.AddComponent<MinimapView>();
+        SetRef(minimapView, "_image", minimapImage);
+        SetRef(minimapView, "_target", player.transform);
+
+        EditorSceneManager.SaveScene(scene, PlayerScenePath);
+        AddSceneToBuildSettings(PlayerScenePath);
+        Debug.Log($"[TutorialSceneBuilder] {PlayerScenePath} を構築しました。ステージと UI はこの上に Additive で重なります。");
+    }
+
+    /// <summary>
+    /// UI 専用シーンが無ければ、開いているシーンを閉じずに Additive で生成して保存する。
+    /// </summary>
+    private static void EnsureUIScene(string scenePath, GameObject prefab)
+    {
+        if (File.Exists(scenePath))
+        {
+            AddSceneToBuildSettings(scenePath);
+            return;
+        }
+
+        var uiScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        PrefabUtility.InstantiatePrefab(prefab, uiScene);
+        EditorSceneManager.SaveScene(uiScene, scenePath);
+        EditorSceneManager.CloseScene(uiScene, true);
+        AddSceneToBuildSettings(scenePath);
     }
 
     #endregion
@@ -1647,6 +2344,23 @@ public static class TutorialSceneBuilder
         so.ApplyModifiedPropertiesWithoutUndo();
     }
 
+    /// <summary>private [SerializeField] の string 配列フィールドへ値を書き込む。</summary>
+    private static void SetStringArray(Object target, string fieldName, string[] values)
+    {
+        var so = new SerializedObject(target);
+        var prop = so.FindProperty(fieldName);
+        if (prop == null)
+        {
+            Debug.LogError($"[TutorialSceneBuilder] {target.GetType().Name} にフィールド {fieldName} がありません。");
+            return;
+        }
+
+        prop.arraySize = values.Length;
+        for (var i = 0; i < values.Length; i++)
+            prop.GetArrayElementAtIndex(i).stringValue = values[i];
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
     /// <summary>private [SerializeField] の string フィールドへ値を書き込む。</summary>
     private static void SetString(Object target, string fieldName, string value)
     {
@@ -1723,6 +2437,13 @@ public static class TutorialSceneBuilder
     /// 仮素材用の正方形スプライトを取得する。2D パッケージの組み込みスプライトを優先し、
     /// 見つからなければ白テクスチャを生成して使う。
     /// </summary>
+    /// <summary>円形スプライト (クールダウン円などに使う)。Unity 組み込みの Knob を使う。</summary>
+    private static Sprite GetCircleSprite()
+    {
+        var knob = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
+        return knob != null ? knob : GetSquareSprite();
+    }
+
     private static Sprite GetSquareSprite()
     {
         var candidates = new[]

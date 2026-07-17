@@ -1,9 +1,12 @@
 using R3;
 using UnityEngine;
+using VContainer;
 
 /// <summary>
-/// プレイヤーの体力。<see cref="IDamageable"/> として敵の攻撃を受け、
-/// 被弾時は無敵時間(点滅)を開始して <see cref="PlayerController"/> に HurtState / DeadState への遷移を依頼する。
+/// プレイヤーの体力 (MonoBehaviour アダプタ)。HP の実体は <see cref="PlayerHealthModel"/> が持ち、
+/// 本クラスは <see cref="IDamageable"/> としての被弾受付・無敵時間 (点滅)・
+/// <see cref="PlayerController"/> への HurtState / DeadState 遷移依頼を担う。
+/// Model は PlayerLifetimeScope (プレハブ同梱) 経由で注入され、DI の無いシーンでは自前生成にフォールバックする。
 /// </summary>
 [RequireComponent(typeof(PlayerController))]
 [RequireComponent(typeof(SpriteRenderer))]
@@ -15,25 +18,41 @@ public class PlayerHealth : MonoBehaviour, IDamageable
     private PlayerController _controller;
     private SpriteRenderer _sprite;
 
-    private ReactiveProperty<int> _hp;
+    private PlayerHealthModel _model;
+    private bool _ownsModel;
     private float _invincibleTimer;
 
-    /// <summary>現在 HP の購読用 (HUD が Subscribe する)。</summary>
-    public ReadOnlyReactiveProperty<int> Hp => _hp;
+    /// <summary>現在 HP の購読用 (HUD の Presenter が Subscribe する)。</summary>
+    public ReadOnlyReactiveProperty<int> Hp => _model.Hp;
 
-    public int MaxHp => _controller.Consts.MaxHp;
+    public int MaxHp => _model.MaxHp;
     public bool IsInvincible => _invincibleTimer > 0f;
+
+    [Inject]
+    public void Construct(PlayerHealthModel model)
+    {
+        _model = model;
+    }
 
     private void Awake()
     {
         _controller = GetComponent<PlayerController>();
         _sprite = GetComponent<SpriteRenderer>();
-        _hp = new ReactiveProperty<int>(_controller.Consts.MaxHp);
+
+        if (_model == null)
+        {
+            _model = new PlayerHealthModel(_controller.Consts);
+            _ownsModel = true;
+        }
+
+        // Model はシーンをまたいで生存するため、スポーン時に満タンへ戻す
+        _model.ResetForSpawn();
     }
 
     private void OnDestroy()
     {
-        _hp.Dispose();
+        if (_ownsModel)
+            _model.Dispose();
     }
 
     private void Update()
@@ -61,9 +80,9 @@ public class PlayerHealth : MonoBehaviour, IDamageable
         if (info.HpDamage <= 0 || IsInvincible || _controller.IsDead || _controller.IsDashInvulnerable)
             return;
 
-        _hp.Value = Mathf.Max(0, _hp.Value - info.HpDamage);
+        _model.Damage(info.HpDamage);
 
-        if (_hp.Value <= 0)
+        if (_model.IsDepleted)
         {
             _sprite.enabled = true;
             _controller.OnDied();
@@ -77,9 +96,9 @@ public class PlayerHealth : MonoBehaviour, IDamageable
     /// <summary>HP を回復する (最大値でクランプ)。</summary>
     public void Heal(int amount)
     {
-        if (amount <= 0 || _controller.IsDead)
+        if (_controller.IsDead)
             return;
 
-        _hp.Value = Mathf.Min(MaxHp, _hp.Value + amount);
+        _model.Heal(amount);
     }
 }

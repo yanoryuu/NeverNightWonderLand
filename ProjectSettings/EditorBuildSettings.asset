@@ -6,23 +6,38 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/SampleScene.unity
+    path: Assets/Scenes/Test/SampleScene.unity
     guid: 99c9720ab356a0642a771bea13969a05
   - enabled: 1
-    path: Assets/Scenes/TutorialScene.unity
+    path: Assets/Scenes/Test/TutorialScene.unity
     guid: 529b4669351925549ae195df3137fc66
   - enabled: 1
-    path: Assets/Scenes/IngameTestScene.unity
+    path: Assets/Scenes/GameField/PreparationRoomScene.unity
     guid: 7147eb3e840ab844084120c8b60945ac
   - enabled: 1
     path: Assets/Scenes/TitleScene.unity
     guid: 9d42d4b35aacded4dbc0f92d515d670b
   - enabled: 1
-    path: Assets/Scenes/FieldScene.unity
+    path: Assets/Scenes/Test/FieldScene.unity
     guid: 2c0efc34b9544b74d9fa8c53be92785e
   - enabled: 1
-    path: Assets/Scenes/SandboxScene.unity
+    path: Assets/Scenes/Test/SandboxScene.unity
     guid: 417a7765b34ea344ca63a64cb401fd91
+  - enabled: 1
+    path: Assets/Scenes/UI/PlayerUI.unity
+    guid: 7a25e125c72007649b728025d92d6062
+  - enabled: 1
+    path: Assets/Scenes/UI/PauseUI.unity
+    guid: 5808846542447b34ca0dd6426629a148
+  - enabled: 1
+    path: Assets/Scenes/UI/HomeUI.unity
+    guid: d7c1077635464124aa9e98aa41eb8e30
+  - enabled: 1
+    path: Assets/Scenes/UI/GameOverUI.unity
+    guid: fe2796b8d1b44b84fad9093a7e5379e0
+  - enabled: 1
+    path: Assets/Scenes/UI/ResultUI.unity
+    guid: 356a58ff9f3ab884cb2e1e7021dfbbd6
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

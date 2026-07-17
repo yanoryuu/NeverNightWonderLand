@@ -2,22 +2,28 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI;
 
 /// <summary>
 /// タイトル画面。はじめから / つづきから (セーブがある時のみ) / ゲーム終了。
-/// UI は実行時に構築するため、シーンにはカメラとこのコンポーネントだけあればよい。
+/// UI は実行時に生成せず、シーン上で事前配置したタイトルロゴとメニューパネルを参照する
+/// (素材の差し替えはシーン/プレハブ側で行う)。
 /// </summary>
 public class TitleScreen : MonoBehaviour
 {
     [Tooltip("メニューに使う日本語フォント")]
     [SerializeField] private TMP_FontAsset _font;
 
-    [Tooltip("ゲームタイトル表示")]
+    [Tooltip("ゲームタイトル (ロゴテキストへ反映される)")]
     [SerializeField] private string _gameTitle = "Never Night Wonderland";
 
     [Tooltip("「はじめから」で読み込むシーン名")]
     [SerializeField] private string _startSceneName = "TutorialScene";
+
+    [Tooltip("タイトルロゴのテキスト (事前配置)")]
+    [SerializeField] private TMP_Text _titleLabel;
+
+    [Tooltip("メニューパネル (事前配置)")]
+    [SerializeField] private MenuPanelView _menu;
 
     private void Awake()
     {
@@ -26,62 +32,35 @@ public class TitleScreen : MonoBehaviour
 
     private void Start()
     {
-        // Canvas 構築
-        var canvasGo = new GameObject("TitleCanvas");
-        var canvas = canvasGo.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        var scaler = canvasGo.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920f, 1080f);
-        scaler.matchWidthOrHeight = 0.5f;
+        if (_titleLabel != null)
+            _titleLabel.text = _gameTitle;
 
-        // タイトルロゴ (テキスト)
-        var titleGo = new GameObject("GameTitle", typeof(RectTransform));
-        titleGo.transform.SetParent(canvasGo.transform, false);
-        var titleRt = (RectTransform)titleGo.transform;
-        titleRt.anchorMin = new Vector2(0.5f, 1f);
-        titleRt.anchorMax = new Vector2(0.5f, 1f);
-        titleRt.pivot = new Vector2(0.5f, 1f);
-        titleRt.anchoredPosition = new Vector2(0f, -120f);
-        titleRt.sizeDelta = new Vector2(1400f, 120f);
-        var title = titleGo.AddComponent<TextMeshProUGUI>();
-        title.text = _gameTitle;
-        title.fontSize = 84f;
-        title.fontStyle = FontStyles.Bold;
-        title.alignment = TextAlignmentOptions.Center;
-        title.color = new Color(0.9f, 0.9f, 1f);
-        if (_font != null)
-            title.font = _font;
+        if (_menu == null)
+        {
+            Debug.LogError($"[{nameof(TitleScreen)}] MenuPanelView が設定されていません。", this);
+            return;
+        }
 
-        // メニュー
-        var menuGo = new GameObject("TitleMenu", typeof(RectTransform));
-        menuGo.transform.SetParent(canvasGo.transform, false);
-        var menuRt = (RectTransform)menuGo.transform;
-        menuRt.anchorMin = Vector2.zero;
-        menuRt.anchorMax = Vector2.one;
-        menuRt.offsetMin = Vector2.zero;
-        menuRt.offsetMax = Vector2.zero;
-
-        var menu = menuGo.AddComponent<MenuPanelView>();
-        menu.Initialize(_font);
-        menu.AllowCancel = false;
-        menu.SetTitle("");
-        menu.SetBody("");
+        _menu.Initialize(_font);
+        _menu.AllowCancel = false;
+        _menu.SetTitle("");
+        _menu.SetBody("");
 
         var hasSave = SaveSystem.Exists();
-        menu.SetEntries(new List<MenuPanelView.Entry>
+        _menu.SetEntries(new List<MenuPanelView.Entry>
         {
             new("はじめから", StartNewGame),
             new("つづきから", ContinueGame, hasSave),
             new("ゲーム終了", QuitGame),
         });
-        menu.Open();
+        _menu.Open();
     }
 
     private void StartNewGame()
     {
         GameSession.PendingLoad = null;
-        SceneManager.LoadScene(_startSceneName);
+        // PlayerScene を土台に開始ステージを Additive で重ねる (PlayerScene 未登録なら旧方式)
+        StageLoader.LoadWithPlayerScene(_startSceneName);
     }
 
     private void ContinueGame()
@@ -94,7 +73,7 @@ public class TitleScreen : MonoBehaviour
         }
 
         GameSession.PendingLoad = save;
-        SceneManager.LoadScene(save.sceneName);
+        StageLoader.LoadWithPlayerScene(save.sceneName);
     }
 
     private void QuitGame()

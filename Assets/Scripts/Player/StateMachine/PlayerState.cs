@@ -41,7 +41,7 @@ public abstract class PlayerState
     #region Shared Transition Helpers
 
     /// <summary>
-    /// 裁断・スタイル切替・攻撃・ダッシュへの遷移を試みる。どの状態からでも発生しうる共通アクション。
+    /// 裁断・特殊攻撃・近接攻撃・ダッシュへの遷移を試みる。どの状態からでも発生しうる共通アクション。
     /// 遷移したら true を返す。
     /// </summary>
     protected bool TryActionTransitions()
@@ -53,10 +53,10 @@ public abstract class PlayerState
             return true;
         }
 
-        // スタイル切替は切り替え攻撃を兼ねる
-        if (Player.TryConsumeStyleSwitch())
+        // 特殊攻撃 (△/K)。装備済みでクールダウンが明けている時のみ発動できる
+        if (Player.TryConsumeSpecial() && Player.CanSpecialAttack())
         {
-            StateMachine.ChangeState(Player.StyleSwitchState);
+            StateMachine.ChangeState(Player.SpecialAttackState);
             return true;
         }
 
@@ -72,33 +72,25 @@ public abstract class PlayerState
             return true;
         }
 
-        // アイテム使用 (ホロウナイト形式: 下/左/右+ボタンでスロットのアイテムを使う)
-        if (Player.TryConsumeItemUse() && Player.Inventory != null)
+        // アイテム使用 (L1/[I] ホールド + 下/左/右でスロットのアイテムを使う)
+        if (Player.TryConsumeItemUse(out var slot) && Player.Inventory != null)
         {
-            var slot = Player.SelectSlotByDirection();
-            if (slot == null)
+            var item = Player.Inventory.GetSlotItem(slot);
+            if (item == null)
             {
-                Notifier.Notify("下/左/右を入力しながらアイテムボタンで使用する");
+                Notifier.Notify($"{slot.DisplayName()}は空だ (メニューでセットできる)");
+            }
+            else if (Player.Inventory.TryConsume(item))
+            {
+                Player.SetPendingItem(item);
+                StateMachine.ChangeState(item.Motion == ItemUseMotion.Dash
+                    ? Player.ItemDashState
+                    : (PlayerState)Player.ItemThrowState);
+                return true;
             }
             else
             {
-                var item = Player.Inventory.GetSlotItem(slot.Value);
-                if (item == null)
-                {
-                    Notifier.Notify($"{slot.Value.DisplayName()}は空だ (メニューでセットできる)");
-                }
-                else if (Player.Inventory.TryConsume(item))
-                {
-                    Player.SetPendingItem(item);
-                    StateMachine.ChangeState(item.Motion == ItemUseMotion.Dash
-                        ? Player.ItemDashState
-                        : (PlayerState)Player.ItemThrowState);
-                    return true;
-                }
-                else
-                {
-                    Notifier.Notify($"{item.DisplayName}を使い切った (拠点で補充できる)");
-                }
+                Notifier.Notify($"{item.DisplayName}を使い切った (拠点で補充できる)");
             }
         }
 

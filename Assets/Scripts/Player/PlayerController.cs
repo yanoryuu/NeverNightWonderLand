@@ -1,6 +1,7 @@
 using R3;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using VContainer;
 
 /// <summary>
 /// 2D メトロイドヴァニア風のプレイヤー制御(ステートパターンのコンテキスト)。
@@ -51,6 +52,7 @@ public class PlayerController : MonoBehaviour
     private PlayerHealGauge _healGauge;       // 任意 (無いと回復不可)
     private PlayerItemInventory _inventory;   // 任意 (無いとアイテム不可)
     private PlayerProgression _progression;   // 任意 (無いとハサミ強化なし)
+    private PlayerAttackLoadout _attackLoadout; // 任意 (無いと特殊攻撃不可・近接はフォールバック)
 
     #endregion
 
@@ -64,7 +66,7 @@ public class PlayerController : MonoBehaviour
     public FallState FallState { get; private set; }
     public DashState DashState { get; private set; }
     public AttackState AttackState { get; private set; }
-    public StyleSwitchState StyleSwitchState { get; private set; }
+    public SpecialAttackState SpecialAttackState { get; private set; }
     public FinisherState FinisherState { get; private set; }
     public HealState HealState { get; private set; }
     public HurtState HurtState { get; private set; }
@@ -72,6 +74,7 @@ public class PlayerController : MonoBehaviour
     public ItemThrowState ItemThrowState { get; private set; }
     public ItemDashState ItemDashState { get; private set; }
     public GrappleState GrappleState { get; private set; }
+    public WallClingState WallClingState { get; private set; }
 
     #endregion
 
@@ -81,12 +84,12 @@ public class PlayerController : MonoBehaviour
     private float _verticalInput;    // -1..1 の垂直入力 (グラップルの狙い用)
     private bool _jumpHeld;          // ジャンプボタン押しっぱなし
     private bool _dashPressed;       // このフレームにダッシュ入力されたか
-    private bool _attackPressed;     // このフレームに攻撃入力されたか
-    private bool _stylePressed;      // このフレームにスタイル切替入力されたか
+    private bool _attackPressed;     // このフレームに近接攻撃入力されたか
+    private bool _specialPressed;    // このフレームに特殊攻撃入力されたか
     private float _finisherBufferTimer; // 裁断の先行入力の残り時間 (攻撃中の入力を拾うためバッファ式)
     private bool _healPressed;       // このフレームに回復入力されたか
     private bool _interactPressed;   // このフレームにインタラクト入力されたか
-    private bool _itemPressed;       // このフレームにアイテム使用入力されたか
+    private ItemSlot? _itemSlotPressed; // このフレームに押されたアイテムスロット (L1/[I] ホールド + 方向)
     private bool _grapplePressed;    // このフレームにグラップル入力されたか
 
     #endregion
@@ -95,7 +98,8 @@ public class PlayerController : MonoBehaviour
 
     private bool _isGrounded;
     private readonly ReactiveProperty<int> _facing = new(1);  // 1 = 右, -1 = 左
-    private readonly ReactiveProperty<ScissorStyle> _style = new(ScissorStyle.DualBlades);
+
+    private PlayerRuntime _playerRuntime; // UI (Presenter) へ自身を公開するための実行時参照
 
     private float _originalScaleX;
     private float _originalScaleY;
@@ -104,6 +108,8 @@ public class PlayerController : MonoBehaviour
     private float _coyoteTimer;      // 地面を離れてからの残り猶予
     private float _jumpBufferTimer;  // 先行入力の残り時間
     private float _dashCooldownTimer;
+    private float _specialCooldownTimer;    // 特殊攻撃の再使用までの残り時間
+    private float _specialCooldownDuration; // 直近のクールダウン全長 (HUD の割合表示用)
 
     private bool _isDashing;
     private bool _isAttacking;
@@ -130,11 +136,16 @@ public class PlayerController : MonoBehaviour
     public int Facing => _facing.Value;
     public bool IsDead => _isDead;
 
-    /// <summary>現在のスタイル。</summary>
-    public ScissorStyle Style => _style.Value;
+    /// <summary>攻撃方法の装備状況。無いシーンでは null。</summary>
+    public PlayerAttackLoadout AttackLoadout => _attackLoadout;
 
-    /// <summary>スタイルの購読用 (UI が Subscribe する)。</summary>
-    public ReadOnlyReactiveProperty<ScissorStyle> StyleRP => _style;
+    /// <summary>
+    /// 装備中の近接攻撃プロファイル。ロードアウト未装備時は PlayerConsts のフォールバックを使う。
+    /// </summary>
+    public PlayerConsts.AttackProfile CurrentMeleeProfile =>
+        _attackLoadout != null && _attackLoadout.CurrentMelee != null
+            ? _attackLoadout.CurrentMelee.Profile
+            : _consts.DualAttack;
 
     public PlayerHealth Health => _health;
     public PlayerHealGauge HealGauge => _healGauge;
@@ -152,6 +163,12 @@ public class PlayerController : MonoBehaviour
 
     #region Unity Callbacks
 
+    [Inject]
+    public void Construct(PlayerRuntime playerRuntime)
+    {
+        _playerRuntime = playerRuntime;
+    }
+
     private void Awake()
     {
         _rb = GetComponent<Rigidbody2D>();
@@ -160,6 +177,7 @@ public class PlayerController : MonoBehaviour
         _healGauge = GetComponent<PlayerHealGauge>();
         _inventory = GetComponent<PlayerItemInventory>();
         _progression = GetComponent<PlayerProgression>();
+        _attackLoadout = GetComponent<PlayerAttackLoadout>();
 
         _originalScaleX = transform.localScale.x;
         _originalScaleY = transform.localScale.y;
@@ -198,7 +216,7 @@ public class PlayerController : MonoBehaviour
         FallState = new FallState(this, _stateMachine);
         DashState = new DashState(this, _stateMachine);
         AttackState = new AttackState(this, _stateMachine);
-        StyleSwitchState = new StyleSwitchState(this, _stateMachine);
+        SpecialAttackState = new SpecialAttackState(this, _stateMachine);
         FinisherState = new FinisherState(this, _stateMachine);
         HealState = new HealState(this, _stateMachine);
         HurtState = new HurtState(this, _stateMachine);
@@ -206,6 +224,10 @@ public class PlayerController : MonoBehaviour
         ItemThrowState = new ItemThrowState(this, _stateMachine);
         ItemDashState = new ItemDashState(this, _stateMachine);
         GrappleState = new GrappleState(this, _stateMachine);
+        WallClingState = new WallClingState(this, _stateMachine);
+
+        // 初期化がすべて終わってから UI (Presenter) へ自身を公開する
+        _playerRuntime?.Register(this);
     }
 
     private void Start()
@@ -215,9 +237,9 @@ public class PlayerController : MonoBehaviour
 
     private void OnDestroy()
     {
+        _playerRuntime?.Unregister(this);
         _playerDisposables.Dispose();
         _facing.Dispose();
-        _style.Dispose();
     }
 
     private void Update()
@@ -258,11 +280,9 @@ public class PlayerController : MonoBehaviour
             Gizmos.DrawWireSphere(_groundCheck.position, _consts.GroundCheckRadius);
         }
 
-        // 攻撃判定ボックス (現在スタイルの通常攻撃)
+        // 攻撃判定ボックス (装備中の近接攻撃)
         var dir = Application.isPlaying ? _facing.Value : 1;
-        var profile = (Application.isPlaying && Style == ScissorStyle.TwoHanded)
-            ? _consts.HeavyAttack
-            : _consts.DualAttack;
+        var profile = Application.isPlaying ? CurrentMeleeProfile : _consts.DualAttack;
         Gizmos.color = Color.red;
         Gizmos.DrawWireCube(GetAttackCenter(profile, dir), profile.BoxSize);
 
@@ -286,64 +306,88 @@ public class PlayerController : MonoBehaviour
         var jumpPressedThisFrame = false;
         var dashPressedThisFrame = false;
         var attackPressedThisFrame = false;
-        var stylePressedThisFrame = false;
+        var specialPressedThisFrame = false;
         var finisherPressedThisFrame = false;
         var healPressedThisFrame = false;
         var interactPressedThisFrame = false;
-        var itemPressedThisFrame = false;
+        ItemSlot? itemSlotPressedThisFrame = null;
         var grapplePressedThisFrame = false;
 
         var keyboard = Keyboard.current;
         if (keyboard != null)
         {
-            if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed) _moveInput -= 1f;
-            if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed) _moveInput += 1f;
+            // [I] ホールド中は方向キーをアイテム選択に使う (移動・回復には反映しない)
+            var itemHeld = keyboard.iKey.isPressed;
+            if (itemHeld)
+            {
+                if (keyboard.sKey.wasPressedThisFrame || keyboard.downArrowKey.wasPressedThisFrame)
+                    itemSlotPressedThisFrame = ItemSlot.Down;
+                else if (keyboard.aKey.wasPressedThisFrame || keyboard.leftArrowKey.wasPressedThisFrame)
+                    itemSlotPressedThisFrame = ItemSlot.Left;
+                else if (keyboard.dKey.wasPressedThisFrame || keyboard.rightArrowKey.wasPressedThisFrame)
+                    itemSlotPressedThisFrame = ItemSlot.Right;
+            }
+            else
+            {
+                if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed) _moveInput -= 1f;
+                if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed) _moveInput += 1f;
+                if (keyboard.downArrowKey.isPressed || keyboard.sKey.isPressed) _verticalInput -= 1f;
+                healPressedThisFrame = keyboard.sKey.wasPressedThisFrame;
+            }
+
             if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed) _verticalInput += 1f;
-            if (keyboard.downArrowKey.isPressed || keyboard.sKey.isPressed) _verticalInput -= 1f;
 
             _jumpHeld = keyboard.spaceKey.isPressed;
             jumpPressedThisFrame = keyboard.spaceKey.wasPressedThisFrame;
 
-            // キーボード: Shift = ダッシュ, J = 攻撃, K = スタイル切替, L = 裁断,
-            //             S = 回復, E = インタラクト, I = アイテム使用, F = 糸移動 (青)
+            // キーボード: Shift = ダッシュ, J = 近接攻撃, K = 特殊攻撃, L = 裁断,
+            //             S = 回復, E = インタラクト, I ホールド+方向 = アイテム使用, F = 糸移動 (青)
             dashPressedThisFrame = keyboard.leftShiftKey.wasPressedThisFrame;
             attackPressedThisFrame = keyboard.jKey.wasPressedThisFrame;
-            stylePressedThisFrame = keyboard.kKey.wasPressedThisFrame;
+            specialPressedThisFrame = keyboard.kKey.wasPressedThisFrame;
             finisherPressedThisFrame = keyboard.lKey.wasPressedThisFrame;
-            healPressedThisFrame = keyboard.sKey.wasPressedThisFrame;
             interactPressedThisFrame = keyboard.eKey.wasPressedThisFrame;
-            itemPressedThisFrame = keyboard.iKey.wasPressedThisFrame;
             grapplePressedThisFrame = keyboard.fKey.wasPressedThisFrame;
         }
 
         var gamepad = Gamepad.current;
         if (gamepad != null)
         {
+            // L1 ホールド中は十字キーをアイテム選択に使う (移動・インタラクトには反映しない)。
+            // スティックでの移動は L1 ホールド中も有効
+            var itemHeld = gamepad.leftShoulder.isPressed;
+
             // 慣性なしの移動に合わせ、スティックはデッドゾーンを超えたら最大入力として扱う
             var stickX = gamepad.leftStick.x.ReadValue();
-            if (stickX < -StickDeadZone || gamepad.dpad.left.isPressed) _moveInput = -1f;
-            else if (stickX > StickDeadZone || gamepad.dpad.right.isPressed) _moveInput = 1f;
+            if (stickX < -StickDeadZone || (!itemHeld && gamepad.dpad.left.isPressed)) _moveInput = -1f;
+            else if (stickX > StickDeadZone || (!itemHeld && gamepad.dpad.right.isPressed)) _moveInput = 1f;
 
             var stickY = gamepad.leftStick.y.ReadValue();
-            if (stickY > StickDeadZone || gamepad.dpad.up.isPressed) _verticalInput = 1f;
-            else if (stickY < -StickDeadZone || gamepad.dpad.down.isPressed) _verticalInput = -1f;
+            if (stickY > StickDeadZone || (!itemHeld && gamepad.dpad.up.isPressed)) _verticalInput = 1f;
+            else if (stickY < -StickDeadZone || (!itemHeld && gamepad.dpad.down.isPressed)) _verticalInput = -1f;
+
+            if (itemHeld)
+            {
+                if (gamepad.dpad.down.wasPressedThisFrame) itemSlotPressedThisFrame = ItemSlot.Down;
+                else if (gamepad.dpad.left.wasPressedThisFrame) itemSlotPressedThisFrame = ItemSlot.Left;
+                else if (gamepad.dpad.right.wasPressedThisFrame) itemSlotPressedThisFrame = ItemSlot.Right;
+            }
 
             // ホロウナイト準拠の配置:
-            // ジャンプ = ×(A), 攻撃 = □(X), スタイル切替 = △(Y), 回復 = ○(B/フォーカス枠),
+            // ジャンプ = ×(A), 近接攻撃 = □(X), 特殊攻撃 = △(Y), 回復 = ○(B/フォーカス枠),
             // ダッシュ = R2, 裁断 = R1(クイックキャスト枠), 糸移動 = L2(スーパーダッシュ枠),
-            // アイテム = L1, インタラクト = 上入力
+            // アイテム = L1 ホールド+十字, インタラクト = 上入力
             _jumpHeld |= gamepad.buttonSouth.isPressed;
             jumpPressedThisFrame |= gamepad.buttonSouth.wasPressedThisFrame;
             dashPressedThisFrame |= gamepad.rightTrigger.wasPressedThisFrame;
             attackPressedThisFrame |= gamepad.buttonWest.wasPressedThisFrame;
-            stylePressedThisFrame |= gamepad.buttonNorth.wasPressedThisFrame;
+            specialPressedThisFrame |= gamepad.buttonNorth.wasPressedThisFrame;
             finisherPressedThisFrame |= gamepad.rightShoulder.wasPressedThisFrame;
             healPressedThisFrame |= gamepad.buttonEast.wasPressedThisFrame;
-            itemPressedThisFrame |= gamepad.leftShoulder.wasPressedThisFrame;
             grapplePressedThisFrame |= gamepad.leftTrigger.wasPressedThisFrame;
 
             // インタラクト = 上入力 (十字キー上 / 左スティック上) — ホロウナイトと同じ
-            interactPressedThisFrame |= gamepad.dpad.up.wasPressedThisFrame
+            interactPressedThisFrame |= (!itemHeld && gamepad.dpad.up.wasPressedThisFrame)
                                         || gamepad.leftStick.up.wasPressedThisFrame;
         }
 
@@ -358,10 +402,10 @@ public class PlayerController : MonoBehaviour
         // 押されたフレームのみ true。各ステートが TryConsume で消費する
         _dashPressed = dashPressedThisFrame;
         _attackPressed = attackPressedThisFrame;
-        _stylePressed = stylePressedThisFrame;
+        _specialPressed = specialPressedThisFrame;
         _healPressed = healPressedThisFrame;
         _interactPressed = interactPressedThisFrame;
-        _itemPressed = itemPressedThisFrame;
+        _itemSlotPressed = itemSlotPressedThisFrame;
         _grapplePressed = grapplePressedThisFrame;
     }
 
@@ -371,6 +415,7 @@ public class PlayerController : MonoBehaviour
         if (_jumpBufferTimer > 0f) _jumpBufferTimer -= dt;
         if (_finisherBufferTimer > 0f) _finisherBufferTimer -= dt;
         if (_dashCooldownTimer > 0f) _dashCooldownTimer -= dt;
+        if (_specialCooldownTimer > 0f) _specialCooldownTimer -= dt;
     }
 
     #endregion
@@ -400,13 +445,13 @@ public class PlayerController : MonoBehaviour
         return true;
     }
 
-    /// <summary>スタイル切替入力を消費する。</summary>
-    public bool TryConsumeStyleSwitch()
+    /// <summary>特殊攻撃入力を消費する。発動可否 (<see cref="CanSpecialAttack"/>) は呼び出し側で確認する。</summary>
+    public bool TryConsumeSpecial()
     {
-        if (!_stylePressed)
+        if (!_specialPressed)
             return false;
 
-        _stylePressed = false;
+        _specialPressed = false;
         return true;
     }
 
@@ -443,26 +488,21 @@ public class PlayerController : MonoBehaviour
         return true;
     }
 
-    /// <summary>アイテム使用入力を消費する。所持数チェックは呼び出し側で行う。</summary>
-    public bool TryConsumeItemUse()
-    {
-        if (!_itemPressed)
-            return false;
-
-        _itemPressed = false;
-        return true;
-    }
-
     /// <summary>
-    /// 方向入力で使うアイテムスロットを決める (ホロウナイトの術形式)。
-    /// 下 = 下スロット、左 = 左スロット、右 = 右スロット。方向なしは null (不発)。
+    /// アイテム使用入力を消費する (L1/[I] ホールド + 方向で押されたスロット)。
+    /// 所持数チェックは呼び出し側で行う。
     /// </summary>
-    public ItemSlot? SelectSlotByDirection()
+    public bool TryConsumeItemUse(out ItemSlot slot)
     {
-        if (_verticalInput < -0.5f) return ItemSlot.Down;
-        if (_moveInput < -0.5f) return ItemSlot.Left;
-        if (_moveInput > 0.5f) return ItemSlot.Right;
-        return null;
+        if (_itemSlotPressed == null)
+        {
+            slot = default;
+            return false;
+        }
+
+        slot = _itemSlotPressed.Value;
+        _itemSlotPressed = null;
+        return true;
     }
 
     /// <summary>直前のアイテム使用で選ばれたアイテム定義 (ItemThrowState / ItemDashState が参照する)。</summary>
@@ -482,6 +522,49 @@ public class PlayerController : MonoBehaviour
 
     /// <summary>グラップルが使えるか (青ハサミを取得済みか)。</summary>
     public bool CanGrapple() => _progression != null && _progression.Has(ScissorUpgrade.Blue);
+
+    /// <summary>指定方向へ入力しているか (壁張り付きの維持判定用)。</summary>
+    public bool IsPressingToward(int direction) =>
+        direction > 0 ? _moveInput > 0.01f : _moveInput < -0.01f;
+
+    /// <summary>指定方向の壁に接しているか (Ground レイヤー)。</summary>
+    public bool IsTouchingWall(int direction)
+    {
+        var origin = (Vector2)transform.position + new Vector2(0f, 0.3f);
+        return Physics2D.Raycast(origin, new Vector2(direction, 0f),
+            _consts.WallCheckDistance, _consts.GroundLayer);
+    }
+
+    /// <summary>
+    /// 壁張り付き (黄ハサミ) が可能か。空中で壁方向へ入力しながら壁に接している時。
+    /// </summary>
+    public bool CanWallCling()
+    {
+        if (_isGrounded || _progression == null || !_progression.Has(ScissorUpgrade.Yellow))
+            return false;
+
+        if (Mathf.Abs(_moveInput) < 0.01f)
+            return false;
+
+        var dir = _moveInput > 0f ? 1 : -1;
+        return IsTouchingWall(dir);
+    }
+
+    /// <summary>壁張り付き中のずり落ちを適用する (WallClingState.PhysicsUpdate から呼ばれる)。</summary>
+    public void ApplyWallSlide()
+    {
+        _rb.linearVelocity = new Vector2(0f, -_consts.WallSlideSpeed);
+    }
+
+    /// <summary>壁と反対方向へ壁ジャンプする。direction は飛ぶ方向 (1=右, -1=左)。</summary>
+    public void WallJump(int direction)
+    {
+        _rb.linearVelocity = new Vector2(direction * _consts.WallJumpVelocity.x, _consts.WallJumpVelocity.y);
+        _facing.Value = direction;
+        _jumpBufferTimer = 0f;
+        _coyoteTimer = 0f;
+        _airJumpUsed = false; // 壁ジャンプで二段ジャンプを回復
+    }
 
     /// <summary>
     /// 二段ジャンプ (赤ハサミ) を消費する。空中で未使用かつジャンプ先行入力があれば true。
@@ -652,12 +735,46 @@ public class PlayerController : MonoBehaviour
         _isAttacking = false;
     }
 
-    /// <summary>スタイルを切り替える (StyleSwitchState.Enter から呼ばれる)。</summary>
-    public void ToggleStyle()
+    /// <summary>特殊攻撃が発動可能か (装備済み かつ クールダウン明け)。</summary>
+    public bool CanSpecialAttack()
     {
-        _style.Value = _style.Value == ScissorStyle.DualBlades
-            ? ScissorStyle.TwoHanded
-            : ScissorStyle.DualBlades;
+        return _attackLoadout != null
+               && _attackLoadout.CurrentSpecial != null
+               && _specialCooldownTimer <= 0f;
+    }
+
+    /// <summary>特殊攻撃のクールダウンを開始する (SpecialAttackState.Enter から呼ばれる)。</summary>
+    public void BeginSpecialCooldown(float duration)
+    {
+        if (duration <= 0f)
+            return;
+
+        _specialCooldownTimer = duration;
+        _specialCooldownDuration = duration;
+    }
+
+    /// <summary>
+    /// 特殊攻撃クールダウンの残り割合 (1=使った直後, 0=使用可能)。HUD の円形表示用。
+    /// </summary>
+    public float SpecialCooldownRatio =>
+        _specialCooldownDuration <= 0f
+            ? 0f
+            : Mathf.Clamp01(_specialCooldownTimer / _specialCooldownDuration);
+
+    /// <summary>
+    /// 投擲/特殊攻撃の発射位置を計算する。壁際で使った時に弾が壁の中に生成されないよう、
+    /// 目の前に壁があれば手前へ寄せる (ItemThrowState / SpecialAttackState が使う)。
+    /// </summary>
+    public Vector2 ComputeThrowOrigin()
+    {
+        var origin = (Vector2)transform.position + new Vector2(0.5f * _facing.Value, 0.3f);
+
+        var rayStart = (Vector2)transform.position + new Vector2(0f, 0.3f);
+        var wall = Physics2D.Raycast(rayStart, new Vector2(_facing.Value, 0f), 0.9f, _consts.GroundLayer);
+        if (wall.collider != null)
+            origin.x = wall.point.x - _facing.Value * 0.4f;
+
+        return origin;
     }
 
     /// <summary>

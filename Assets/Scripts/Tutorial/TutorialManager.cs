@@ -133,14 +133,14 @@ public class TutorialManager : MonoBehaviour
                  "×(A) でジャンプして段差を越えよう");
         await UniTask.WaitUntil(() => _jumpGoal == null || _jumpGoal.Passed, cancellationToken: ct);
 
-        // 4. 箱に攻撃 (スタイルと切り替えの練習)
-        ShowStep("[J] で攻撃、[K] でスタイル切替 (切替も攻撃になる)。箱を全部壊そう",
-                 "□(X) で攻撃、△(Y) でスタイル切替 (切替も攻撃になる)。箱を全部壊そう");
+        // 4. 箱に攻撃 (近接と特殊攻撃の練習)
+        ShowStep("[J] で近接攻撃、[K] で特殊攻撃 (遠距離)。箱を全部壊そう",
+                 "□(X) で近接攻撃、△(Y) で特殊攻撃 (遠距離)。箱を全部壊そう");
         await UniTask.WaitUntil(() => _boxesBroken >= _boxes.Length, cancellationToken: ct);
 
         // 5. 実戦 (ブレイクと裁断)
         _inCombatStep = true;
-        ShowStep("敵だ! 両手持ちで防御値(白)を削ってブレイクさせよう");
+        ShowStep("敵だ! 特殊攻撃で防御値(白)を削ってブレイクさせよう");
         await UniTask.WaitUntil(() => _enemiesDefeated >= _enemies.Length, cancellationToken: ct);
         _inCombatStep = false;
 

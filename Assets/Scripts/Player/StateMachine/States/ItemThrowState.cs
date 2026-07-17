@@ -40,7 +40,8 @@ public class ItemThrowState : PlayerState
         var elapsed = _item.UseDuration - _timer;
         if (!_activated && elapsed >= _item.UseDelay)
         {
-            _item.Activate(Player, GetSpawnOrigin(), Player.Facing);
+            // 発射位置は壁めり込み補正付き (PlayerController.ComputeThrowOrigin)
+            _item.Activate(Player, Player.ComputeThrowOrigin(), Player.Facing);
             _activated = true;
         }
 
@@ -53,22 +54,5 @@ public class ItemThrowState : PlayerState
         // 使いながら移動できる
         Player.ApplyHorizontalMovement();
         Player.ApplyGravity();
-    }
-
-    /// <summary>
-    /// 発射位置を計算する。壁際で使った時に弾が壁の中に生成されないよう、
-    /// 目の前に壁があれば手前へ寄せる。
-    /// </summary>
-    private Vector2 GetSpawnOrigin()
-    {
-        var facing = Player.Facing;
-        var origin = (Vector2)Player.transform.position + new Vector2(0.5f * facing, 0.3f);
-
-        var rayStart = (Vector2)Player.transform.position + new Vector2(0f, 0.3f);
-        var wall = Physics2D.Raycast(rayStart, new Vector2(facing, 0f), 0.9f, Player.Consts.GroundLayer);
-        if (wall.collider != null)
-            origin.x = wall.point.x - facing * 0.4f;
-
-        return origin;
     }
 }

@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.UI;
 
 /// <summary>
-/// キーボード/パッド操作の汎用メニューパネル。UI は実行時にコードで構築する
-/// (ポーズ・拠点・ゲームオーバー・リザルト・タイトルが共用)。
+/// キーボード/パッド操作の汎用メニューパネル (ポーズ・拠点・ゲームオーバー・リザルト・タイトルが共用)。
+/// UI は実行時に生成せず、プレハブ/シーン上で事前配置したものを SerializeField で参照する
+/// (枠などの素材はプレハブ側の Image / 行テキストを差し替えれば反映される)。
+/// 行も HUD と同様にすべて事前配置し、項目数に応じて表示/非表示を切り替えるだけ。
 /// 操作: W/S・↑↓・十字キー = 選択、Enter/Space/J・Aボタン = 決定、Esc・Bボタン = 戻る。
 /// Time.timeScale = 0 中でも動作する (入力ポーリングのため)。
-/// Canvas の子に置いて <see cref="Initialize"/> を呼んでから使う。
 /// </summary>
 public class MenuPanelView : MonoBehaviour
 {
@@ -41,88 +41,68 @@ public class MenuPanelView : MonoBehaviour
     /// <summary>「戻る」操作をした時に発火する。ページ遷移や Close は所有者が行う。</summary>
     public event Action OnCancelled;
 
-    private TMP_FontAsset _font;
-    private GameObject _root;
-    private TMP_Text _title;
-    private TMP_Text _body;
-    private RectTransform _rowsRoot;
-    private readonly List<TMP_Text> _rowTexts = new();
+    [Header("参照 (プレハブ/シーン上で事前配置)")]
+    [Tooltip("メニュー全体のルート (暗幕)。開閉で表示切替される")]
+    [SerializeField] private GameObject _root;
+
+    [Tooltip("タイトルテキスト")]
+    [SerializeField] private TMP_Text _title;
+
+    [Tooltip("本文テキスト")]
+    [SerializeField] private TMP_Text _body;
+
+    [Tooltip("行テキスト (上から順に事前配置。項目数がこれを超えた分は表示されない)")]
+    [SerializeField] private TMP_Text[] _rows;
+
+    [Header("行の色")]
+    [SerializeField] private Color _normalColor = Color.white;
+    [SerializeField] private Color _selectedColor = new(1f, 0.85f, 0.3f);
+    [SerializeField] private Color _disabledColor = new(0.5f, 0.5f, 0.5f);
+
     private readonly List<Entry> _entries = new();
     private int _index;
+    private bool _initialized;
+    private bool _isValid;
 
-    #region Build
+    #region Setup
 
-    /// <summary>UI を構築する。一度だけ呼ぶ。</summary>
+    /// <summary>
+    /// 初期化する (参照の検証・フォント適用・初期非表示)。一度だけ呼ぶ。
+    /// font は null なら事前配置のフォントをそのまま使う。
+    /// </summary>
     public void Initialize(TMP_FontAsset font)
     {
-        if (_root != null)
+        if (_initialized)
             return;
 
-        _font = font;
+        _initialized = true;
+        _isValid = _root != null && _title != null && _body != null
+                   && _rows != null && _rows.Length > 0;
 
-        // 全面の暗幕
-        _root = new GameObject("MenuRoot", typeof(RectTransform));
-        _root.transform.SetParent(transform, false);
-        Stretch((RectTransform)_root.transform);
-        var dim = _root.AddComponent<Image>();
-        dim.color = new Color(0f, 0f, 0f, 0.6f);
+        if (!_isValid)
+        {
+            Debug.LogError($"[{nameof(MenuPanelView)}] UI 参照が設定されていません。プレハブ上で配置してください。", this);
+            return;
+        }
 
-        // ウィンドウ
-        var window = new GameObject("Window", typeof(RectTransform));
-        window.transform.SetParent(_root.transform, false);
-        var windowRt = (RectTransform)window.transform;
-        windowRt.sizeDelta = new Vector2(680f, 560f);
-        var windowImage = window.AddComponent<Image>();
-        windowImage.color = new Color(0.08f, 0.08f, 0.12f, 0.95f);
+        if (font != null)
+        {
+            _title.font = font;
+            _body.font = font;
+            foreach (var row in _rows)
+            {
+                if (row != null)
+                    row.font = font;
+            }
+        }
 
-        _title = CreateText(windowRt, "Title", 40f, FontStyles.Bold);
-        var titleRt = _title.rectTransform;
-        titleRt.anchorMin = new Vector2(0f, 1f);
-        titleRt.anchorMax = new Vector2(1f, 1f);
-        titleRt.pivot = new Vector2(0.5f, 1f);
-        titleRt.anchoredPosition = new Vector2(0f, -24f);
-        titleRt.sizeDelta = new Vector2(0f, 60f);
-
-        _body = CreateText(windowRt, "Body", 26f, FontStyles.Normal);
-        var bodyRt = _body.rectTransform;
-        bodyRt.anchorMin = new Vector2(0f, 1f);
-        bodyRt.anchorMax = new Vector2(1f, 1f);
-        bodyRt.pivot = new Vector2(0.5f, 1f);
-        bodyRt.anchoredPosition = new Vector2(0f, -92f);
-        bodyRt.sizeDelta = new Vector2(-60f, 190f);
-        _body.alignment = TextAlignmentOptions.Top;
-
-        var rows = new GameObject("Rows", typeof(RectTransform));
-        rows.transform.SetParent(windowRt, false);
-        _rowsRoot = (RectTransform)rows.transform;
-        _rowsRoot.anchorMin = new Vector2(0f, 0f);
-        _rowsRoot.anchorMax = new Vector2(1f, 1f);
-        _rowsRoot.offsetMin = new Vector2(60f, 30f);
-        _rowsRoot.offsetMax = new Vector2(-60f, -100f);
+        foreach (var row in _rows)
+        {
+            if (row != null)
+                row.gameObject.SetActive(false);
+        }
 
         _root.SetActive(false);
-    }
-
-    private static void Stretch(RectTransform rt)
-    {
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = Vector2.zero;
-        rt.offsetMax = Vector2.zero;
-    }
-
-    private TMP_Text CreateText(RectTransform parent, string name, float size, FontStyles style)
-    {
-        var go = new GameObject(name, typeof(RectTransform));
-        go.transform.SetParent(parent, false);
-        var text = go.AddComponent<TextMeshProUGUI>();
-        text.fontSize = size;
-        text.fontStyle = style;
-        text.color = Color.white;
-        text.alignment = TextAlignmentOptions.Center;
-        if (_font != null)
-            text.font = _font;
-        return text;
     }
 
     #endregion
@@ -143,28 +123,25 @@ public class MenuPanelView : MonoBehaviour
 
     public void SetEntries(IReadOnlyList<Entry> entries)
     {
+        if (!_isValid)
+            return;
+
         _entries.Clear();
         _entries.AddRange(entries);
 
-        // 行テキストを必要数まで用意する
-        while (_rowTexts.Count < _entries.Count)
+        // 事前配置した行数を超えた分は表示できない
+        if (_entries.Count > _rows.Length)
         {
-            var row = CreateText(_rowsRoot, $"Row{_rowTexts.Count}", 30f, FontStyles.Normal);
-            row.alignment = TextAlignmentOptions.Left;
-            var rt = row.rectTransform;
-            rt.anchorMin = new Vector2(0f, 1f);
-            rt.anchorMax = new Vector2(1f, 1f);
-            rt.pivot = new Vector2(0.5f, 1f);
-            rt.sizeDelta = new Vector2(0f, 44f);
-            _rowTexts.Add(row);
+            Debug.LogWarning(
+                $"[{nameof(MenuPanelView)}] 項目数 {_entries.Count} が事前配置の行数 {_rows.Length} を超えています。超過分は表示されません。",
+                this);
+            _entries.RemoveRange(_rows.Length, _entries.Count - _rows.Length);
         }
 
-        for (var i = 0; i < _rowTexts.Count; i++)
+        for (var i = 0; i < _rows.Length; i++)
         {
-            var active = i < _entries.Count;
-            _rowTexts[i].gameObject.SetActive(active);
-            if (active)
-                _rowTexts[i].rectTransform.anchoredPosition = new Vector2(0f, -i * 48f);
+            if (_rows[i] != null)
+                _rows[i].gameObject.SetActive(i < _entries.Count);
         }
 
         _index = FirstEnabledIndex();
@@ -173,7 +150,7 @@ public class MenuPanelView : MonoBehaviour
 
     public void Open()
     {
-        if (IsOpen)
+        if (IsOpen || !_isValid)
             return;
 
         IsOpen = true;
@@ -189,7 +166,8 @@ public class MenuPanelView : MonoBehaviour
 
         IsOpen = false;
         _openCount = Mathf.Max(0, _openCount - 1);
-        _root.SetActive(false);
+        if (_root != null)
+            _root.SetActive(false);
     }
 
     #endregion
@@ -275,12 +253,15 @@ public class MenuPanelView : MonoBehaviour
     {
         for (var i = 0; i < _entries.Count; i++)
         {
+            if (_rows[i] == null)
+                continue;
+
             var selected = i == _index;
             var entry = _entries[i];
-            _rowTexts[i].text = (selected ? "▶ " : "　 ") + entry.Label;
-            _rowTexts[i].color = !entry.Enabled
-                ? new Color(0.5f, 0.5f, 0.5f)
-                : selected ? new Color(1f, 0.85f, 0.3f) : Color.white;
+            _rows[i].text = (selected ? "▶ " : "　 ") + entry.Label;
+            _rows[i].color = !entry.Enabled
+                ? _disabledColor
+                : selected ? _selectedColor : _normalColor;
         }
     }
 

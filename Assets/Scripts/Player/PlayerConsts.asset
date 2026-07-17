@@ -70,10 +70,9 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 2048
   _refillThreadCost: 3
-  _slashWaveHpDamage: 1
-  _slashWaveGuardDamage: 1
-  _slashWaveSpeed: 13
-  _slashWaveLifetime: 0.7
+  _wallSlideSpeed: 1.5
+  _wallJumpVelocity: {x: 9, y: 14}
+  _wallCheckDistance: 0.45
   _grappleRange: 9
   _grappleSpeed: 22
   _glideFallSpeed: 2.5
