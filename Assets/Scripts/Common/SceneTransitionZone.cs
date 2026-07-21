@@ -66,7 +66,7 @@ public class SceneTransitionZone : MonoBehaviour
     private bool IsPlayerInside()
     {
         var results = new Collider2D[8];
-        var count = _collider.OverlapCollider(new ContactFilter2D().NoFilter(), results);
+        var count = _collider.Overlap(new ContactFilter2D().NoFilter(), results);
         for (var i = 0; i < count; i++)
         {
             if (results[i] != null && results[i].GetComponentInParent<PlayerController>() != null)
