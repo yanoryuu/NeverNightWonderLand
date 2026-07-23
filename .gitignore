@@ -97,3 +97,6 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# 企画書などのドキュメント出力 (Google Slides 管理)
+/*.pptx
