@@ -380,6 +380,51 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 65402128}
   m_CullTransparentMesh: 1
+--- !u!1 &143299084
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 143299086}
+  - component: {fileID: 143299085}
+  m_Layer: 0
+  m_Name: PlayerSpawnPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &143299085
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 143299084}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 213633da831e7484c8289d81f9b80450, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _id: 
+--- !u!4 &143299086
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 143299084}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1.5, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &163354540
 GameObject:
   m_ObjectHideFlags: 0
@@ -1003,17 +1048,12 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1710230817091283545, guid: 8cfe655dad4f9e64ab55c834cdba4988, type: 3}
   m_PrefabInstance: {fileID: 541855260}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 541855262}
+  m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ecc732cbd0e28e84ba6a8a1556373e2e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!1 &541855262 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 6311746777100379849, guid: 8cfe655dad4f9e64ab55c834cdba4988, type: 3}
-  m_PrefabInstance: {fileID: 541855260}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &610587965
 GameObject:
   m_ObjectHideFlags: 0
@@ -1383,7 +1423,6 @@ GameObject:
   - component: {fileID: 893605432}
   - component: {fileID: 893605431}
   - component: {fileID: 893605430}
-  - component: {fileID: 893605429}
   - component: {fileID: 893605428}
   m_Layer: 0
   m_Name: SceneUI
@@ -1407,19 +1446,6 @@ MonoBehaviour:
   _font: {fileID: 11400000, guid: e4036604c4556bc408dfe7a1bf316733, type: 2}
   _titleSceneName: TitleScene
   _menu: {fileID: 0}
---- !u!114 &893605429
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 893605427}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 850b2bddcb3ea7a499c17c903745bdc4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _font: {fileID: 11400000, guid: e4036604c4556bc408dfe7a1bf316733, type: 2}
 --- !u!114 &893605430
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2253,56 +2279,6 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
---- !u!1 &1458351718
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1458351720}
-  - component: {fileID: 1458351719}
-  m_Layer: 0
-  m_Name: StageLifetimeScope
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1458351719
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1458351718}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 07d09ec9594b18f4bb43dfd131e40623, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  parentReference:
-    TypeName: 
-  autoRun: 1
-  autoInjectGameObjects: []
-  _injectTargets:
-  - {fileID: 541855262}
---- !u!4 &1458351720
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1458351718}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1559072713
 GameObject:
   m_ObjectHideFlags: 0
@@ -3098,37 +3074,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1694422721
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1694422723}
-  m_Layer: 0
-  m_Name: LifeTimeScope
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1694422723
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1694422721}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1905785342
 GameObject:
   m_ObjectHideFlags: 0
@@ -3485,7 +3430,6 @@ SceneRoots:
   m_Roots:
   - {fileID: 350836979}
   - {fileID: 1559072715}
-  - {fileID: 1694422723}
   - {fileID: 1052440462}
   - {fileID: 358152063}
   - {fileID: 1905785345}
@@ -3503,6 +3447,6 @@ SceneRoots:
   - {fileID: 29744309}
   - {fileID: 2105064622}
   - {fileID: 541855260}
-  - {fileID: 1458351720}
   - {fileID: 2031415080}
   - {fileID: 893605434}
+  - {fileID: 143299086}

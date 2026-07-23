@@ -5,11 +5,12 @@ using R3;
 using UnityEngine;
 
 /// <summary>
-/// チュートリアル用の雑魚敵。防御値(白)と HP(赤)の二層構造を持ち、
+/// 敵のコア。防御値(白)と HP(赤)の二層構造を持ち、
 /// 防御値を削り切ると一定時間ブレイク(スタン・無防備・被HPダメージ増)する。
-/// 挙動は enum ベースの簡易ステート(Patrol/Hurt/Break/Dead)で管理する
-/// (プレイヤー級のクラス FSM はボス実装時に検討)。
 /// 攻撃はプレイヤーへの接触ダメージ。
+/// うごき (AI) は同じ GameObject の <see cref="EnemyBehaviour"/> に委譲し、
+/// 行動可能な状態 (Acting) の間だけ Tick を呼ぶ。未装着なら標準の巡回
+/// (<see cref="PatrolChaseBehaviour"/>) を自動で付ける。
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(SpriteRenderer))]
@@ -23,8 +24,8 @@ public class EnemyController : MonoBehaviour, IDamageable
 
     private enum State
     {
-        Patrol, // 巡回
-        Hurt,   // 被弾硬直
+        Acting, // 行動中 (EnemyBehaviour に委譲)
+        Hurt,   // 被弾硬直 / 糸玉拘束
         Break,  // ブレイク (スタン)
         Dead,   // 死亡 (演出中)
     }
@@ -41,13 +42,14 @@ public class EnemyController : MonoBehaviour, IDamageable
     private PlayerHealth _playerHealth;
     private Collider2D _playerCollider;
 
-    private State _state = State.Patrol;
+    private State _state = State.Acting;
     private float _stateTimer;   // Hurt / Break の残り時間
     private float _flashTimer;   // 被弾フラッシュの残り時間
-    private Vector2 _patrolOrigin;
-    private int _moveDir = 1;
-    private bool _wasMovingLastPhysicsStep; // 壁詰まり検知用 (速度を与えたのに動けていない場合に反転)
-    private Transform _playerTransform;     // 追跡 (俊敏型) 用。シーンに1人想定
+    private bool _wasMovingLastPhysicsStep; // 壁詰まり検知用 (Move で速度を与えたのに動けていない場合)
+    private Transform _playerTransform;     // 追跡・狙い撃ち用。シーンに1人想定
+    private EnemyBehaviour _behaviour;      // うごき (AI)。行動中のみ Tick される
+    private EnemyPerception _perception;    // 索敵 (任意)。無ければ距離判定にフォールバック
+    private EnemyAnimator _animator;        // アニメーション制御 (任意)
 
     private ReactiveProperty<int> _hp;
     private ReactiveProperty<int> _guard;
@@ -59,13 +61,53 @@ public class EnemyController : MonoBehaviour, IDamageable
     public EnemyConsts Consts => _consts;
     public bool IsDead => _state == State.Dead;
 
+    /// <summary>被弾硬直 (または糸玉拘束) 中か。EnemyAnimator が参照する。</summary>
+    public bool IsHurt => _state == State.Hurt;
+
+    /// <summary>アニメーション制御 (任意)。未装着なら null (うごき部品は null 条件演算子で使う)。</summary>
+    public EnemyAnimator Animation => _animator;
+
+    /// <summary>プレイヤーの Transform (EnemyBehaviour 用)。不在なら null。</summary>
+    public Transform PlayerTransform => _playerTransform;
+
+    /// <summary>
+    /// プレイヤーを発見しているか (発見後フェーズ)。
+    /// EnemyPerception があればそれに従い (ヒステリシス・記憶・視線)、
+    /// 無ければ EnemyConsts.ChaseRange の単純な距離判定にフォールバックする。
+    /// </summary>
+    public bool IsPlayerDetected =>
+        _perception != null
+            ? _perception.IsAlert
+            : _playerTransform != null && _consts != null && _consts.ChaseRange > 0f
+              && Vector2.Distance(transform.position, _playerTransform.position) <= _consts.ChaseRange;
+
     /// <summary>撃破時に発火する (チュートリアルの達成判定用)。</summary>
     public event Action<EnemyController> OnDied;
+
+    private string _persistentId; // 撃破記録用 ID (ステージ名+初期位置+名前)
+    private bool _trackDefeat;    // 撃破を記録するか (スポナー製は false)
+
+    /// <summary>
+    /// 撃破記録の対象から外す (スポナー製など、何度でも再出現させたい敵に使う)。
+    /// </summary>
+    public void SetDefeatTracking(bool enabled) => _trackDefeat = enabled;
 
     #region Unity Callbacks
 
     private void Awake()
     {
+        // 撃破記録: 一度倒した敵は拠点で休むまで再出現しない (ステージ遷移をまたいで有効)。
+        // ID は「ステージ名+初期位置+名前」で同定するため、シーンに手置きした敵が対象。
+        // 実行時スポーン ("(Clone)") はスポナーが何度でも湧かせるため対象外
+        _trackDefeat = !name.EndsWith("(Clone)");
+        _persistentId = $"{gameObject.scene.name}:{name}:{transform.position.x:F1},{transform.position.y:F1}";
+        if (_trackDefeat && DefeatedEnemyRegistry.IsDefeated(_persistentId))
+        {
+            gameObject.SetActive(false);
+            Destroy(gameObject);
+            return;
+        }
+
         _rb = GetComponent<Rigidbody2D>();
         _sprite = GetComponent<SpriteRenderer>();
         _collider = GetComponent<Collider2D>();
@@ -88,7 +130,15 @@ public class EnemyController : MonoBehaviour, IDamageable
 
         _hp = new ReactiveProperty<int>(_consts.MaxHp);
         _guard = new ReactiveProperty<int>(_consts.MaxGuard);
-        _patrolOrigin = transform.position;
+
+        // うごき (AI)。未装着なら標準の巡回を付ける (既存プレハブ/シーン互換)
+        _behaviour = GetComponent<EnemyBehaviour>();
+        if (_behaviour == null)
+            _behaviour = gameObject.AddComponent<PatrolChaseBehaviour>();
+
+        // 索敵・アニメーション (どちらも任意)
+        _perception = GetComponent<EnemyPerception>();
+        _animator = GetComponent<EnemyAnimator>();
     }
 
     private void Start()
@@ -115,6 +165,7 @@ public class EnemyController : MonoBehaviour, IDamageable
         _stateTimer = Mathf.Max(_stateTimer, duration);
         _wasMovingLastPhysicsStep = false;
         _rb.linearVelocity = new Vector2(0f, _rb.linearVelocity.y);
+        _behaviour?.OnInterrupted();
 
         // 糸に絡まっている見た目 (紫)。拘束が明けるとフラッシュ処理が元の色へ戻す
         _sprite.color = new Color(0.75f, 0.55f, 1f);
@@ -165,21 +216,24 @@ public class EnemyController : MonoBehaviour, IDamageable
             if (_flashTimer <= 0f && _state != State.Dead)
                 _sprite.color = _state == State.Break ? BreakTint() : _baseColor;
         }
+
+        if (_state == State.Acting && _behaviour != null)
+            _behaviour.LogicTick();
     }
 
     private void FixedUpdate()
     {
         switch (_state)
         {
-            case State.Patrol:
-                UpdatePatrol();
+            case State.Acting:
+                _behaviour?.PhysicsTick();
                 CheckContactDamage();
                 break;
 
             case State.Hurt:
                 _stateTimer -= Time.fixedDeltaTime;
                 if (_stateTimer <= 0f)
-                    _state = State.Patrol;
+                    _state = State.Acting;
                 CheckContactDamage();
                 break;
 
@@ -215,38 +269,22 @@ public class EnemyController : MonoBehaviour, IDamageable
 
     #endregion
 
-    #region Movement
+    #region Movement (EnemyBehaviour 用ヘルパー)
 
-    private void UpdatePatrol()
+    /// <summary>
+    /// 水平移動する (速度を直接与える方式)。向きの反転と壁当たり検知
+    /// (<see cref="HitWallLastStep"/>) が揃うため、EnemyBehaviour の移動はこれを使う。
+    /// </summary>
+    public void Move(float horizontalVelocity)
     {
-        var speed = _consts.MoveSpeed;
-
-        // 俊敏型: 検知範囲内のプレイヤーを追跡する (巡回範囲は無視)
-        var chasing = false;
-        if (_playerTransform != null && _consts.ChaseRange > 0f
-            && Vector2.Distance(transform.position, _playerTransform.position) <= _consts.ChaseRange)
-        {
-            chasing = true;
-            speed = _consts.ChaseSpeed;
-            _moveDir = _playerTransform.position.x >= transform.position.x ? 1 : -1;
-        }
-
-        if (!chasing)
-        {
-            // 巡回範囲の端まで来たら反転する
-            var x = transform.position.x;
-            if (_moveDir > 0 && x > _patrolOrigin.x + _consts.PatrolHalfWidth) _moveDir = -1;
-            else if (_moveDir < 0 && x < _patrolOrigin.x - _consts.PatrolHalfWidth) _moveDir = 1;
-
-            // 直前の物理ステップで速度を与えたのに動けていない = 壁に当たっているので反転する
-            if (_wasMovingLastPhysicsStep && Mathf.Abs(_rb.linearVelocity.x) < 0.01f)
-                _moveDir = -_moveDir;
-        }
-
-        _rb.linearVelocity = new Vector2(_moveDir * speed, _rb.linearVelocity.y);
-        _sprite.flipX = _moveDir < 0;
-        _wasMovingLastPhysicsStep = true;
+        _rb.linearVelocity = new Vector2(horizontalVelocity, _rb.linearVelocity.y);
+        if (Mathf.Abs(horizontalVelocity) > 0.01f)
+            _sprite.flipX = horizontalVelocity < 0f;
+        _wasMovingLastPhysicsStep = Mathf.Abs(horizontalVelocity) > 0.01f;
     }
+
+    /// <summary>直前の物理ステップで動こうとしたのに動けていなかったか (壁当たり反転の判定用)。</summary>
+    public bool HitWallLastStep => _wasMovingLastPhysicsStep && Mathf.Abs(_rb.linearVelocity.x) < 0.01f;
 
     #endregion
 
@@ -306,6 +344,7 @@ public class EnemyController : MonoBehaviour, IDamageable
         _state = State.Hurt;
         _stateTimer = _consts.HitStunTime;
         _wasMovingLastPhysicsStep = false;
+        _behaviour?.OnInterrupted();
 
         var power = knockbackOverride > 0f ? knockbackOverride : _consts.KnockbackOnHit;
         var dir = transform.position.x >= hitPoint.x ? 1f : -1f;
@@ -317,6 +356,7 @@ public class EnemyController : MonoBehaviour, IDamageable
         _state = State.Break;
         _stateTimer = _consts.BreakDuration;
         _wasMovingLastPhysicsStep = false;
+        _behaviour?.OnInterrupted();
         _isBroken.Value = true;
         _sprite.color = BreakTint();
         _rb.linearVelocity = new Vector2(0f, _rb.linearVelocity.y);
@@ -324,7 +364,7 @@ public class EnemyController : MonoBehaviour, IDamageable
 
     private void EndBreak()
     {
-        _state = State.Patrol;
+        _state = State.Acting;
         _isBroken.Value = false;
         _guard.Value = _consts.MaxGuard; // ブレイク明けで防御値は全回復
         _sprite.color = _baseColor;
@@ -335,7 +375,13 @@ public class EnemyController : MonoBehaviour, IDamageable
         _state = State.Dead;
         _isBroken.Value = false;
         Active.Remove(this);
+
+        // 拠点で休むまで再出現しないよう記録する
+        if (_trackDefeat)
+            DefeatedEnemyRegistry.MarkDefeated(_persistentId);
+
         OnDied?.Invoke(this);
+        _animator?.PlayDeath();
 
         // リザルト集計と素材「糸」のドロップ
         GameSession.EnemiesDefeated++;
@@ -363,20 +409,4 @@ public class EnemyController : MonoBehaviour, IDamageable
 
     #endregion
 
-    #region Gizmos
-
-    private void OnDrawGizmosSelected()
-    {
-        if (_consts == null)
-            return;
-
-        // 巡回範囲
-        var origin = Application.isPlaying ? _patrolOrigin : (Vector2)transform.position;
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawLine(
-            origin + Vector2.left * _consts.PatrolHalfWidth,
-            origin + Vector2.right * _consts.PatrolHalfWidth);
-    }
-
-    #endregion
 }

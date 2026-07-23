@@ -19,6 +19,7 @@ public class UILifetimeScope : LifetimeScope
     [SerializeField] private ItemSlotView _itemSlotView;
     [SerializeField] private ThreadCountView _threadCountView;
     [SerializeField] private FinisherPromptView _finisherPromptView;
+    [SerializeField] private MinimapView _minimapView;
 
     protected override void Configure(IContainerBuilder builder)
     {
@@ -63,5 +64,9 @@ public class UILifetimeScope : LifetimeScope
             builder.RegisterComponent(_finisherPromptView).As<IFinisherPromptView>();
             builder.RegisterEntryPoint<FinisherPromptPresenter>();
         }
+
+        // ミニマップは Presenter を持たないが、PlayerRuntime の注入 ([Inject]) が必要
+        if (_minimapView != null)
+            builder.RegisterComponent(_minimapView);
     }
 }

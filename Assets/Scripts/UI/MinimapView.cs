@@ -1,15 +1,20 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using VContainer;
 
 /// <summary>
 /// ミニマップ。専用カメラを実行時に生成して RenderTexture に描画し、HUD の RawImage に映す。
+/// PlayerUI シーン (HUD プレハブ) に置けるよう、追従ターゲットは実行時に解決する
+/// (PlayerRuntime 注入 → シリアライズ参照 → シーン検索 の順)。
+/// 生成したカメラは自分と同じシーンに置き、ステージ遷移で破棄されないようにする。
 /// </summary>
 public class MinimapView : MonoBehaviour
 {
     [Tooltip("ミニマップを表示する RawImage")]
     [SerializeField] private RawImage _image;
 
-    [Tooltip("追従するターゲット (プレイヤー)")]
+    [Tooltip("追従するターゲット (任意。未設定なら実行時にプレイヤーを解決する)")]
     [SerializeField] private Transform _target;
 
     [Tooltip("ミニマップカメラの表示範囲 (orthographicSize)")]
@@ -17,6 +22,31 @@ public class MinimapView : MonoBehaviour
 
     private Camera _camera;
     private RenderTexture _renderTexture;
+    private PlayerRuntime _playerRuntime;
+    private PlayerController _foundPlayer; // シーン検索のキャッシュ (破棄されたら引き直す)
+
+    [Inject]
+    public void Construct(PlayerRuntime playerRuntime)
+    {
+        _playerRuntime = playerRuntime;
+    }
+
+    /// <summary>追従ターゲット。Additive シーン運用でもシーンをまたいで解決できる。</summary>
+    private Transform Target
+    {
+        get
+        {
+            if (_playerRuntime != null && _playerRuntime.Current.CurrentValue != null)
+                return _playerRuntime.Current.CurrentValue.transform;
+
+            if (_target != null)
+                return _target;
+
+            if (_foundPlayer == null)
+                _foundPlayer = FindAnyObjectByType<PlayerController>();
+            return _foundPlayer != null ? _foundPlayer.transform : null;
+        }
+    }
 
     private void Start()
     {
@@ -30,6 +60,10 @@ public class MinimapView : MonoBehaviour
         _renderTexture = new RenderTexture(256, 256, 16);
 
         var camGo = new GameObject("MinimapCamera");
+        // 生成先はアクティブシーン (=ステージ) になるため、自分と同じシーンへ移して
+        // ステージ入替で破棄されないようにする
+        SceneManager.MoveGameObjectToScene(camGo, gameObject.scene);
+
         _camera = camGo.AddComponent<Camera>();
         _camera.orthographic = true;
         _camera.orthographicSize = _viewSize;
@@ -43,11 +77,12 @@ public class MinimapView : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (_camera == null || _target == null)
+        var target = Target;
+        if (_camera == null || target == null)
             return;
 
         _camera.transform.position = new Vector3(
-            _target.position.x, _target.position.y + 3f, -10f);
+            target.position.x, target.position.y + 3f, -10f);
     }
 
     private void OnDestroy()

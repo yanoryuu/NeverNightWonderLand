@@ -45,8 +45,9 @@ public class HomeUIView : MonoBehaviour
         _saveBridge = playerGo.GetComponent<PlayerSaveBridge>();
         _savePoint = savePoint;
 
-        // 拠点に入ったら自動で全回復する
+        // 拠点に入ったら自動で全回復し、倒した敵の記録をクリアする (以後のステージ入りで復活)
         HealFull();
+        DefeatedEnemyRegistry.Clear();
 
         GamePause.Push();
         ShowMain();

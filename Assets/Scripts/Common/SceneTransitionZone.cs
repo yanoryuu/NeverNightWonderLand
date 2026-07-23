@@ -48,9 +48,15 @@ public class SceneTransitionZone : MonoBehaviour
         GamePause.Reset();
 
         if (StageLoader.Instance != null)
-            StageLoader.Instance.TransitionTo(_sceneName, _entranceId); // ステージのみ入替 (ステータス維持)
+        {
+            // ステージのみ入替 (ステータス維持)。ロード中などで遷移できなければ発火を取り消す
+            if (!StageLoader.Instance.TransitionTo(_sceneName, _entranceId))
+                _fired = false;
+        }
         else
-            SceneManager.LoadScene(_sceneName);                        // 旧方式 (サンプルシーン)
+        {
+            SceneManager.LoadScene(_sceneName); // 旧方式 (サンプルシーン)
+        }
     }
 
     private void OnTriggerExit2D(Collider2D other)
@@ -65,6 +71,9 @@ public class SceneTransitionZone : MonoBehaviour
     /// <summary>プレイヤーがこのゾーンに重なっているか (アーミングの初期判定用)。</summary>
     private bool IsPlayerInside()
     {
+        // StageLoader が直前に transform を動かしているため、物理状態を同期してから判定する
+        Physics2D.SyncTransforms();
+
         var results = new Collider2D[8];
         var count = _collider.Overlap(new ContactFilter2D().NoFilter(), results);
         for (var i = 0; i < count; i++)

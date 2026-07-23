@@ -66,14 +66,16 @@ public class StageLoader : MonoBehaviour
     /// ステージを入れ替える (プレイヤーは破棄されず、ステータスは維持される)。
     /// entranceId を指定すると、遷移先ステージ内の同じ Id を持つ PlayerSpawnPoint から開始する
     /// (出口⇔入り口の接続)。SceneTransitionZone から呼ばれる。
+    /// ロード中・同一ステージなどで遷移しなかった場合は false を返す。
     /// </summary>
-    public void TransitionTo(string stageName, string entranceId = null)
+    public bool TransitionTo(string stageName, string entranceId = null)
     {
         if (_isLoading || string.IsNullOrEmpty(stageName) || stageName == CurrentStageName)
-            return;
+            return false;
 
         _pendingEntranceId = entranceId;
         LoadStage(stageName, unloadAfter: CurrentStageName);
+        return true;
     }
 
     private void LoadStage(string stageName, string unloadAfter = null)
@@ -116,6 +118,7 @@ public class StageLoader : MonoBehaviour
     {
         GameSession.PendingStage = stageName;
         GamePause.Reset();
+        DefeatedEnemyRegistry.Clear(); // 全リセットでは倒した敵も復活する
 
         if (Application.CanStreamedLevelBeLoaded(PlayerSceneName))
         {

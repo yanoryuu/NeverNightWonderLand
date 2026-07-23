@@ -1278,6 +1278,7 @@ public static class TutorialSceneBuilder
 
             var enemy = root.AddComponent<EnemyController>();
             SetRef(enemy, "_consts", GetOrCreateEnemyConsts());
+            root.AddComponent<PatrolChaseBehaviour>(); // 標準のうごき (差し替え可能)
 
             BuildEnemyStatusCanvas(root, square);
 
@@ -1676,6 +1677,23 @@ public static class TutorialSceneBuilder
         var notifyView = notifyRoot.gameObject.AddComponent<NotificationView>();
         SetRef(notifyView, "_label", notifyLabel);
 
+        // ---- ミニマップ (右上)。ターゲットは PlayerRuntime 経由の実行時解決 ----
+        var minimapRoot = CreateUIObject("Minimap", root);
+        minimapRoot.anchorMin = new Vector2(1f, 1f);
+        minimapRoot.anchorMax = new Vector2(1f, 1f);
+        minimapRoot.pivot = new Vector2(1f, 1f);
+        minimapRoot.anchoredPosition = new Vector2(-24f, -24f);
+        minimapRoot.sizeDelta = new Vector2(240f, 240f);
+        var minimapBorder = minimapRoot.gameObject.AddComponent<Image>();
+        minimapBorder.color = new Color(0.1f, 0.1f, 0.1f, 0.9f);
+        minimapBorder.sprite = square;
+        var minimapImageGo = new GameObject("Map", typeof(RectTransform));
+        minimapImageGo.transform.SetParent(minimapRoot, false);
+        StretchWithPadding((RectTransform)minimapImageGo.transform, 4f);
+        var minimapImage = minimapImageGo.AddComponent<RawImage>();
+        var minimapView = minimapRoot.gameObject.AddComponent<MinimapView>();
+        SetRef(minimapView, "_image", minimapImage);
+
         // ---- DI スコープ: View を登録し Presenter を起動する ----
         var uiScope = hudGo.AddComponent<UILifetimeScope>();
         SetRef(uiScope, "_hpBarView", hpView);
@@ -1685,6 +1703,7 @@ public static class TutorialSceneBuilder
         SetRef(uiScope, "_itemSlotView", itemView);
         SetRef(uiScope, "_threadCountView", threadView);
         SetRef(uiScope, "_finisherPromptView", finisherView);
+        SetRef(uiScope, "_minimapView", minimapView);
 
         EnsureDirectory(PrefabDir);
         var prefab = PrefabUtility.SaveAsPrefabAsset(hudGo, HudPrefabPath);
@@ -1759,23 +1778,7 @@ public static class TutorialSceneBuilder
         SetString(areaView, "_areaName", areaName);
         SetRef(areaView, "_label", areaLabel);
 
-        // ---- ミニマップ (右上) ----
-        var minimapRoot = CreateUIObject("Minimap", root);
-        minimapRoot.anchorMin = new Vector2(1f, 1f);
-        minimapRoot.anchorMax = new Vector2(1f, 1f);
-        minimapRoot.pivot = new Vector2(1f, 1f);
-        minimapRoot.anchoredPosition = new Vector2(-24f, -24f);
-        minimapRoot.sizeDelta = new Vector2(240f, 240f);
-        var minimapBorder = minimapRoot.gameObject.AddComponent<Image>();
-        minimapBorder.color = new Color(0.1f, 0.1f, 0.1f, 0.9f);
-        minimapBorder.sprite = square;
-        var minimapImageGo = new GameObject("Map", typeof(RectTransform));
-        minimapImageGo.transform.SetParent(minimapRoot, false);
-        StretchWithPadding((RectTransform)minimapImageGo.transform, 4f);
-        var minimapImage = minimapImageGo.AddComponent<RawImage>();
-        var minimapView = minimapRoot.gameObject.AddComponent<MinimapView>();
-        SetRef(minimapView, "_image", minimapImage);
-        SetRef(minimapView, "_target", player.transform);
+        // ミニマップは HUD プレハブ (PlayerUI) 側に含まれる (ターゲットは実行時解決)
 
         return sceneUiGo;
     }
@@ -2183,31 +2186,7 @@ public static class TutorialSceneBuilder
         new GameObject("StageLoader").AddComponent<StageLoader>();
         new GameObject("UISceneBootstrap").AddComponent<UISceneBootstrap>();
 
-        // ---- ミニマップ (プレイヤー追従なので PlayerScene 側に持つ) ----
-        var uiGo = new GameObject("PlayerSceneUI");
-        var uiCanvas = uiGo.AddComponent<Canvas>();
-        uiCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        var uiScaler = uiGo.AddComponent<CanvasScaler>();
-        uiScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        uiScaler.referenceResolution = new Vector2(1920f, 1080f);
-        uiScaler.matchWidthOrHeight = 0.5f;
-
-        var minimapRoot = CreateUIObject("Minimap", (RectTransform)uiGo.transform);
-        minimapRoot.anchorMin = new Vector2(1f, 1f);
-        minimapRoot.anchorMax = new Vector2(1f, 1f);
-        minimapRoot.pivot = new Vector2(1f, 1f);
-        minimapRoot.anchoredPosition = new Vector2(-24f, -24f);
-        minimapRoot.sizeDelta = new Vector2(240f, 240f);
-        var minimapBorder = minimapRoot.gameObject.AddComponent<Image>();
-        minimapBorder.color = new Color(0.1f, 0.1f, 0.1f, 0.9f);
-        minimapBorder.sprite = square;
-        var minimapImageGo = new GameObject("Map", typeof(RectTransform));
-        minimapImageGo.transform.SetParent(minimapRoot, false);
-        StretchWithPadding((RectTransform)minimapImageGo.transform, 4f);
-        var minimapImage = minimapImageGo.AddComponent<RawImage>();
-        var minimapView = minimapRoot.gameObject.AddComponent<MinimapView>();
-        SetRef(minimapView, "_image", minimapImage);
-        SetRef(minimapView, "_target", player.transform);
+        // ミニマップは HUD プレハブ (PlayerUI) 側に含まれる (ターゲットは実行時解決)
 
         EditorSceneManager.SaveScene(scene, PlayerScenePath);
         AddSceneToBuildSettings(PlayerScenePath);

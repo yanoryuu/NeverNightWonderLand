@@ -42,6 +42,7 @@ public class EnemySpawner : MonoBehaviour
         }
 
         _current.ApplyProfile(_consts, _tint);
+        _current.SetDefeatTracking(false); // スポナー製は撃破記録の対象外 (何度でも湧く)
         _current.OnDied += OnEnemyDied;
     }
 
