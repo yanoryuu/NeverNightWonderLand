@@ -41,8 +41,9 @@ public sealed class PlayerItemInventoryModel : IDisposable
     }
 
     /// <summary>
-    /// スポーン時の初期化。カタログを登録し、所持数を最大・スロットを初期構成・糸を 0 に戻す
+    /// スポーン時の初期化。カタログを登録し、所持数を 0 (未所持)・スロットを初期構成・糸を 0 に戻す
     /// (Model はシーンをまたぐため明示リセットが必要)。
+    /// アイテムはゲーム進行での入手や拠点の補充で手に入れる。
     /// </summary>
     public void ResetForSpawn(IReadOnlyList<ItemDefinition> catalog, IReadOnlyList<ItemDefinition> defaultSlots)
     {
@@ -58,9 +59,9 @@ public sealed class PlayerItemInventoryModel : IDisposable
                 _catalog.Add(item);
 
                 if (_counts.TryGetValue(item, out var count))
-                    count.Value = item.MaxCount;
+                    count.Value = 0;
                 else
-                    _counts.Add(item, new ReactiveProperty<int>(item.MaxCount));
+                    _counts.Add(item, new ReactiveProperty<int>(0));
             }
         }
 

@@ -311,9 +311,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: a43b3382fb176ad43bbd0100af0b2916, type: 2}
   - {fileID: 11400000, guid: fc79622088e3a564d83d0cea929582fd, type: 2}
   _defaultSlots:
-  - {fileID: 11400000, guid: 4772807e4bbaf054eaa2179d88c30dee, type: 2}
-  - {fileID: 11400000, guid: 7ee2907c79a3834468d89679ce3b1fe6, type: 2}
-  - {fileID: 11400000, guid: 1c02efdff32e64d479527b1d05c1ae4b, type: 2}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
 --- !u!114 &8107723167950756562
 MonoBehaviour:
   m_ObjectHideFlags: 0

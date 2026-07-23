@@ -38,6 +38,21 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/UI/ResultUI.unity
     guid: 356a58ff9f3ab884cb2e1e7021dfbbd6
+  - enabled: 1
+    path: Assets/Scenes/PlayerScene.unity
+    guid: 578632a4f5c679644a66de43849fb8b6
+  - enabled: 1
+    path: Assets/Scenes/GameField/MaintenanceTunnelScene.unity
+    guid: 00eb52fbc5410e24bbffbbbbc32f94ee
+  - enabled: 1
+    path: Assets/Scenes/GameField/ServiceShaftScene.unity
+    guid: 6d23ce41a16f12c4e884ce4665aeab11
+  - enabled: 1
+    path: Assets/Scenes/GameField/CarouselPlazaScene.unity
+    guid: 02326c248d7591d4da7b6831880dd2e1
+  - enabled: 1
+    path: Assets/Scenes/GameField/FerrisWheelHillScene.unity
+    guid: 61b25191fa23cf64db50144c6212d82a
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

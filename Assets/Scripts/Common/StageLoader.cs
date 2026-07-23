@@ -74,7 +74,24 @@ public class StageLoader : MonoBehaviour
             return false;
 
         _pendingEntranceId = entranceId;
-        LoadStage(stageName, unloadAfter: CurrentStageName);
+
+        // 一瞬暗転してから入れ替える (プレイヤーのワープとカメラのスナップを見せない)
+        var fader = ScreenFader.Instance;
+        if (fader != null)
+        {
+            _isLoading = true; // 暗転中の多重発火も防ぐ
+            var unloadAfter = CurrentStageName;
+            fader.FadeOut(() =>
+            {
+                _isLoading = false; // LoadStage が改めて管理する
+                LoadStage(stageName, unloadAfter);
+            });
+        }
+        else
+        {
+            LoadStage(stageName, unloadAfter: CurrentStageName);
+        }
+
         return true;
     }
 
@@ -87,6 +104,7 @@ public class StageLoader : MonoBehaviour
         {
             Debug.LogError($"[{nameof(StageLoader)}] ステージ '{stageName}' をロードできません。Build Settings を確認してください。", this);
             _pendingEntranceId = null;
+            ScreenFader.Instance?.FadeIn(); // 暗転したまま止まらないように
             return;
         }
 
@@ -106,7 +124,14 @@ public class StageLoader : MonoBehaviour
                 SceneManager.SetActiveScene(scene);
 
             PlacePlayer(scene);
+
+            // 暗転中にカメラをプレイヤーへ即時スナップしてから明転する
+            var follow = FindAnyObjectByType<CameraFollow>();
+            if (follow != null)
+                follow.SnapToTarget();
+
             _isLoading = false;
+            ScreenFader.Instance?.FadeIn();
         };
     }
 

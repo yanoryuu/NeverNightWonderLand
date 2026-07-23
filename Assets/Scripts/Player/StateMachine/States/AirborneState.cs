@@ -23,6 +23,14 @@ public abstract class AirborneState : PlayerState
             return;
         }
 
+        // 崖際に体が届いたら登る (ジャンプが縁にわずかに届かない時の救済。壁張り付きより優先)
+        if (Player.TryGetLedgeTarget(out var ledgeTarget))
+        {
+            Player.LedgeClimbState.SetTarget(ledgeTarget);
+            StateMachine.ChangeState(Player.LedgeClimbState);
+            return;
+        }
+
         // 壁張り付き (黄ハサミ取得後): 壁方向へ入力しながら壁に触れている
         if (Player.CanWallCling())
         {

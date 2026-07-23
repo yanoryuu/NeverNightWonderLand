@@ -21,6 +21,21 @@ public class CameraFollow : MonoBehaviour
 
     private Vector3 _velocity;
 
+    /// <summary>
+    /// ターゲット位置へ即座に移動する (ステージ遷移でプレイヤーがワープした時用。
+    /// 暗転中に呼ぶことで、カメラが移動していく様子を見せない)。
+    /// </summary>
+    public void SnapToTarget()
+    {
+        if (_target == null)
+            return;
+
+        var desired = _target.position + _offset;
+        desired.y = Mathf.Max(desired.y, _minY);
+        transform.position = desired;
+        _velocity = Vector3.zero;
+    }
+
     private void LateUpdate()
     {
         if (_target == null)

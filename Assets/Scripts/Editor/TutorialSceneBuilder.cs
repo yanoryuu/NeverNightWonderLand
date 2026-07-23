@@ -1539,7 +1539,11 @@ public static class TutorialSceneBuilder
     {
         var existing = AssetDatabase.LoadAssetAtPath<GameObject>(HudPrefabPath);
         if (existing != null)
-            return existing;
+        {
+            // 旧仕様 (ミニマップ無し) なら GUID を維持したまま補修する
+            RepairHudPrefabIfOutdated();
+            return AssetDatabase.LoadAssetAtPath<GameObject>(HudPrefabPath);
+        }
 
         var square = GetSquareSprite();
         var circle = GetCircleSprite();
@@ -1678,21 +1682,7 @@ public static class TutorialSceneBuilder
         SetRef(notifyView, "_label", notifyLabel);
 
         // ---- ミニマップ (右上)。ターゲットは PlayerRuntime 経由の実行時解決 ----
-        var minimapRoot = CreateUIObject("Minimap", root);
-        minimapRoot.anchorMin = new Vector2(1f, 1f);
-        minimapRoot.anchorMax = new Vector2(1f, 1f);
-        minimapRoot.pivot = new Vector2(1f, 1f);
-        minimapRoot.anchoredPosition = new Vector2(-24f, -24f);
-        minimapRoot.sizeDelta = new Vector2(240f, 240f);
-        var minimapBorder = minimapRoot.gameObject.AddComponent<Image>();
-        minimapBorder.color = new Color(0.1f, 0.1f, 0.1f, 0.9f);
-        minimapBorder.sprite = square;
-        var minimapImageGo = new GameObject("Map", typeof(RectTransform));
-        minimapImageGo.transform.SetParent(minimapRoot, false);
-        StretchWithPadding((RectTransform)minimapImageGo.transform, 4f);
-        var minimapImage = minimapImageGo.AddComponent<RawImage>();
-        var minimapView = minimapRoot.gameObject.AddComponent<MinimapView>();
-        SetRef(minimapView, "_image", minimapImage);
+        var minimapView = CreateMinimapUI(root, square);
 
         // ---- DI スコープ: View を登録し Presenter を起動する ----
         var uiScope = hudGo.AddComponent<UILifetimeScope>();
@@ -1709,6 +1699,55 @@ public static class TutorialSceneBuilder
         var prefab = PrefabUtility.SaveAsPrefabAsset(hudGo, HudPrefabPath);
         Object.DestroyImmediate(hudGo);
         return prefab;
+    }
+
+    /// <summary>ミニマップ UI (枠 + RawImage + MinimapView) を右上に構築する。ターゲットは実行時解決。</summary>
+    private static MinimapView CreateMinimapUI(RectTransform root, Sprite square)
+    {
+        var minimapRoot = CreateUIObject("Minimap", root);
+        minimapRoot.anchorMin = new Vector2(1f, 1f);
+        minimapRoot.anchorMax = new Vector2(1f, 1f);
+        minimapRoot.pivot = new Vector2(1f, 1f);
+        minimapRoot.anchoredPosition = new Vector2(-24f, -24f);
+        minimapRoot.sizeDelta = new Vector2(240f, 240f);
+        var minimapBorder = minimapRoot.gameObject.AddComponent<Image>();
+        minimapBorder.color = new Color(0.1f, 0.1f, 0.1f, 0.9f);
+        minimapBorder.sprite = square;
+        var minimapImageGo = new GameObject("Map", typeof(RectTransform));
+        minimapImageGo.transform.SetParent(minimapRoot, false);
+        StretchWithPadding((RectTransform)minimapImageGo.transform, 4f);
+        var minimapImage = minimapImageGo.AddComponent<RawImage>();
+        var minimapView = minimapRoot.gameObject.AddComponent<MinimapView>();
+        SetRef(minimapView, "_image", minimapImage);
+        return minimapView;
+    }
+
+    /// <summary>
+    /// 旧仕様の HUD.prefab (ミニマップ無し) を補修する。
+    /// GUID が維持されるため、配置済みシーン (PlayerUI.unity 等) のインスタンスにもそのまま反映される。
+    /// </summary>
+    private static void RepairHudPrefabIfOutdated()
+    {
+        var existing = AssetDatabase.LoadAssetAtPath<GameObject>(HudPrefabPath);
+        if (existing == null || existing.GetComponentInChildren<MinimapView>(true) != null)
+            return;
+
+        var root = PrefabUtility.LoadPrefabContents(HudPrefabPath);
+        try
+        {
+            var minimapView = CreateMinimapUI((RectTransform)root.transform, GetSquareSprite());
+
+            var uiScope = root.GetComponent<UILifetimeScope>();
+            if (uiScope != null)
+                SetRef(uiScope, "_minimapView", minimapView);
+
+            PrefabUtility.SaveAsPrefabAsset(root, HudPrefabPath);
+            Debug.Log("[TutorialSceneBuilder] HUD.prefab にミニマップを補修追加しました。");
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(root);
+        }
     }
 
     /// <summary>
@@ -1866,7 +1905,11 @@ public static class TutorialSceneBuilder
     {
         var existing = AssetDatabase.LoadAssetAtPath<GameObject>(HomeUIPrefabPath);
         if (existing != null)
-            return existing;
+        {
+            // 旧仕様 (HomeUIView 無しの骨組み) なら GUID を維持したまま補修する
+            RepairHomeUIPrefabIfOutdated(jpFont);
+            return AssetDatabase.LoadAssetAtPath<GameObject>(HomeUIPrefabPath);
+        }
 
         var homeGo = new GameObject("HomeUI");
         var canvas = homeGo.AddComponent<Canvas>();
@@ -1891,6 +1934,47 @@ public static class TutorialSceneBuilder
         var prefab = PrefabUtility.SaveAsPrefabAsset(homeGo, HomeUIPrefabPath);
         Object.DestroyImmediate(homeGo);
         return prefab;
+    }
+
+    /// <summary>
+    /// 旧仕様の HomeUI.prefab (HomeUIView 無しの骨組み) を新仕様へ補修する。
+    /// GUID が維持されるため、配置済みシーン (HomeUI.unity) のインスタンスにもそのまま反映される。
+    /// </summary>
+    private static void RepairHomeUIPrefabIfOutdated(TMP_FontAsset jpFont)
+    {
+        var existing = AssetDatabase.LoadAssetAtPath<GameObject>(HomeUIPrefabPath);
+        if (existing == null || existing.GetComponent<HomeUIView>() != null)
+            return;
+
+        var root = PrefabUtility.LoadPrefabContents(HomeUIPrefabPath);
+        try
+        {
+            // 旧スケルトン (HomeRoot: 暗幕/ウィンドウのみ) は撤去して実体に置き換える
+            var stale = root.transform.Find("HomeRoot");
+            if (stale != null)
+                Object.DestroyImmediate(stale.gameObject);
+
+            var homeView = root.GetComponent<HomeUIView>();
+            if (homeView == null)
+                homeView = root.AddComponent<HomeUIView>();
+            SetRef(homeView, "_font", jpFont);
+
+            var panelTransform = root.transform.Find("HomePanel");
+            var menu = panelTransform != null ? panelTransform.GetComponent<MenuPanelView>() : null;
+            if (menu == null)
+                menu = CreateMenuPanel((RectTransform)root.transform, "HomePanel", jpFont);
+            SetRef(homeView, "_menu", menu);
+
+            if (root.GetComponent<HomeLifetimeScope>() == null)
+                root.AddComponent<HomeLifetimeScope>();
+
+            PrefabUtility.SaveAsPrefabAsset(root, HomeUIPrefabPath);
+            Debug.Log("[TutorialSceneBuilder] HomeUI.prefab を新仕様 (HomeUIView + HomePanel) に補修しました。");
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(root);
+        }
     }
 
     /// <summary>

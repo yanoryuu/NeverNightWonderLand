@@ -10,7 +10,7 @@ using UnityEngine;
 public class BreakableBox : MonoBehaviour, IDamageable
 {
     [Tooltip("耐久値。HPダメージ+防御値ダメージの合算で削られる")]
-    [SerializeField] private int _maxHp = 4;
+    [SerializeField] private int _maxHp = 1;
 
     [Tooltip("被弾フラッシュの時間 (sec)")]
     [SerializeField] private float _hitFlashTime = 0.1f;

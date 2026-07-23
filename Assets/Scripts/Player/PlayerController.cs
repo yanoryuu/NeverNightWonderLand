@@ -75,6 +75,7 @@ public class PlayerController : MonoBehaviour
     public ItemDashState ItemDashState { get; private set; }
     public GrappleState GrappleState { get; private set; }
     public WallClingState WallClingState { get; private set; }
+    public LedgeClimbState LedgeClimbState { get; private set; }
 
     #endregion
 
@@ -172,6 +173,7 @@ public class PlayerController : MonoBehaviour
     private void Awake()
     {
         _rb = GetComponent<Rigidbody2D>();
+        _ownColliders = GetComponents<Collider2D>();
         _animator = GetComponent<Animator>();
         _health = GetComponent<PlayerHealth>();
         _healGauge = GetComponent<PlayerHealGauge>();
@@ -225,6 +227,7 @@ public class PlayerController : MonoBehaviour
         ItemDashState = new ItemDashState(this, _stateMachine);
         GrappleState = new GrappleState(this, _stateMachine);
         WallClingState = new WallClingState(this, _stateMachine);
+        LedgeClimbState = new LedgeClimbState(this, _stateMachine);
 
         // 初期化がすべて終わってから UI (Presenter) へ自身を公開する
         _playerRuntime?.Register(this);
@@ -416,6 +419,23 @@ public class PlayerController : MonoBehaviour
         if (_finisherBufferTimer > 0f) _finisherBufferTimer -= dt;
         if (_dashCooldownTimer > 0f) _dashCooldownTimer -= dt;
         if (_specialCooldownTimer > 0f) _specialCooldownTimer -= dt;
+
+        // 降り抜け中のすり抜け床: 時間が経ったら衝突を戻す
+        for (var i = _dropThroughPlatforms.Count - 1; i >= 0; i--)
+        {
+            _dropThroughTimers[i] -= dt;
+            if (_dropThroughTimers[i] > 0f)
+                continue;
+
+            if (_dropThroughPlatforms[i] != null)
+            {
+                foreach (var own in _ownColliders)
+                    Physics2D.IgnoreCollision(own, _dropThroughPlatforms[i], false);
+            }
+
+            _dropThroughPlatforms.RemoveAt(i);
+            _dropThroughTimers.RemoveAt(i);
+        }
     }
 
     #endregion
@@ -585,20 +605,49 @@ public class PlayerController : MonoBehaviour
 
     #region Movement Helpers (states 用)
 
+    // 接地判定の結果バッファ (毎フレームの確保を避ける)
+    private readonly Collider2D[] _groundHits = new Collider2D[8];
+
+    // 降り抜け (下入力+ジャンプ) 中に衝突を無効化しているすり抜け床と残り時間
+    private const float DropThroughTime = 0.3f;
+    private Collider2D[] _ownColliders;
+    private readonly System.Collections.Generic.List<Collider2D> _dropThroughPlatforms = new();
+    private readonly System.Collections.Generic.List<float> _dropThroughTimers = new();
+
     private void UpdateGrounded()
     {
         var wasGrounded = _isGrounded;
+        _isGrounded = false;
 
         if (_groundCheck != null)
         {
-            _isGrounded = Physics2D.OverlapCircle(
-                _groundCheck.position,
-                _consts.GroundCheckRadius,
-                _consts.GroundLayer);
-        }
-        else
-        {
-            _isGrounded = false;
+            var filter = new ContactFilter2D
+            {
+                useLayerMask = true,
+                layerMask = _consts.GroundLayer,
+                useTriggers = false, // ヒントゾーン等のトリガーを地面と誤認しない
+            };
+            var count = Physics2D.OverlapCircle(
+                (Vector2)_groundCheck.position, _consts.GroundCheckRadius, filter, _groundHits);
+
+            for (var i = 0; i < count; i++)
+            {
+                // 降り抜け中の床は接地とみなさない (衝突無効中でもクエリには映るため)
+                if (_dropThroughPlatforms.Contains(_groundHits[i]))
+                    continue;
+
+                // すり抜け床 (PlatformEffector2D の一方通行) は、下から通過している
+                // 上昇中には接地とみなさない (通過中に Idle へ戻ってしまうのを防ぐ)
+                if (_rb.linearVelocity.y > 0.1f
+                    && _groundHits[i].usedByEffector
+                    && _groundHits[i].GetComponent<PlatformEffector2D>() != null)
+                {
+                    continue;
+                }
+
+                _isGrounded = true;
+                break;
+            }
         }
 
         if (_isGrounded)
@@ -655,6 +704,158 @@ public class PlayerController : MonoBehaviour
         }
 
         _rb.linearVelocity = new Vector2(_rb.linearVelocity.x, velocityY);
+    }
+
+    #region Ledge Climb
+
+    // 崖登りの判定パラメータ
+    private const float LedgeMinHeight = 0.4f;   // これ未満の段差は普通に歩ける/低すぎるので登らない
+    private const float LedgeMaxHeight = 1.3f;   // 足元からこの高さまでに崖の上面があれば掴める (縁ぎりぎりのみ)
+    private const float LedgeHeadClearance = 1.45f; // この高さの前方が塞がっていたら「高い壁」とみなし登らない
+
+    private readonly RaycastHit2D[] _ledgeHits = new RaycastHit2D[4];
+
+    /// <summary>
+    /// 崖際 (壁の最上部付近) を登れるか判定し、登り先 (崖の上に立つ位置) を返す。
+    /// 条件: 移動入力の方向に壁があり、頭上の高さは空いていて、壁の向こうの上面が
+    /// 足元から LedgeMin〜MaxHeight の範囲にある。高い壁の途中では発動しない
+    /// (壁登りはハサミ強化の領分)。すり抜け床は壁として扱わない。
+    /// </summary>
+    public bool TryGetLedgeTarget(out Vector2 target)
+    {
+        target = default;
+
+        if (Mathf.Abs(_moveInput) < 0.01f || _groundCheck == null)
+            return false;
+
+        var dir = _moveInput > 0f ? 1 : -1;
+        var feetY = _groundCheck.position.y - _consts.GroundCheckRadius;
+        var x = transform.position.x;
+        var wallDist = _consts.WallCheckDistance + 0.15f;
+
+        var filter = new ContactFilter2D
+        {
+            useLayerMask = true,
+            layerMask = _consts.GroundLayer,
+            useTriggers = false,
+        };
+
+        // 1) 体の高さに壁があるか (すり抜け床は除外)
+        var found = false;
+        var count = Physics2D.Raycast(new Vector2(x, feetY + 0.3f), new Vector2(dir, 0f),
+            filter, _ledgeHits, wallDist);
+        for (var i = 0; i < count; i++)
+        {
+            if (_ledgeHits[i].collider.usedByEffector
+                && _ledgeHits[i].collider.GetComponent<PlatformEffector2D>() != null)
+                continue;
+
+            found = true;
+            break;
+        }
+
+        if (!found)
+            return false;
+
+        // 2) 頭上の高さの前方は空いているか (塞がっていたら高い壁 = 登れない)
+        count = Physics2D.Raycast(new Vector2(x, feetY + LedgeHeadClearance), new Vector2(dir, 0f),
+            filter, _ledgeHits, wallDist + 0.4f);
+        for (var i = 0; i < count; i++)
+        {
+            if (_ledgeHits[i].collider.usedByEffector
+                && _ledgeHits[i].collider.GetComponent<PlatformEffector2D>() != null)
+                continue;
+
+            return false;
+        }
+
+        // 3) 壁の向こう側で崖の上面を探す
+        var overX = x + dir * (wallDist + 0.35f);
+        count = Physics2D.Raycast(new Vector2(overX, feetY + LedgeHeadClearance + 0.1f), Vector2.down,
+            filter, _ledgeHits, LedgeHeadClearance + 0.2f);
+        if (count == 0)
+            return false;
+
+        var top = _ledgeHits[0].point.y;
+
+        // 4) 上面が「掴める窓」(足元より少し上〜胸の高さ) にあること
+        var height = top - feetY;
+        if (height < LedgeMinHeight || height > LedgeMaxHeight)
+            return false;
+
+        // 5) 登り先に立つ空間があること
+        var standCount = Physics2D.OverlapCircle(new Vector2(overX, top + 0.75f), 0.3f, filter, _groundHits);
+        for (var i = 0; i < standCount; i++)
+        {
+            if (_groundHits[i].usedByEffector
+                && _groundHits[i].GetComponent<PlatformEffector2D>() != null)
+                continue;
+
+            return false;
+        }
+
+        var pivotOffset = transform.position.y - feetY;
+        target = new Vector2(overX, top + pivotOffset + 0.02f);
+        return true;
+    }
+
+    #endregion
+
+    /// <summary>
+    /// 乗っているすり抜け床から降りる (下入力+ジャンプ)。
+    /// 足元が全てすり抜け床の時のみ発動し、しばらく衝突を無効化して落下する。
+    /// 通常の地面が混ざっている場合は何もしない。降下を開始したら true。
+    /// </summary>
+    public bool TryDropThroughPlatform()
+    {
+        if (_groundCheck == null)
+            return false;
+
+        var filter = new ContactFilter2D
+        {
+            useLayerMask = true,
+            layerMask = _consts.GroundLayer,
+            useTriggers = false,
+        };
+        var count = Physics2D.OverlapCircle(
+            (Vector2)_groundCheck.position, _consts.GroundCheckRadius, filter, _groundHits);
+
+        // 足元の全てがすり抜け床であることを確認する
+        var anyPlatform = false;
+        for (var i = 0; i < count; i++)
+        {
+            if (_dropThroughPlatforms.Contains(_groundHits[i]))
+                continue;
+
+            if (!_groundHits[i].usedByEffector
+                || _groundHits[i].GetComponent<PlatformEffector2D>() == null)
+            {
+                return false;
+            }
+
+            anyPlatform = true;
+        }
+
+        if (!anyPlatform)
+            return false;
+
+        for (var i = 0; i < count; i++)
+        {
+            var platform = _groundHits[i];
+            if (_dropThroughPlatforms.Contains(platform))
+                continue;
+
+            foreach (var own in _ownColliders)
+                Physics2D.IgnoreCollision(own, platform, true);
+
+            _dropThroughPlatforms.Add(platform);
+            _dropThroughTimers.Add(DropThroughTime);
+        }
+
+        // 消費したジャンプ入力で跳ばないようにバッファを破棄する
+        _jumpBufferTimer = 0f;
+        _coyoteTimer = 0f;
+        return true;
     }
 
     /// <summary>コヨーテタイムを回復する (グラップルで壁に張り付いた時など)。</summary>
