@@ -451,7 +451,9 @@ GameObject:
   - component: {fileID: 8264369827477236021}
   - component: {fileID: 7482128074622694698}
   - component: {fileID: 8547182982536813380}
-  - component: {fileID: 692635133404871239}
+  - component: {fileID: 4868579200280597869}
+  - component: {fileID: 7182248476563523687}
+  - component: {fileID: 7505618301579665281}
   m_Layer: 9
   m_Name: FlyingEnemy
   m_TagString: Untagged
@@ -616,7 +618,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _consts: {fileID: 11400000, guid: cd3929950c7d0e04d80f2bd1b9ad7472, type: 2}
---- !u!114 &692635133404871239
+--- !u!114 &4868579200280597869
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -625,12 +627,36 @@ MonoBehaviour:
   m_GameObject: {fileID: 6441443267434100320}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ccdfe7aa26de5d74ab38c7befa307a82, type: 3}
+  m_Script: {fileID: 11500000, guid: 5148e7f2dbd03a146bde897bd90bdc28, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _patrolRange: 3
-  _moveSpeed: 2
-  _chaseSpeed: 3.2
+--- !u!114 &7182248476563523687
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6441443267434100320}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4568cb6188c8cd499f32d7fef62357e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _phase: 0
+  _aimHeight: 0.5
+--- !u!114 &7505618301579665281
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6441443267434100320}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee2b03fd5036a4547933c4c0197058d9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _phase: 0
   _hoverAmplitude: 0.5
   _hoverFrequency: 2
 --- !u!1 &8540758918353436563

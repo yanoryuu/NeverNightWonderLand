@@ -90,7 +90,7 @@
 2. **BossArena** — 入場トリガーでゲート (壁) を閉め、ボス (EnemyController) の死亡でゲート開放+フラグ記録。フラグ済みならボスを出さずゲートも開けたまま。
 3. **ShopKeeper + ShopView** — 拠点のショップ。事前配置の MenuPanelView (実行時生成なし) で、糸を消費してアイテムを購入 (所持数は各アイテムの最大数まで)。
 4. **PlayerItemInventoryModel 拡張** — `TryAddItem` (1個追加) / `TrySpendThread` (糸消費)。
-5. **FloatingPatrolBehaviour** — 浮遊敵のうごき (重力なし・ふわふわ上下+水平巡回、発見で緩追尾)。仮実装のため差し替え可。FlyingEnemy.prefab として敵バリアントを追加。
+5. **浮遊移動の部品** (組み合わせ方式) — `FloatingMotionBase` (重力0化+縦速度ヘルパーの共通基底) を継承した `FloatingChaseMotion` (発見中のみ・緩追尾) と `FloatingPatrolMotion` (常時・ふわふわ水平巡回)。FlyingEnemy.prefab は `CompositeEnemyBehaviour` + この2部品構成で、他の浮遊敵や攻撃部品 (IEnemyAction) との組み合わせに流用できる。速度・巡回幅は EnemyConsts (MoveSpeed/ChaseSpeed/PatrolHalfWidth) を参照。
 6. **Blacksmith 解禁条件** — 進行フラグ未達成時は強化を渡さず台詞のみ。
 
 ## グレーボックス規約 (このステージ群)
