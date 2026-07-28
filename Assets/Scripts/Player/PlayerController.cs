@@ -648,6 +648,23 @@ public class PlayerController : MonoBehaviour
                 _isGrounded = true;
                 break;
             }
+
+            // 坂の上では接地円が斜面から浮いて判定が途切れることがあるため、
+            // 実際の接触 (上向き法線のコンタクト) でも接地とみなす。
+            // 上昇中は除外する (ジャンプ直後の蹴り足や、すり抜け床の通過を接地扱いしない)
+            if (!_isGrounded && _rb.linearVelocity.y <= 0.1f)
+            {
+                var contactFilter = new ContactFilter2D
+                {
+                    useLayerMask = true,
+                    layerMask = _consts.GroundLayer,
+                    useTriggers = false,
+                    useNormalAngle = true,
+                    minNormalAngle = 45f,
+                    maxNormalAngle = 135f,
+                };
+                _isGrounded = _rb.IsTouching(contactFilter);
+            }
         }
 
         if (_isGrounded)

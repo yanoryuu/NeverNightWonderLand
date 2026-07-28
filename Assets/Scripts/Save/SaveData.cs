@@ -36,4 +36,7 @@ public class SaveData
 
     /// <summary>解放済みの攻撃方法の ID。</summary>
     public string[] unlockedAttackIds;
+
+    /// <summary>進行フラグ (中ボス撃破など。GameProgress が管理)。</summary>
+    public string[] progressFlags;
 }

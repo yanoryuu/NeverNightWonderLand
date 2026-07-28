@@ -85,6 +85,9 @@ public class PlayerItemInventory : MonoBehaviour
 
     public int GetCount(ItemDefinition item) => _model.GetCount(item);
 
+    /// <summary>アイテムを1つ入手する (ショップ購入・拾得用)。最大数なら false。</summary>
+    public bool TryAddItem(ItemDefinition item) => _model.TryAddItem(item);
+
     /// <summary>指定アイテムを1消費する。所持数0なら false。</summary>
     public bool TryConsume(ItemDefinition item) => _model.TryConsume(item);
 
@@ -93,6 +96,9 @@ public class PlayerItemInventory : MonoBehaviour
     #region Thread / Refill
 
     public void AddThread(int amount) => _model.AddThread(amount);
+
+    /// <summary>糸を消費する (ショップ購入用)。足りなければ false。</summary>
+    public bool TrySpendThread(int amount) => _model.TrySpendThread(amount);
 
     /// <summary>
     /// 拠点でのアイテム補充 (再生成)。糸を消費して全アイテムを最大数に戻す。

@@ -53,6 +53,45 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/GameField/FerrisWheelHillScene.unity
     guid: 61b25191fa23cf64db50144c6212d82a
+  - enabled: 1
+    path: Assets/Scenes/GameField/CarouselHallScene.unity
+    guid: 7777024bd6d97fb44af040146cff1b68
+  - enabled: 1
+    path: Assets/Scenes/GameField/CarouselGateArenaScene.unity
+    guid: 0dfb664cfa7f294448c0b2a5d3b7e29c
+  - enabled: 1
+    path: Assets/Scenes/GameField/CarouselJunctionScene.unity
+    guid: 3c25e3f78eaba76408b1dee18d410919
+  - enabled: 1
+    path: Assets/Scenes/GameField/UpperPromenadeScene.unity
+    guid: a2de8f4df18d16f4c9817ac5f455f6df
+  - enabled: 1
+    path: Assets/Scenes/GameField/UpperGardenScene.unity
+    guid: b17c7d028bedaaf44a49cb91d14b7465
+  - enabled: 1
+    path: Assets/Scenes/GameField/UpperTerraceScene.unity
+    guid: fd5d065a7c9c9ec4b829afde3c2b312d
+  - enabled: 1
+    path: Assets/Scenes/GameField/UpperRooftopScene.unity
+    guid: 59041ab055dca7d4b81347aae63d0076
+  - enabled: 1
+    path: Assets/Scenes/GameField/UpperBossArenaScene.unity
+    guid: 2a85b7bd69f92f24c83904147a8aec80
+  - enabled: 1
+    path: Assets/Scenes/GameField/LowerGearShaftScene.unity
+    guid: ba7ac01cc8c9f3f458222eda2520939d
+  - enabled: 1
+    path: Assets/Scenes/GameField/LowerChainVaultScene.unity
+    guid: b757aa0cdabc7dd46a303b95552eddc7
+  - enabled: 1
+    path: Assets/Scenes/GameField/LowerPistonHallScene.unity
+    guid: 85227c097363d8f4b956f953f30b35ee
+  - enabled: 1
+    path: Assets/Scenes/GameField/LowerFlywheelPitScene.unity
+    guid: f92168f9af6ea3746a216905cd7139b0
+  - enabled: 1
+    path: Assets/Scenes/GameField/LowerBossArenaScene.unity
+    guid: 72bfc84a1305fac4dba1b467863801a9
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

@@ -51,6 +51,7 @@ public class PlayerSaveBridge : MonoBehaviour
         _progression?.LoadFrom(data);
         _inventory?.LoadFrom(data);
         _attackLoadout?.LoadFrom(data);
+        GameProgress.LoadFrom(data);
         return true;
     }
 
@@ -66,6 +67,7 @@ public class PlayerSaveBridge : MonoBehaviour
             posY = transform.position.y,
             upgrades = _progression != null ? _progression.CollectUpgrades() : new int[0],
             thread = _inventory != null ? _inventory.Thread.CurrentValue : 0,
+            progressFlags = GameProgress.Collect(),
         };
 
         if (_inventory != null)

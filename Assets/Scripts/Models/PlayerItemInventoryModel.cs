@@ -104,6 +104,20 @@ public sealed class PlayerItemInventoryModel : IDisposable
     public int GetCount(ItemDefinition item) =>
         item != null && _counts.TryGetValue(item, out var count) ? count.Value : 0;
 
+    /// <summary>アイテムを1つ入手する (ショップ購入・拾得用)。カタログ外や最大数なら false。</summary>
+    public bool TryAddItem(ItemDefinition item)
+    {
+        if (item == null || !_counts.TryGetValue(item, out var count))
+            return false;
+
+        if (count.Value >= item.MaxCount)
+            return false;
+
+        count.Value++;
+        _changed.OnNext(Unit.Default);
+        return true;
+    }
+
     /// <summary>指定アイテムを1消費する。所持数0なら false。</summary>
     public bool TryConsume(ItemDefinition item)
     {
@@ -126,6 +140,20 @@ public sealed class PlayerItemInventoryModel : IDisposable
 
         _thread.Value += amount;
         Notifier.Notify($"糸を {amount} 手に入れた (所持: {_thread.Value})");
+    }
+
+    /// <summary>糸を消費する (ショップ購入用)。足りなければ false。</summary>
+    public bool TrySpendThread(int amount)
+    {
+        if (amount <= 0)
+            return true;
+
+        if (_thread.Value < amount)
+            return false;
+
+        _thread.Value -= amount;
+        _changed.OnNext(Unit.Default);
+        return true;
     }
 
     /// <summary>

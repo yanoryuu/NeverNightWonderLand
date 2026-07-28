@@ -25,13 +25,7 @@ public abstract class GroundedState : PlayerState
         if (TryJumpTransition())
             return;
 
-        // 崖際 (低い段差や崖の縁) に向かって歩いたら登る
-        if (Player.TryGetLedgeTarget(out var ledgeTarget))
-        {
-            Player.LedgeClimbState.SetTarget(ledgeTarget);
-            StateMachine.ChangeState(Player.LedgeClimbState);
-            return;
-        }
+        // 崖登りは空中 (ジャンプ) からのみ発生する (歩きで段差に触れても登らない)
 
         // 回復は接地中のみ(空中で無防備に回復できると不自然なため)
         if (Player.CanHeal() && Player.TryConsumeHeal())
