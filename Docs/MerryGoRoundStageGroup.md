@@ -93,6 +93,26 @@
 5. **浮遊移動の部品** (組み合わせ方式) — `FloatingMotionBase` (重力0化+縦速度ヘルパーの共通基底) を継承した `FloatingChaseMotion` (発見中のみ・緩追尾) と `FloatingPatrolMotion` (常時・ふわふわ水平巡回)。FlyingEnemy.prefab は `CompositeEnemyBehaviour` + この2部品構成で、他の浮遊敵や攻撃部品 (IEnemyAction) との組み合わせに流用できる。速度・巡回幅は EnemyConsts (MoveSpeed/ChaseSpeed/PatrolHalfWidth) を参照。
 6. **Blacksmith 解禁条件** — 進行フラグ未達成時は強化を渡さず台詞のみ。
 
+## 後半コンテンツ (2026-07-30 追加)
+
+### 関門の構成 (二段構え)
+1. **スピーカー** (黄・耐久3): 各中ボスの奥の部屋に1つずつ (`SpeakerGate`/`SpeakerUpper`/`SpeakerLower`)。上/下ボス部屋の奥の部屋はボス撃破までゲートで封鎖。破壊で**回転軸の内部の入口三重扉**が1枚ずつ開く
+2. **強化壁** (暗赤): 回転軸の内部。赤ハサミ (2段ジャンプ) 強化後の攻撃でのみ破壊できる (`UpgradeWall`)
+3. **迷宮のレバー3本** (`BossDoor1..3`): 歯車迷宮を探索して発見。**三重扉の間**の扉を1枚ずつ開く
+4. **エリアボス「大回転木馬」** (`CarouselBoss`): 大広間→木馬の門→分岐塔→回転軸の内部→歯車迷宮→三重扉の間→中枢 = 5ステージ跨ぎ
+
+### 追加シーン (8)
+- ボス街道: CarouselSpireScene 回転軸の内部 (三重扉+強化壁+2段ジャンプ立坑) / CarouselMazeScene 歯車迷宮 (4層デッキ・レバー3・滑空ギャップ10) / CarouselAntechamberScene 三重扉の間 / CarouselBossArenaScene 大回転木馬・中枢
+- 帰還路 (中ボス後に来た道を戻らない別ルート): 上 = UpperReturnSlideScene 大すべり台 → UpperReturnBalconyScene 観覧バルコニー → 大広間左上バルコニー / 下 = LowerReturnConveyorScene 搬出コンベア坑 → LowerReturnDuctScene 送風ダクト → 大広間右上バルコニー
+
+### 進行変更
+- 赤ハサミ強化 = **中ボス3体全て撃破後** (鍛冶師の `_requiredFlags` = MidBoss1/UpperBoss/LowerBoss)
+- 大広間への到達は観覧車の丘の頂上ルート経由 (準備室直結はユーザー編集により封鎖 → 配線を追随済み)
+
+### アイテムピックアップ (新システム)
+- `ItemPickup` 抽象基底 (上入力で取得・`_pickupId` で取得済みを GameProgress 永続化)。派生: `ThreadPickup` (糸) / `ConsumableItemPickup` (消耗品) / `EquipmentPickup` (攻撃解放) / `KeyItemPickup` (進行フラグ)。新種はサブクラス追加のみ
+- 配置: 迷宮 (糸×2+紋章)、花壇の遊歩道 (ワイドスラッシュ=新攻撃アセット・2段ジャンプ必須)、鎖の大空洞 (糸15)、屋根の上の道 (ボビン爆弾×2)
+
 ## グレーボックス規約 (このステージ群)
 
 - 地形 = 白〜灰の Square スプライト + BoxCollider2D。すり抜け床 = 緑 (PlatformEffector2D)。

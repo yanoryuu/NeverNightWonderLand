@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1b866178ee1510e4ba8817b6fea01735, type: 3}
+  m_Name: WideSlash
+  m_EditorClassIdentifier: 
+  _displayName: "\u30EF\u30A4\u30C9\u30B9\u30E9\u30C3\u30B7\u30E5"
+  _description: "\u6A2A\u306B\u5927\u304D\u304F\u8599\u304E\u6255\u3046\u4E00\u9583\u3002\u7BC4\u56F2\u304C\u5E83\u304F\u3001\u8907\u6570\u306E\u6575\u3092\u5DFB\u304D\u8FBC\u3081\u308B\u3002"
+  _iconColor: {r: 0.4, g: 0.9, b: 0.6, a: 1}
+  _profile:
+    _duration: 0.35
+    _hitDelay: 0.08
+    _hpDamage: 2
+    _guardDamage: 1
+    _offset: {x: 1, y: 0}
+    _boxSize: {x: 2.4, y: 1.1}

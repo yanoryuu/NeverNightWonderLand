@@ -16,8 +16,8 @@ public class Blacksmith : MonoBehaviour, IInteractable
     [Tooltip("プロンプト表示位置のオフセット")]
     [SerializeField] private Vector3 _promptOffset = new Vector3(0f, 1.2f, 0f);
 
-    [Tooltip("この進行フラグ (GameProgress) が立つまで強化を渡さない。空なら常時渡す")]
-    [SerializeField] private string _requiredFlag = "";
+    [Tooltip("これらの進行フラグ (GameProgress) が全て立つまで強化を渡さない。空なら常時渡す")]
+    [SerializeField] private string[] _requiredFlags = new string[0];
 
     [Tooltip("解禁前の台詞")]
     [SerializeField] private string _lockedMessage = "「今は渡せるものがない」";
@@ -32,12 +32,17 @@ public class Blacksmith : MonoBehaviour, IInteractable
         if (progression == null)
             return;
 
-        // 進行条件 (中ボス撃破など) を満たすまでは渡さない
-        if (!string.IsNullOrEmpty(_requiredFlag) && !GameProgress.Has(_requiredFlag)
-            && !progression.Has(_upgrade))
+        // 進行条件 (中ボス全撃破など) を全て満たすまでは渡さない
+        if (!progression.Has(_upgrade) && _requiredFlags != null)
         {
-            Notifier.Notify($"{_smithName}{_lockedMessage}");
-            return;
+            foreach (var flag in _requiredFlags)
+            {
+                if (string.IsNullOrEmpty(flag) || GameProgress.Has(flag))
+                    continue;
+
+                Notifier.Notify($"{_smithName}{_lockedMessage}");
+                return;
+            }
         }
 
         if (progression.Has(_upgrade))

@@ -11,13 +11,18 @@ public static class GameProgress
 {
     private static readonly HashSet<string> Flags = new();
 
+    /// <summary>フラグが新しく立った時に発火する (同シーン内の FlagDoor の即時開放などに使う)。</summary>
+    public static event System.Action<string> Changed;
+
     public static bool Has(string flag) =>
         !string.IsNullOrEmpty(flag) && Flags.Contains(flag);
 
     public static void Set(string flag)
     {
-        if (!string.IsNullOrEmpty(flag))
-            Flags.Add(flag);
+        if (string.IsNullOrEmpty(flag) || !Flags.Add(flag))
+            return;
+
+        Changed?.Invoke(flag);
     }
 
     /// <summary>セーブ用に全フラグを集める。</summary>

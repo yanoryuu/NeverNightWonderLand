@@ -92,6 +92,30 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/GameField/LowerBossArenaScene.unity
     guid: 72bfc84a1305fac4dba1b467863801a9
+  - enabled: 1
+    path: Assets/Scenes/GameField/UpperReturnSlideScene.unity
+    guid: 5add44cfdab5a494b8ee32214ff964c0
+  - enabled: 1
+    path: Assets/Scenes/GameField/UpperReturnBalconyScene.unity
+    guid: 0fa58218a22dedc43bc185f9fd6d6be4
+  - enabled: 1
+    path: Assets/Scenes/GameField/LowerReturnConveyorScene.unity
+    guid: 4025df84388346842bad550e666e5e3f
+  - enabled: 1
+    path: Assets/Scenes/GameField/LowerReturnDuctScene.unity
+    guid: a6abceffb984a6e418f2bfea4a96e4f3
+  - enabled: 1
+    path: Assets/Scenes/GameField/CarouselSpireScene.unity
+    guid: 3baa43aacdae5e14092c27d660974534
+  - enabled: 1
+    path: Assets/Scenes/GameField/CarouselMazeScene.unity
+    guid: eff45c93414216b448af46eb01901c60
+  - enabled: 1
+    path: Assets/Scenes/GameField/CarouselAntechamberScene.unity
+    guid: 5230e78b147f3264d80a5b696b14bcb3
+  - enabled: 1
+    path: Assets/Scenes/GameField/CarouselBossArenaScene.unity
+    guid: 7bc2c7e3214e0804a8fae49c34d80aab
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0
