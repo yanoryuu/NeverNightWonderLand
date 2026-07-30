@@ -25,13 +25,16 @@ public class CameraFollow : MonoBehaviour
     /// ターゲット位置へ即座に移動する (ステージ遷移でプレイヤーがワープした時用。
     /// 暗転中に呼ぶことで、カメラが移動していく様子を見せない)。
     /// </summary>
+    /// <summary>実効の下限。ステージに CameraLimit があればそちらを優先する。</summary>
+    private float EffectiveMinY => CameraLimit.OverrideMinY ?? _minY;
+
     public void SnapToTarget()
     {
         if (_target == null)
             return;
 
         var desired = _target.position + _offset;
-        desired.y = Mathf.Max(desired.y, _minY);
+        desired.y = Mathf.Max(desired.y, EffectiveMinY);
         transform.position = desired;
         _velocity = Vector3.zero;
     }
@@ -42,7 +45,7 @@ public class CameraFollow : MonoBehaviour
             return;
 
         var desired = _target.position + _offset;
-        desired.y = Mathf.Max(desired.y, _minY);
+        desired.y = Mathf.Max(desired.y, EffectiveMinY);
 
         transform.position = Vector3.SmoothDamp(transform.position, desired, ref _velocity, _smoothTime);
     }

@@ -666,6 +666,10 @@ PrefabInstance:
     m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: 1785998797017167517, guid: 8264b13f30791cb46bcd605e003cb4a3, type: 3}
+      propertyPath: _forgeId
+      value: CarouselHall
+      objectReference: {fileID: 0}
+    - target: {fileID: 1785998797017167517, guid: 8264b13f30791cb46bcd605e003cb4a3, type: 3}
       propertyPath: _upgrade
       value: 2
       objectReference: {fileID: 0}

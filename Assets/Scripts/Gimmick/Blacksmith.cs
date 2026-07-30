@@ -22,9 +22,18 @@ public class Blacksmith : MonoBehaviour, IInteractable
     [Tooltip("解禁前の台詞")]
     [SerializeField] private string _lockedMessage = "「今は渡せるものがない」";
 
+    [Header("鍛冶強化 (能力とは別の有償強化)")]
+    [Tooltip("この鍛冶師の鍛冶強化ID (1人1回まで)。空なら有償強化は行わない。例: CarouselHall")]
+    [SerializeField] private string _forgeId = "";
+
+    [Tooltip("鍛冶強化に必要な糸の数")]
+    [SerializeField] private int _forgeCost = 30;
+
     public string PromptText => "話す";
     public bool CanInteract => true;
     public Vector3 PromptAnchor => transform.position + _promptOffset;
+
+    private string ForgeFlag => $"Forge_{_forgeId}";
 
     public void Interact(GameObject interactor)
     {
@@ -45,13 +54,43 @@ public class Blacksmith : MonoBehaviour, IInteractable
             }
         }
 
-        if (progression.Has(_upgrade))
+        // 1回目の会話: 能力の強化 (ハサミの色)
+        if (!progression.Has(_upgrade))
         {
-            Notifier.Notify($"{_smithName}「{_upgrade.DisplayName()}の調子はどうだ?」");
+            Notifier.Notify($"{_smithName}「いいハサミだ。強化してやろう」");
+            progression.Grant(_upgrade);
             return;
         }
 
-        Notifier.Notify($"{_smithName}「いいハサミだ。強化してやろう」");
-        progression.Grant(_upgrade);
+        // 2回目以降: 鍛冶強化 (糸を払って攻撃力+コンボ数、1人1回)
+        if (TryForge(interactor, progression))
+            return;
+
+        Notifier.Notify($"{_smithName}「{_upgrade.DisplayName()}の調子はどうだ?」");
+    }
+
+    /// <summary>
+    /// 有償の鍛冶強化。糸 (_forgeCost) を消費して攻撃力と最大コンボ数を1段階伸ばす。
+    /// この鍛冶師で強化済みなら false (通常会話へ)。
+    /// </summary>
+    private bool TryForge(GameObject interactor, PlayerProgression progression)
+    {
+        if (string.IsNullOrEmpty(_forgeId) || GameProgress.Has(ForgeFlag))
+            return false;
+
+        var inventory = interactor.GetComponent<PlayerItemInventory>();
+        if (inventory == null)
+            return false;
+
+        if (!inventory.TrySpendThread(_forgeCost))
+        {
+            Notifier.Notify($"{_smithName}「刃を研ぎ直してやれるが、糸が{_forgeCost}いる」");
+            return true;
+        }
+
+        GameProgress.Set(ForgeFlag);
+        progression.AddForgeLevel();
+        Notifier.Notify($"{_smithName}「研ぎ上げたぞ」攻撃力と最大コンボ数が上がった! (糸 -{_forgeCost})");
+        return true;
     }
 }

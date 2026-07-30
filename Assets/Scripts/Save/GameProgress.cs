@@ -39,6 +39,13 @@ public static class GameProgress
             Set(flag);
     }
 
+    /// <summary>フラグを取り下げる (デバッグ用。イベントは発火しない)。</summary>
+    public static void Unset(string flag)
+    {
+        if (!string.IsNullOrEmpty(flag))
+            Flags.Remove(flag);
+    }
+
     /// <summary>全消去 (ニューゲーム用)。</summary>
     public static void Clear() => Flags.Clear();
 }

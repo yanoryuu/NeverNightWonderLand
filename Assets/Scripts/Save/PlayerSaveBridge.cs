@@ -66,6 +66,8 @@ public class PlayerSaveBridge : MonoBehaviour
             posX = transform.position.x,
             posY = transform.position.y,
             upgrades = _progression != null ? _progression.CollectUpgrades() : new int[0],
+            skills = _progression != null ? _progression.CollectSkills() : new int[0],
+            forgeLevel = _progression != null ? _progression.ForgeLevel : 0,
             thread = _inventory != null ? _inventory.Thread.CurrentValue : 0,
             progressFlags = GameProgress.Collect(),
         };

@@ -11,6 +11,23 @@ public abstract class GroundedState : PlayerState
 
     public override void LogicUpdate()
     {
+        // パリィ (スキル): 方向入力なしでダッシュ (通常ダッシュより優先)
+        if (Player.HasSkill(PlayerSkill.Parry)
+            && Mathf.Abs(Player.MoveInput) < 0.01f && Mathf.Abs(Player.VerticalInput) < 0.01f
+            && Player.TryConsumeDash())
+        {
+            StateMachine.ChangeState(Player.ParryState);
+            return;
+        }
+
+        // 横突進 (スキル): 下入力 + ダッシュ長押しで溜めに入る (通常ダッシュより優先)
+        if (Player.HasSkill(PlayerSkill.ChargeRush)
+            && Player.VerticalInput < -0.5f && Player.TryConsumeDash())
+        {
+            StateMachine.ChangeState(Player.ChargeRushChargeState);
+            return;
+        }
+
         if (TryActionTransitions())
             return;
 
@@ -19,6 +36,14 @@ public abstract class GroundedState : PlayerState
             && Player.TryDropThroughPlatform())
         {
             StateMachine.ChangeState(Player.FallState);
+            return;
+        }
+
+        // 大ジャンプ (スキル): 上入力 + ジャンプで溜めに入る (通常ジャンプより優先)
+        if (Player.HasSkill(PlayerSkill.SuperJump)
+            && Player.VerticalInput > 0.5f && Player.HasBufferedJump())
+        {
+            StateMachine.ChangeState(Player.SuperJumpChargeState);
             return;
         }
 

@@ -16,6 +16,12 @@ public class SaveData
     /// <summary>取得済みハサミ強化 (ScissorUpgrade の int 値)。</summary>
     public int[] upgrades;
 
+    /// <summary>取得済み移動スキル (PlayerSkill の int 値)。</summary>
+    public int[] skills;
+
+    /// <summary>鍛冶強化 (有償) の回数。攻撃力と最大コンボ数に反映される。</summary>
+    public int forgeLevel;
+
     /// <summary>アイテムの ID (ItemDefinition のアセット名)。itemCounts と対になる。</summary>
     public string[] itemIds;
 

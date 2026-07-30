@@ -186,6 +186,43 @@ public class PlayerConsts : ScriptableObject
     [Tooltip("着地前にジャンプ入力を先行入力として保持する時間 (sec)")]
     [SerializeField] private float _jumpBufferTime = 0.1f;
 
+    [Header("移動スキル (メリーゴーランド後)")]
+    [Tooltip("落下攻撃の降下速度 (units/sec)")]
+    [SerializeField] private float _slamFallSpeed = 32f;
+
+    [Tooltip("落下攻撃の着地衝撃 (足元中心の範囲攻撃)")]
+    [SerializeField] private AttackProfile _slamAttack =
+        new AttackProfile(0.2f, 0f, 2, 3, new Vector2(0f, -0.6f), new Vector2(3f, 1.6f));
+
+    [Tooltip("大ジャンプ/横突進の溜め完了までの長押し時間 (sec)")]
+    [SerializeField] private float _skillChargeTime = 0.4f;
+
+    [Tooltip("大ジャンプの最高到達高さ (units)。通常ジャンプ (3.5) の7倍。天井に当たるとそこで止まる")]
+    [SerializeField] private float _superJumpHeight = 24.5f;
+
+    [Tooltip("横突進の速度 (units/sec)。障害物に当たるまで突き進み続ける")]
+    [SerializeField] private float _chargeRushSpeed = 26f;
+
+    [Header("パリィ (スキル)")]
+    [Tooltip("パリィ受付時間 (sec)。この間に受けた攻撃を無効化する")]
+    [SerializeField] private float _parryWindow = 0.18f;
+
+    [Tooltip("受付終了後の硬直時間 (sec)。この間は無防備")]
+    [SerializeField] private float _parryRecovery = 0.25f;
+
+    [Tooltip("パリィ成功時に得る無敵時間 (sec)")]
+    [SerializeField] private float _parrySuccessInvincible = 0.6f;
+
+    [Header("近接コンボ / 鍛冶強化")]
+    [Tooltip("初期状態の最大コンボ数")]
+    [SerializeField] private int _baseMaxCombo = 3;
+
+    [Tooltip("鍛冶強化を重ねても超えない最大コンボ数の上限")]
+    [SerializeField] private int _maxComboCap = 5;
+
+    [Tooltip("鍛冶強化1回ごとに近接攻撃へ加算されるHPダメージ")]
+    [SerializeField] private int _forgeAttackBonus = 1;
+
     [Header("接地判定")]
     [Tooltip("接地判定を行う円の半径 (units)")]
     [SerializeField] private float _groundCheckRadius = 0.2f;
@@ -269,6 +306,26 @@ public class PlayerConsts : ScriptableObject
     /// v0 = gravity * timeToApex
     /// </summary>
     public float JumpVelocity => Gravity * _timeToApex;
+
+    public float SlamFallSpeed => _slamFallSpeed;
+    public AttackProfile SlamAttack => _slamAttack;
+    public float SkillChargeTime => _skillChargeTime;
+    public float SuperJumpHeight => _superJumpHeight;
+    public float ChargeRushSpeed => _chargeRushSpeed;
+
+    public float ParryWindow => _parryWindow;
+    public float ParryRecovery => _parryRecovery;
+    public float ParrySuccessInvincible => _parrySuccessInvincible;
+
+    public int BaseMaxCombo => _baseMaxCombo;
+    public int MaxComboCap => _maxComboCap;
+    public int ForgeAttackBonus => _forgeAttackBonus;
+
+    /// <summary>
+    /// 大ジャンプの初速。v0 = √(2 * gravity * superJumpHeight)
+    /// (基準重力での初速。上昇中の LowJumpMultiplier はボタン解放後のみ効く)
+    /// </summary>
+    public float SuperJumpVelocity => Mathf.Sqrt(2f * Gravity * Mathf.Max(_superJumpHeight, 0.01f));
 
     #endregion
 }

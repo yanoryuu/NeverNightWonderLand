@@ -9,6 +9,14 @@ public abstract class AirborneState : PlayerState
 
     public override void LogicUpdate()
     {
+        // 落下攻撃 (スキル): 空中で下+攻撃。通常の空中攻撃より優先する
+        if (Player.HasSkill(PlayerSkill.GroundSlam)
+            && Player.VerticalInput < -0.5f && Player.TryConsumeAttack())
+        {
+            StateMachine.ChangeState(Player.GroundSlamState);
+            return;
+        }
+
         if (TryActionTransitions())
             return;
 

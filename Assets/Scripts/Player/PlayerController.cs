@@ -76,6 +76,12 @@ public class PlayerController : MonoBehaviour
     public GrappleState GrappleState { get; private set; }
     public WallClingState WallClingState { get; private set; }
     public LedgeClimbState LedgeClimbState { get; private set; }
+    public GroundSlamState GroundSlamState { get; private set; }
+    public SuperJumpChargeState SuperJumpChargeState { get; private set; }
+    public SuperJumpState SuperJumpState { get; private set; }
+    public ChargeRushChargeState ChargeRushChargeState { get; private set; }
+    public ChargeRushState ChargeRushState { get; private set; }
+    public ParryState ParryState { get; private set; }
 
     #endregion
 
@@ -84,6 +90,7 @@ public class PlayerController : MonoBehaviour
     private float _moveInput;        // -1..1 の水平入力
     private float _verticalInput;    // -1..1 の垂直入力 (グラップルの狙い用)
     private bool _jumpHeld;          // ジャンプボタン押しっぱなし
+    private bool _dashHeld;          // ダッシュボタン押しっぱなし (横突進の溜め用)
     private bool _dashPressed;       // このフレームにダッシュ入力されたか
     private bool _attackPressed;     // このフレームに近接攻撃入力されたか
     private bool _specialPressed;    // このフレームに特殊攻撃入力されたか
@@ -119,6 +126,7 @@ public class PlayerController : MonoBehaviour
     private bool _isRunning;         // ダッシュ後に維持される走り状態
     private bool _airJumpUsed;       // 二段ジャンプ (赤ハサミ) を使用済みか。接地でリセット
     private bool _dashInvulnerable;  // 現在のダッシュが接触ダメージ無効 (回避) か
+    private bool _skillInvulnerable; // スキル (横突進/大ジャンプ) 中の無敵。敵を貫通する
 
     // Animator に任意パラメータ(IsHurt/Death)が存在するか (無い場合は警告を出さずスキップ)
     private bool _hasIsHurtParam;
@@ -153,6 +161,48 @@ public class PlayerController : MonoBehaviour
     public PlayerItemInventory Inventory => _inventory;
     public PlayerProgression Progression => _progression;
     public float VerticalInput => _verticalInput;
+    public bool JumpHeld => _jumpHeld;
+    public bool DashHeld => _dashHeld;
+
+    /// <summary>移動スキルを所持しているか (Progression が無いシーンでは false)。</summary>
+    public bool HasSkill(PlayerSkill skill) => _progression != null && _progression.HasSkill(skill);
+
+    /// <summary>スプライト (溜め演出の着色などに使う)。</summary>
+    public SpriteRenderer Sprite { get; private set; }
+
+    /// <summary>先行入力とコヨーテ猶予を消費する (溜めステートがジャンプ入力を引き取る時に使う)。</summary>
+    public void ClearJumpBuffers()
+    {
+        _jumpBufferTimer = 0f;
+        _coyoteTimer = 0f;
+    }
+
+    /// <summary>スキル (横突進/大ジャンプ) 中の無敵。敵をダメージを与えながら貫通する。</summary>
+    public bool IsSkillInvulnerable => _skillInvulnerable;
+
+    /// <summary>スキル無敵の設定 (スキルステートの Enter/Exit から呼ぶ)。</summary>
+    public void SetSkillInvulnerable(bool value) => _skillInvulnerable = value;
+
+    /// <summary>
+    /// 現在の最大コンボ数。基本値 (BaseMaxCombo) + 鍛冶強化の回数で、上限は MaxComboCap。
+    /// </summary>
+    public int MaxCombo => Mathf.Min(
+        _consts.BaseMaxCombo + (_progression != null ? _progression.ForgeLevel : 0),
+        _consts.MaxComboCap);
+
+    /// <summary>鍛冶強化による攻撃力ボーナス (PerformAttackHit の HP ダメージへ加算)。</summary>
+    public int ForgeDamageBonus =>
+        (_progression != null ? _progression.ForgeLevel : 0) * _consts.ForgeAttackBonus;
+
+    /// <summary>
+    /// パリィを試みる (PlayerHealth.TakeDamage から呼ばれる)。
+    /// パリィ受付中なら攻撃を無効化して true を返す。
+    /// </summary>
+    public bool TryParry(in DamageInfo info) =>
+        _stateMachine.CurrentState == ParryState && ParryState.TryAbsorb(info);
+
+    /// <summary>ダッシュのクールダウンを開始する (パリィがダッシュ入力を消費した時に使う)。</summary>
+    public void BeginDashCooldown() => _dashCooldownTimer = _consts.DashCooldown;
 
     /// <summary>直近の被弾情報 (HurtState 用)。</summary>
     public DamageInfo LastDamage => _lastDamage;
@@ -175,6 +225,7 @@ public class PlayerController : MonoBehaviour
         _rb = GetComponent<Rigidbody2D>();
         _ownColliders = GetComponents<Collider2D>();
         _animator = GetComponent<Animator>();
+        Sprite = GetComponent<SpriteRenderer>();
         _health = GetComponent<PlayerHealth>();
         _healGauge = GetComponent<PlayerHealGauge>();
         _inventory = GetComponent<PlayerItemInventory>();
@@ -228,6 +279,12 @@ public class PlayerController : MonoBehaviour
         GrappleState = new GrappleState(this, _stateMachine);
         WallClingState = new WallClingState(this, _stateMachine);
         LedgeClimbState = new LedgeClimbState(this, _stateMachine);
+        GroundSlamState = new GroundSlamState(this, _stateMachine);
+        SuperJumpChargeState = new SuperJumpChargeState(this, _stateMachine);
+        SuperJumpState = new SuperJumpState(this, _stateMachine);
+        ChargeRushChargeState = new ChargeRushChargeState(this, _stateMachine);
+        ChargeRushState = new ChargeRushState(this, _stateMachine);
+        ParryState = new ParryState(this, _stateMachine);
 
         // 初期化がすべて終わってから UI (Presenter) へ自身を公開する
         _playerRuntime?.Register(this);
@@ -342,6 +399,7 @@ public class PlayerController : MonoBehaviour
 
             _jumpHeld = keyboard.spaceKey.isPressed;
             jumpPressedThisFrame = keyboard.spaceKey.wasPressedThisFrame;
+            _dashHeld = keyboard.leftShiftKey.isPressed;
 
             // キーボード: Shift = ダッシュ, J = 近接攻撃, K = 特殊攻撃, L = 裁断,
             //             S = 回復, E = インタラクト, I ホールド+方向 = アイテム使用, F = 糸移動 (青)
@@ -383,6 +441,7 @@ public class PlayerController : MonoBehaviour
             _jumpHeld |= gamepad.buttonSouth.isPressed;
             jumpPressedThisFrame |= gamepad.buttonSouth.wasPressedThisFrame;
             dashPressedThisFrame |= gamepad.rightTrigger.wasPressedThisFrame;
+            _dashHeld |= gamepad.rightTrigger.isPressed;
             attackPressedThisFrame |= gamepad.buttonWest.wasPressedThisFrame;
             specialPressedThisFrame |= gamepad.buttonNorth.wasPressedThisFrame;
             finisherPressedThisFrame |= gamepad.rightShoulder.wasPressedThisFrame;
@@ -1012,7 +1071,9 @@ public class PlayerController : MonoBehaviour
 
             if (hit.TryGetComponent<IDamageable>(out var damageable))
             {
-                var info = new DamageInfo(profile.HpDamage, profile.GuardDamage, center, gameObject, isFinisher);
+                // 鍛冶強化 (有償) のぶん HP ダメージを底上げする
+                var info = new DamageInfo(profile.HpDamage + ForgeDamageBonus, profile.GuardDamage,
+                    center, gameObject, isFinisher);
                 damageable.TakeDamage(info);
                 anyHit = true;
             }

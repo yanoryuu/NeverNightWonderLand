@@ -77,7 +77,12 @@ public class PlayerHealth : MonoBehaviour, IDamageable
     {
         // プレイヤーに防御値はないので HpDamage のみ扱う
         // 回避ダッシュ中は接触ダメージを受けない (布カッター突進は除く)
-        if (info.HpDamage <= 0 || IsInvincible || _controller.IsDead || _controller.IsDashInvulnerable)
+        if (info.HpDamage <= 0 || IsInvincible || _controller.IsDead || _controller.IsDashInvulnerable
+            || _controller.IsSkillInvulnerable || DebugCheats.Invincible)
+            return;
+
+        // パリィ受付中なら攻撃を無効化する (スキル)
+        if (_controller.TryParry(info))
             return;
 
         _model.Damage(info.HpDamage);
@@ -100,5 +105,11 @@ public class PlayerHealth : MonoBehaviour, IDamageable
             return;
 
         _model.Heal(amount);
+    }
+
+    /// <summary>無敵時間を付与する (パリィ成功時など。既に長い無敵が残っていれば維持)。</summary>
+    public void GrantInvincibility(float seconds)
+    {
+        _invincibleTimer = Mathf.Max(_invincibleTimer, seconds);
     }
 }

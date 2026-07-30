@@ -40,6 +40,10 @@ public class PlayerConstsEditor : Editor
             EditorGUILayout.FloatField(
                 new GUIContent("ジャンプ初速 (Jump Velocity)", "gravity * timeToApex"),
                 consts.JumpVelocity);
+
+            EditorGUILayout.FloatField(
+                new GUIContent("大ジャンプ初速 (Super Jump Velocity)", "√(2 * gravity * superJumpHeight)"),
+                consts.SuperJumpVelocity);
         }
 
         EditorGUILayout.HelpBox(
