@@ -24,6 +24,9 @@ public class RangedSpecialDefinition : SpecialAttackDefinition
     [Tooltip("防御値(白)への与ダメージ")]
     [SerializeField] private int _guardDamage = 2;
 
+    [Tooltip("発射高さのオフセット (プレイヤー中心基準)。0 = 腰の高さで、床上の小型敵 (高さ1) に当たる")]
+    [SerializeField] private float _fireHeightOffset = 0f;
+
     public override void Activate(PlayerController player, Vector2 origin, int facing)
     {
         if (_projectilePrefab == null)
@@ -31,6 +34,9 @@ public class RangedSpecialDefinition : SpecialAttackDefinition
             Debug.LogError($"[{nameof(RangedSpecialDefinition)}] {name} に弾 Prefab が設定されていません。", this);
             return;
         }
+
+        // 既定の投擲位置 (+0.3) だと地上の小型敵の頭上を抜けてしまうため、直進弾は低めに撃つ
+        origin = player.ComputeThrowOrigin(_fireHeightOffset);
 
         var projectile = Instantiate(_projectilePrefab, origin, Quaternion.identity);
         projectile.Launch(

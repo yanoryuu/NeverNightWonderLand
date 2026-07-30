@@ -983,11 +983,11 @@ public class PlayerController : MonoBehaviour
     /// 投擲/特殊攻撃の発射位置を計算する。壁際で使った時に弾が壁の中に生成されないよう、
     /// 目の前に壁があれば手前へ寄せる (ItemThrowState / SpecialAttackState が使う)。
     /// </summary>
-    public Vector2 ComputeThrowOrigin()
+    public Vector2 ComputeThrowOrigin(float heightOffset = 0.3f)
     {
-        var origin = (Vector2)transform.position + new Vector2(0.5f * _facing.Value, 0.3f);
+        var origin = (Vector2)transform.position + new Vector2(0.5f * _facing.Value, heightOffset);
 
-        var rayStart = (Vector2)transform.position + new Vector2(0f, 0.3f);
+        var rayStart = (Vector2)transform.position + new Vector2(0f, heightOffset);
         var wall = Physics2D.Raycast(rayStart, new Vector2(_facing.Value, 0f), 0.9f, _consts.GroundLayer);
         if (wall.collider != null)
             origin.x = wall.point.x - _facing.Value * 0.4f;
