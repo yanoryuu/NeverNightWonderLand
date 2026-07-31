@@ -39,12 +39,15 @@ public class LeverSwitch : MonoBehaviour, IInteractable
     {
         _sprite = GetComponent<SpriteRenderer>();
 
-        // フラグ永続化レバーは、作動済みなら最初から作動状態で表示する
+        // フラグ永続化レバーは、作動済みなら最初から作動状態で表示し、ドアも開けておく
         if (!string.IsNullOrEmpty(_progressFlag) && GameProgress.Has(_progressFlag))
         {
             _activated = true;
             transform.rotation = Quaternion.Euler(0f, 0f, -40f);
             _sprite.color = new Color(0.5f, 0.5f, 0.5f);
+
+            if (_targetDoor != null)
+                _targetDoor.Open(instant: true);
         }
     }
 

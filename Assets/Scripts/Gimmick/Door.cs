@@ -20,7 +20,12 @@ public class Door : MonoBehaviour
     /// <summary>開き終わった時に発火する (チュートリアルの達成判定用)。</summary>
     public event Action OnOpened;
 
-    public void Open()
+    public void Open() => Open(instant: false);
+
+    /// <summary>
+    /// ドアを開ける。instant はシーンロード時の復元用で、演出なしで即座に開いた状態にする。
+    /// </summary>
+    public void Open(bool instant)
     {
         if (_isOpen)
             return;
@@ -29,6 +34,16 @@ public class Door : MonoBehaviour
 
         foreach (var col in GetComponentsInChildren<Collider2D>())
             col.enabled = false;
+
+        if (instant)
+        {
+            transform.position += Vector3.up * _slideDistance;
+            // 開ききった扉は見えなくする (グレーボックスでは邪魔なだけのため)
+            foreach (var sr in GetComponentsInChildren<SpriteRenderer>())
+                sr.enabled = false;
+            OnOpened?.Invoke();
+            return;
+        }
 
         transform.DOMoveY(transform.position.y + _slideDistance, _slideDuration)
             .SetEase(Ease.InOutQuad)
