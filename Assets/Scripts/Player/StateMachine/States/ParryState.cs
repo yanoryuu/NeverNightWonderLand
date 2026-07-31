@@ -56,11 +56,20 @@ public class ParryState : PlayerState
 
     /// <summary>
     /// 攻撃の無効化を試みる (PlayerHealth.TakeDamage から呼ばれる)。
-    /// 受付中なら成功: ダメージを無効化し、無敵時間を得る。
+    /// 受付中かつヒット位置がパリィ範囲 (ParryRangeOffset/Size、x は向きで反転) 内なら成功:
+    /// ダメージを無効化し、無敵時間を得る。範囲外からの攻撃は防げない。
     /// </summary>
     public bool TryAbsorb(in DamageInfo info)
     {
         if (!InWindow)
+            return false;
+
+        var offset = Player.Consts.ParryRangeOffset;
+        var center = (Vector2)Player.transform.position
+                     + new Vector2(offset.x * Player.Facing, offset.y);
+        var half = Player.Consts.ParryRangeSize / 2f;
+        var delta = info.HitPoint - center;
+        if (Mathf.Abs(delta.x) > half.x || Mathf.Abs(delta.y) > half.y)
             return false;
 
         _succeeded = true;

@@ -45,8 +45,8 @@ public class GroundSlamState : PlayerState
     /// <summary>足元の SkillBreakable(落下攻撃) を砕く。砕けたブロックは当たりが消え、そのまま落下が続く。</summary>
     private void BreakBelow()
     {
-        var feet = (Vector2)Player.transform.position + new Vector2(0f, -0.9f);
-        var hits = Physics2D.OverlapBoxAll(feet + new Vector2(0f, -0.4f), new Vector2(0.8f, 0.9f), 0f,
+        var center = (Vector2)Player.transform.position + Player.Consts.SlamBreakOffset;
+        var hits = Physics2D.OverlapBoxAll(center, Player.Consts.SlamBreakSize, 0f,
             Player.Consts.GroundLayer);
         foreach (var hit in hits)
         {

@@ -203,6 +203,25 @@ public class PlayerConsts : ScriptableObject
     [Tooltip("横突進の速度 (units/sec)。障害物に当たるまで突き進み続ける")]
     [SerializeField] private float _chargeRushSpeed = 26f;
 
+    [Header("スキルの当たり判定")]
+    [Tooltip("落下攻撃: 降下中にブロックを砕く判定の中心オフセット (プレイヤー基準)")]
+    [SerializeField] private Vector2 _slamBreakOffset = new Vector2(0f, -1.3f);
+
+    [Tooltip("落下攻撃: 降下中にブロックを砕く判定のサイズ")]
+    [SerializeField] private Vector2 _slamBreakSize = new Vector2(0.8f, 0.9f);
+
+    [Tooltip("大ジャンプ: 上昇中の頭上判定の基準オフセット (プレイヤー基準。上昇速度に応じて上へ伸びる)")]
+    [SerializeField] private Vector2 _superJumpHitOffset = new Vector2(0f, 0.9f);
+
+    [Tooltip("大ジャンプ: 頭上判定の基本サイズ")]
+    [SerializeField] private Vector2 _superJumpHitSize = new Vector2(0.9f, 0.9f);
+
+    [Tooltip("横突進: 正面判定の中心オフセット (x は向きで反転)")]
+    [SerializeField] private Vector2 _chargeRushHitOffset = new Vector2(0.9f, 0f);
+
+    [Tooltip("横突進: 正面判定のサイズ")]
+    [SerializeField] private Vector2 _chargeRushHitSize = new Vector2(1.2f, 1.5f);
+
     [Header("パリィ (スキル)")]
     [Tooltip("パリィ受付時間 (sec)。この間に受けた攻撃を無効化する")]
     [SerializeField] private float _parryWindow = 0.18f;
@@ -212,6 +231,12 @@ public class PlayerConsts : ScriptableObject
 
     [Tooltip("パリィ成功時に得る無敵時間 (sec)")]
     [SerializeField] private float _parrySuccessInvincible = 0.6f;
+
+    [Tooltip("パリィで防げる範囲の中心オフセット (x は向きで反転。攻撃のヒット位置がこの範囲内なら無効化)")]
+    [SerializeField] private Vector2 _parryRangeOffset = new Vector2(0.3f, 0f);
+
+    [Tooltip("パリィで防げる範囲のサイズ")]
+    [SerializeField] private Vector2 _parryRangeSize = new Vector2(2f, 2.2f);
 
     [Header("近接コンボ / 鍛冶強化")]
     [Tooltip("初期状態の最大コンボ数")]
@@ -313,9 +338,18 @@ public class PlayerConsts : ScriptableObject
     public float SuperJumpHeight => _superJumpHeight;
     public float ChargeRushSpeed => _chargeRushSpeed;
 
+    public Vector2 SlamBreakOffset => _slamBreakOffset;
+    public Vector2 SlamBreakSize => _slamBreakSize;
+    public Vector2 SuperJumpHitOffset => _superJumpHitOffset;
+    public Vector2 SuperJumpHitSize => _superJumpHitSize;
+    public Vector2 ChargeRushHitOffset => _chargeRushHitOffset;
+    public Vector2 ChargeRushHitSize => _chargeRushHitSize;
+
     public float ParryWindow => _parryWindow;
     public float ParryRecovery => _parryRecovery;
     public float ParrySuccessInvincible => _parrySuccessInvincible;
+    public Vector2 ParryRangeOffset => _parryRangeOffset;
+    public Vector2 ParryRangeSize => _parryRangeSize;
 
     public int BaseMaxCombo => _baseMaxCombo;
     public int MaxComboCap => _maxComboCap;

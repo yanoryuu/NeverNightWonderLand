@@ -43,8 +43,10 @@ public class ChargeRushState : PlayerState
     /// <summary>正面の SkillBreakable(横突進) を砕き、敵に1回ずつダメージを与える。</summary>
     private void HitAhead()
     {
-        var center = (Vector2)Player.transform.position + new Vector2(Player.Facing * 0.9f, 0f);
-        var hits = Physics2D.OverlapBoxAll(center, new Vector2(1.2f, 1.5f), 0f,
+        var offset = Player.Consts.ChargeRushHitOffset;
+        var center = (Vector2)Player.transform.position
+                     + new Vector2(Player.Facing * offset.x, offset.y);
+        var hits = Physics2D.OverlapBoxAll(center, Player.Consts.ChargeRushHitSize, 0f,
             Player.Consts.AttackTargetLayer);
         foreach (var hit in hits)
         {

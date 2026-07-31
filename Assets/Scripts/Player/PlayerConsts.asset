@@ -83,6 +83,31 @@ MonoBehaviour:
   _maxFallSpeed: 20
   _coyoteTime: 0.1
   _jumpBufferTime: 0.1
+  _slamFallSpeed: 32
+  _slamAttack:
+    _duration: 0.2
+    _hitDelay: 0
+    _hpDamage: 2
+    _guardDamage: 3
+    _offset: {x: 0, y: -0.6}
+    _boxSize: {x: 3, y: 1.6}
+  _skillChargeTime: 0.4
+  _superJumpHeight: 24.5
+  _chargeRushSpeed: 26
+  _slamBreakOffset: {x: 0, y: -1.3}
+  _slamBreakSize: {x: 0.8, y: 0.9}
+  _superJumpHitOffset: {x: 0, y: 0.9}
+  _superJumpHitSize: {x: 0.9, y: 0.9}
+  _chargeRushHitOffset: {x: 0.9, y: 0}
+  _chargeRushHitSize: {x: 1.2, y: 1.5}
+  _parryWindow: 0.18
+  _parryRecovery: 0.25
+  _parrySuccessInvincible: 0.6
+  _parryRangeOffset: {x: 0.3, y: 0}
+  _parryRangeSize: {x: 1.5, y: 1.5}
+  _baseMaxCombo: 3
+  _maxComboCap: 5
+  _forgeAttackBonus: 1
   _groundCheckRadius: 0.2
   _groundLayer:
     serializedVersion: 2

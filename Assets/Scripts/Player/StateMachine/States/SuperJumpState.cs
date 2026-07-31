@@ -51,10 +51,14 @@ public class SuperJumpState : PlayerState
     /// <summary>頭上の SkillBreakable(大ジャンプ) を砕き、敵に1回ずつダメージを与える。</summary>
     private void HitAbove()
     {
+        var baseOffset = Player.Consts.SuperJumpHitOffset;
+        var baseSize = Player.Consts.SuperJumpHitSize;
+
         // 上昇が速いのでフレーム間の移動量ぶん縦に長めの判定にする
-        var stepHeight = Mathf.Max(0.9f, Player.Rb.linearVelocity.y * Time.fixedDeltaTime + 0.6f);
-        var center = (Vector2)Player.transform.position + new Vector2(0f, 0.9f + stepHeight / 2f);
-        var hits = Physics2D.OverlapBoxAll(center, new Vector2(0.9f, stepHeight), 0f,
+        var stepHeight = Mathf.Max(baseSize.y, Player.Rb.linearVelocity.y * Time.fixedDeltaTime + 0.6f);
+        var center = (Vector2)Player.transform.position
+                     + new Vector2(baseOffset.x, baseOffset.y + stepHeight / 2f);
+        var hits = Physics2D.OverlapBoxAll(center, new Vector2(baseSize.x, stepHeight), 0f,
             Player.Consts.AttackTargetLayer);
         foreach (var hit in hits)
         {
