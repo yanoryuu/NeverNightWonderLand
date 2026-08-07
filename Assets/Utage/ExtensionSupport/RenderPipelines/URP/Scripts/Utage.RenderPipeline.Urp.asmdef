@@ -1,0 +1,55 @@
+{
+    "name": "UtageForUrp",
+    "rootNamespace": "Utage.RenderPipeline.Urp",
+    "references": [
+        "Utage",
+        "Utage.RenderPipeline",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "",
+            "define": "UTAGE_URP"
+        },
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "12",
+            "define": "URP_12_OR_NEWER"
+        },
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "13",
+            "define": "URP_13_OR_NEWER"
+        },
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "14",
+            "define": "URP_14_OR_NEWER"
+        },
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "15",
+            "define": "URP_15_OR_NEWER"
+        },
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "16",
+            "define": "URP_16_OR_NEWER"
+        },
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "17",
+            "define": "URP_17_OR_NEWER"
+        }
+    ],
+    "noEngineReferences": false
+}

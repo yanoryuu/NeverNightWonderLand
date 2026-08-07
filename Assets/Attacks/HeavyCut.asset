@@ -1,24 +1,3 @@
-%YAML 1.1
-%TAG !u! tag:unity3d.com,2011:
---- !u!114 &11400000
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1b866178ee1510e4ba8817b6fea01735, type: 3}
-  m_Name: HeavyCut
-  m_EditorClassIdentifier: 
-  _displayName: "\u91CD\u65AD\u3061"
-  _description: "\u5927\u632F\u308A\u306E\u4E00\u6483\u3002\u9632\u5FA1\u5024(\u767D)\u3092\u524A\u308A\u3084\u3059\u3044"
-  _iconColor: {r: 1, g: 0.55, b: 0.25, a: 1}
-  _profile:
-    _duration: 0.5
-    _hitDelay: 0.2
-    _hpDamage: 1
-    _guardDamage: 3
-    _offset: {x: 0.8, y: 0}
-    _boxSize: {x: 1.5, y: 1.4}
+version https://git-lfs.github.com/spec/v1
+oid sha256:3b77ca60513b4aa17c723777fe8cf48077c29a70ec30cc7e403fde722cadbde6
+size 748

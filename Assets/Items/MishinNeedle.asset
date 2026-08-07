@@ -1,26 +1,3 @@
-%YAML 1.1
-%TAG !u! tag:unity3d.com,2011:
---- !u!114 &11400000
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9f257d2a5153f6c4e9deb0a6feaf8779, type: 3}
-  m_Name: MishinNeedle
-  m_EditorClassIdentifier: 
-  _displayName: "\u30DF\u30B7\u30F3\u91DD"
-  _description: "\u66F2\u5C04\u3067\u6295\u3052\u308B\u3002\u5A01\u529B\u304C\u9AD8\u3044"
-  _maxCount: 12
-  _iconColor: {r: 0.6, g: 0.75, b: 1, a: 1}
-  _useDuration: 0.25
-  _useDelay: 0.08
-  _projectilePrefab: {fileID: 5338081320989953938, guid: aeda19335442adb45b4223fea24d08b4, type: 3}
-  _speed: 11
-  _launchAngle: 40
-  _gravityScale: 2.5
-  _hpDamage: 4
-  _guardDamage: 2
+version https://git-lfs.github.com/spec/v1
+oid sha256:d9b84673824415265fc68c233d6214473d7418a3d6ad49998fbe123476102ab9
+size 820

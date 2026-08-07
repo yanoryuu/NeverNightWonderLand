@@ -1,0 +1,50 @@
+﻿Key	Japanese	English
+Yes	はい	Yes
+No	いいえ	No
+Ok	OK	OK
+Cancel	キャンセル	Cancel
+Back	もどる	Back
+Clear	クリア	Clear
+Retry	リトライ	Retry
+History	履歴	History
+Save	セーブ	Save
+Load	ロード	Load
+On	オン	On
+Off	オフ	Off
+Skip	スキップ	Skip
+None	なし	None
+Sound	サウンド	Sound
+Review	レビュー	Review
+Restore	リストア	Restore
+Download	ダウンロード	Download
+QuitGame	ゲームを終了しますか？	Quit Game?
+DebugInfo	●デバッグ情報	Debug Info
+DebugLog	●デバッグログ	Debug Log
+DebugMenu	●デバッグメニュー	Debug Memu
+DeleteSaveAndQuit	セーブ消去＆終了	Delete Save
+DeleteCacheFile	ｷｬｯｼｭﾌｧｲﾙ削除	Delete Cache
+Language	言語	Language
+DeleteAllSaveDataFilesTitle	「宴」のセーブデータを消去	Delete save data of "Utage"
+DeleteAllSaveDataFilesMessage	「宴」のセーブデータを全て消去しますか？		Are you sure you want to clear all saved data of "Utage"?
+DeleteAllCacheFilesTitle	「宴」のキャッシュファイルを消去		Delete cache files of "Utage"
+DeleteAllCacheFilesMessage	「宴」のキャッシュファイルを全て消去しますか？		Are you sure you want to clear all cache files of "Utage"?
+DeleteAllOutputFilesTitle	「宴」の出力ファイルを消去		Delete output files of "Utage"
+DeleteAllOutputFilesMessage	「宴」の出力ファイル（セーブデータとキャッシュファイル）を全て消去しますか？		Are you sure you want to clear all (cache file and save data) output file of "Utage"?
+Downloading	ダウンロード中です...	Downloading...
+DownloadCount	{0}/{1}	{0}/{1}
+DownloadFinished	ダウンロード完了！	Download Finished!
+WarningNotOnline	ネットワークにつながっていません	Warning! Not Online
+WarningNotWifi	サイズの大きいデータがダウンロードされます。Wifi接続ではないですがよろしいですか。	Warning! Not Wifi
+ChangeCurrentProject	現在のシナリオプロジェクトファイルを変更します	Change Current Scenario Data Project
+VersionUpScene	宴のシーンをバージョンアップする必要があります。よろしいですか	Current UTAGE scene should be upgraded. Is it OK？
+VersionUpScenario	宴のシナリオを再インポートしてバージョンアップする必要があります。よろしいですか	Current UTAGE Scenario should be upgraded. Is it OK？
+Redownload	再ﾀﾞｳﾝﾛｰﾄﾞ	Redownload
+UtageGuideMessageQuickSave	クイックセーブされました	Quick saved
+UtageGuideMessageQuickLoad	クイックロードされました	Quick loaded
+UtageGuideMessageCgGalleryNotOpened	まだ開放されていません	Not yet opened  
+UtageGuideMessageSceneGalleryNotOpened	まだ開放されていません	Not yet opened
+UtageGuideMessageLoadFailedNotSaved	まだセーブされていません	Not yet saved
+UtageGuideMessageSaveFailedAutoSave	オートセーブデータにはセーブできません	Cannot save to auto save data
+UtageDialogMessageSaveConfirm	上書きしてセーブしますか？	Would you like to overwrite and save?
+UtageDialogMessageBackTitleConfirm	タイトル画面に戻りますか？	Return to the title screen?
+UtageDialogMessageResetConfigConfirm	全ての設定をデフォルト値に戻しますか？	All settings will be reset to their default values. Proceed?

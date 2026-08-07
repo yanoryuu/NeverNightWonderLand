@@ -1,25 +1,3 @@
-%YAML 1.1
-%TAG !u! tag:unity3d.com,2011:
---- !u!114 &11400000
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9b58f2afee84612499093159f0aba5a2, type: 3}
-  m_Name: PinCushion
-  m_EditorClassIdentifier: 
-  _displayName: "\u91DD\u5C71"
-  _description: "\u5730\u9762\u306B\u8A2D\u7F6E\u3002\u4E0A\u306E\u6575\u306B\u7D99\u7D9A\u30C0\u30E1\u30FC\u30B8"
-  _maxCount: 5
-  _iconColor: {r: 0.8, g: 0.65, b: 0.5, a: 1}
-  _useDuration: 0.25
-  _useDelay: 0.08
-  _trapPrefab: {fileID: 1269858894361593279, guid: 4e98dc03bac0e5b4087666e120f3141f, type: 3}
-  _placeDistance: 1.2
-  _hpDamage: 1
-  _tickInterval: 0.4
-  _lifetime: 6
+version https://git-lfs.github.com/spec/v1
+oid sha256:cddbc692217086fad9c64f0c0cf4ed911590aa6a14565c4f190e1c1892f1b0db
+size 812

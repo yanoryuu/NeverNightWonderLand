@@ -8,16 +8,18 @@ using UnityEngine;
 /// <summary>
 /// 開発用デバッグパネル (メニュー: NeverNight/Debug Panel)。プレイモード中のみ操作できる。
 /// ステージワープ / 能力 (ハサミ強化・スキル) の付与と剥奪 / 無敵 / 回復 / 糸 /
-/// 全攻撃解放 / 敵全滅 / 進行フラグの確認と操作をまとめる。
+/// 全攻撃解放 / 敵全滅 / 会話 (Utage) の再生 / 進行フラグの確認と操作をまとめる。
 /// ランタイム側への影響は DebugCheats.Invincible の参照のみで、ビルドには含まれない。
 /// </summary>
 public class DebugPanelWindow : EditorWindow
 {
     private Vector2 _scroll;
     private string _flagInput = "";
+    private string _dialogueLabelInput = "";
     private bool _warpFoldout = true;
     private bool _abilityFoldout = true;
     private bool _cheatFoldout = true;
+    private bool _dialogueFoldout = true;
     private bool _flagFoldout = true;
 
     // 主要な進行フラグ (ボタンで即セットできるようにする)
@@ -59,6 +61,8 @@ public class DebugPanelWindow : EditorWindow
         DrawAbilitySection(player);
         EditorGUILayout.Space();
         DrawCheatSection(player);
+        EditorGUILayout.Space();
+        DrawDialogueSection();
         EditorGUILayout.Space();
         DrawFlagSection();
 
@@ -196,6 +200,47 @@ public class DebugPanelWindow : EditorWindow
                     enemy.TakeDamage(new DamageInfo(9999, 9999, enemy.transform.position, player.gameObject));
             }
         }
+    }
+
+    private void DrawDialogueSection()
+    {
+        _dialogueFoldout = EditorGUILayout.Foldout(_dialogueFoldout, "会話 (Utage)", true, EditorStyles.foldoutHeader);
+        if (!_dialogueFoldout)
+            return;
+
+        var labels = DialogueLabelScanner.Scan();
+        if (labels.Length == 0)
+        {
+            EditorGUILayout.HelpBox(
+                "シナリオラベルが見つかりません。\nAssets/Dialogue 内の .tsv/.xls にラベル (*ラベル名) を追加してください。",
+                MessageType.Warning);
+        }
+
+        if (DialogueService.IsPlaying)
+            EditorGUILayout.HelpBox("会話を再生中です。", MessageType.Info);
+
+        using (new EditorGUI.DisabledScope(DialogueService.IsPlaying))
+        {
+            foreach (var label in labels)
+            {
+                if (GUILayout.Button(label))
+                    DialogueService.Play(label);
+            }
+
+            // ラベル直接入力での再生 (Excel 保存直後などボタン一覧に無いものを試す用)
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                _dialogueLabelInput = EditorGUILayout.TextField(_dialogueLabelInput);
+                using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(_dialogueLabelInput)))
+                {
+                    if (GUILayout.Button("再生", GUILayout.Width(60f)))
+                        DialogueService.Play(_dialogueLabelInput.TrimStart('*').Trim());
+                }
+            }
+        }
+
+        if (GUILayout.Button("ラベル一覧を再読み込み"))
+            DialogueLabelScanner.Scan(forceReload: true);
     }
 
     private void DrawFlagSection()

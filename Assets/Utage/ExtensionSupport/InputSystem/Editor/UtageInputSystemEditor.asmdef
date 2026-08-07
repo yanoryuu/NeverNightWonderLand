@@ -1,0 +1,28 @@
+{
+    "name": "UtageInputSystemEditor",
+    "rootNamespace": "Utage.InputSystem",
+    "references": [
+        "Unity.InputSystem",
+        "Utage",
+        "UtageEditor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "ENABLE_INPUT_SYSTEM"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.inputsystem",
+            "expression": "",
+            "define": "UTAGE_INPUT_SYSTEM"
+        }
+    ],
+    "noEngineReferences": false
+}

@@ -1,0 +1,99 @@
+﻿Command,Arg1,Arg2,Arg3,Arg4,Arg5,Arg6,WaitType,Text,PageCtrl,Voice,WindowType,English
+*Utage3,,,,,,,,,,,,
+Bg,背景その1,,,,,,,,,,,
+Bgm,BGMその1,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+//StopSound,"Bgm,Voice",,,,,,,,,,,
+,,,,,,,,,,,,
+*宴3選択肢トップ,,,,,,,,,,,,
+**選択肢トップ,,,,,,,,,,,,
+CharacterOff,,,,,,,,,,,,
+Selection,*基本オブジェクト表示,,,,,,,基本オブジェクト表示,,,,Basic object display
+Selection,*カスタムオブジェクト表示,,,,,,,カスタムオブジェクト表示,,,,Custom object display
+Selection,*レイヤー系コマンド,,,,,,,レイヤー（キャンバス）処理,,,,Layers (canvas) processing
+Selection,*宴3演出,,,,,,,宴3演出,,,,Banquet 3 Directing
+Selection,*Utage2or3,,,,,,,戻る,,,,Return
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+*基本オブジェクト表示,,,,,,,,,,,,
+CharacterOff,,,,,,,,,,,,
+Selection,*RawImage表示,,,,,,,テクスチャ表示,,,,Texture display
+Selection,*アバター,,,,,,,アバター,,,,Avatar
+Selection,*ダイシング,,,,,,,ダイシング,,,,Dicing
+Selection,**選択肢トップ,,,,,,,戻る,,,,Return
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+*カスタムオブジェクト表示,,,,,,,,,,,,
+CharacterOff,,,,,,,,,,,,
+Selection,*2Dプレハブ表示,,,,,,,2Dプレハブ,,,,2D Prefab
+Selection,*3Dプレハブ表示,,,,,,,3Dプレハブ,,,,3D prefab
+Selection,*パーティクル,,,,,,,パーティクル,,,,particle
+Selection,*ビデオオブジェクト,,,,,,,ビデオオブジェクト,,,,video
+Selection,**選択肢トップ,,,,,,,戻る,,,,Return
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+*レイヤー（キャンバス）,,,,,,,,,,,,
+Selection,*レイヤー系コマンド,,,,,,,レイヤー,,,,layer
+Selection,*クリック処理,,,,,,,クリックへ反応,,,,Reaction to click
+Selection,**選択肢トップ,,,,,,,戻る,,,,Return
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+*宴3演出,,,,,,,,,,,,
+CharacterOff,,,,,,,,,,,,
+Selection,*宴3演出その1,,,,,,,その１,,,,Timeline effect
+Selection,*宴3演出その2,,,,,,,その２,,,,Camera work
+Selection,**選択肢トップ,,,,,,,戻る,,,,Return
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+*宴3演出その1,,,,,,,,,,,,
+CharacterOff,,,,,,,,,,,,
+Selection,*タイムラインエフェクト,,,,,,,タイムラインエフェクト,,,,Timeline effect
+Selection,*カメラワーク,,,,,,,カメラワーク,,,,Camera work
+Selection,*イメージエフェクト,!urpFlag,,,,,,イメージエフェクト,,,,Image effect
+Selection,*イメージエフェクトURP,urpFlag,,,,,,イメージエフェクト,,,,Image effect
+Selection,*トランジション,,,,,,,トランジション,,,,Transition
+Selection,*宴3演出,,,,,,,戻る,,,,Return
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+*宴3演出その2,,,,,,,,,,,,
+CharacterOff,,,,,,,,,,,,
+Selection,*ビデオ,,,,,,,ビデオ,,,,Video
+Selection,*フェード,,,,,,,フェード,,,,Fade
+Selection,*宴3演出,,,,,,,戻る,,,,Return
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+*タイムラインエフェクト,,,,,,,,,,,,
+CharacterOff,,,,,,,,,,,,
+Selection,*ウェイトとページ処理,,,,,,,ウェイトとページ処理,,,,Wait and page control
+Selection,*スレッド,,,,,,,スレッド,,,,Thread
+Selection,*キーフレームアニメーション,,,,,,,キーフレームアニメーション,,,,Key frame animation
+Selection,*宴3演出その1,,,,,,,戻る,,,,Return
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+*プレハブにリソースロードを追加,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+Jump,*カスタムオブジェクト表示,,,,,,,,,,,

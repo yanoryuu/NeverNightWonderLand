@@ -1,0 +1,92 @@
+This asset is governed by the Asset Store EULA.
+However, the following asset are governed by the licenses indicated below.
+License and copyright/accreditation details—determined by relevant license.
+
+************ Run Time *********************
+
+1. iTween
+ BSD
+ Utage\Scripts\GameLib\iTween\Plugins\ReadMe!\iTweenLicense.txt
+
+2. OFL
+ SIL Open Font License 1.1
+Utage\Fonts\Fonts\NotoSans\NotoSans-OFL.txt
+Utage\Fonts\Fonts\NotoSansJP\NotoSansJP-OFL.txt
+Utage\Fonts\Fonts\NotoSansKR\NotoSansKR-OFL.txt
+Utage\Fonts\Fonts\NotoSansSC\NotoSansSC-OFL.txt
+Utage\Fonts\Fonts\NotoSansTC\NotoSansTC-OFL.txt
+The fonts within this asset are provided under the SIL Open Font License (SIL OFL).
+
+
+ *********** Sample Only ******************
+
+1. UnityChan
+ Unity-Chan License Version 2.02
+ Utage\Sample\UnityChan\UCL2.02
+ This is used in "Sample Only". Unity-Chan License Version 2.02 is not required to be written in the application made using the UTAGE.
+
+2 きまぐれアフター
+Utage\Sample\Resources\Sample\Texture\BG\TutorialBg1.png
+Utage\Sample\Resources\Sample\Texture\BG\TutorialBg2.png
+The copyright for the sample background images belongs to the following rights holders.
+Recording is permitted as a background for tools.
+https://www5d.biglobe.ne.jp/~gakai/HTML/kiyaku.html
+
+************ Editor Only *****************
+
+1. NPOI 
+ Apache License Version 2.0
+ Utage\Editor\NPOI\NpoiLicense.txt
+ This is used in "Editor Only". Apache License Version 2.0 "is not required to be written in the application made using the UTAGE.
+
+***************************************
+
+
+
+---- Japanese Transration ---- 日本語訳 ----
+
+
+このアセットは、AssetStoreEULAの管理下にあります。
+ただし、以下のアセットは、以下に示すライセンスによって管理されます。
+ライセンスおよび著作権の詳細は、関連するライセンスによって決定されます。
+************ ランタイム *********************
+
+1. iTween
+ BSD
+ Utage\Scripts\GameLib\iTween\Plugins\ReadMe!\iTweenLicense.txt
+
+2. OFL
+ SIL Open Font License 1.1
+Utage\Fonts\Fonts\NotoSans\NotoSans-OFL.txt
+Utage\Fonts\Fonts\NotoSansJP\NotoSansJP-OFL.txt
+Utage\Fonts\Fonts\NotoSansKR\NotoSansKR-OFL.txt
+Utage\Fonts\Fonts\NotoSansSC\NotoSansSC-OFL.txt
+Utage\Fonts\Fonts\NotoSansTC\NotoSansTC-OFL.txt
+このアセット内のフォントはSIL Open Font License（SILオープンフォントライセンス）に基づいて提供されています。
+
+ *********** サンプルのみ ******************
+
+1. UnityChan
+ Unity-Chan License Version 2.02
+ Utage\Sample\UnityChan\UCL2.02
+ これは「サンプルのみ」で使われます。UTAGEを使ったアプリケーションに「Unity-Chan License Version 2.02」の表記が必要になるわけではありません。
+
+2 きまぐれアフター
+Utage\Sample\Resources\Sample\Texture\BG\TutorialBg1.png
+Utage\Sample\Resources\Sample\Texture\BG\TutorialBg2.png
+サンプルの背景画像の著作権は、以下の権利者に帰属しています。
+ツール用背景として収録が許可されています。
+https://www5d.biglobe.ne.jp/~gakai/HTML/kiyaku.html
+ これは「サンプルのみ」で使われます。UTAGEを使ったアプリケーションでこのライセンスが必要になるわけではありません。
+
+************ エディタのみ *****************
+
+1. NPOI 
+ Apache License Version 2.0
+ Utage\Editor\NPOI\NpoiLicense.txt
+ これは「エディタのみ」で使われます。UTAGEを使ったアプリケーションに「Apache License Version 2.0」の表記が必要になるわけではありません。
+
+***************************************
+
+
+

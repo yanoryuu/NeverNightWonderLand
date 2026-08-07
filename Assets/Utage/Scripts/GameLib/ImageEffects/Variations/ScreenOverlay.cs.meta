@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 7257e31fba76bf14e9bea6ff30499a78
+timeCreated: 1474780133
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences:
+  - texture: {instanceID: 0}
+  - overlayShader: {fileID: 4800000, guid: b19ad32e6441eab4ab3a2d583b8b23f5, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

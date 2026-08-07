@@ -1,0 +1,19 @@
+{
+    "name": "UtageEditor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:feccedfe35683a44cbdbb1f990156165",
+        "GUID:6055be8ebefd69e48b49212b09b47b2f"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

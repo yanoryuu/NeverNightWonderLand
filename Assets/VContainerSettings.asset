@@ -1,18 +1,3 @@
-%YAML 1.1
-%TAG !u! tag:unity3d.com,2011:
---- !u!114 &11400000
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9cf4d8df1d704d5689f3c69bd70d1cb9, type: 3}
-  m_Name: VContainerSettings
-  m_EditorClassIdentifier: 
-  RootLifetimeScope: {fileID: 8114370234843922124, guid: 72f1606188e195d42afda29a0eb256b3, type: 3}
-  EnableDiagnostics: 0
-  DisableScriptModifier: 0
-  RemoveClonePostfix: 0
+version https://git-lfs.github.com/spec/v1
+oid sha256:cdc118e571f6722f6f495c4a544833199f94dd4233408fbb7bfebf1ee641f20d
+size 581

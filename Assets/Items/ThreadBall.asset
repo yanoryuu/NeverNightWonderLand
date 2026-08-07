@@ -1,26 +1,3 @@
-%YAML 1.1
-%TAG !u! tag:unity3d.com,2011:
---- !u!114 &11400000
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 150f5e1bd123c3e468373bab4a6c7a85, type: 3}
-  m_Name: ThreadBall
-  m_EditorClassIdentifier: 
-  _displayName: "\u7CF8\u7389"
-  _description: "\u5F53\u305F\u3063\u305F\u6575\u3092\u7CF8\u3067\u7D61\u3081\u3066\u62D8\u675F\u3059\u308B"
-  _maxCount: 8
-  _iconColor: {r: 0.85, g: 0.6, b: 1, a: 1}
-  _useDuration: 0.25
-  _useDelay: 0.08
-  _projectilePrefab: {fileID: 8942241098131145384, guid: 5688aec5d40b69d4ca3eaebb2815d776, type: 3}
-  _speed: 9
-  _launchAngle: 30
-  _gravityScale: 2
-  _hpDamage: 1
-  _bindDuration: 2.5
+version https://git-lfs.github.com/spec/v1
+oid sha256:5a09dab81bc51b88535587b67485ce1b395a63d133ef7867b51f56562bbcb263
+size 823

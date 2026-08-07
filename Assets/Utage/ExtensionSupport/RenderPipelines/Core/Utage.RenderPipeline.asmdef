@@ -1,0 +1,23 @@
+{
+    "name": "Utage.RenderPipeline",
+    "rootNamespace": "Utage.RenderPipeline",
+    "references": [
+        "Utage",
+        "Unity.RenderPipelines.Core.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.render-pipelines.core",
+            "expression": "",
+            "define": "UTAGE_RENDER_PIPELINE"
+        }
+    ],
+    "noEngineReferences": false
+}
