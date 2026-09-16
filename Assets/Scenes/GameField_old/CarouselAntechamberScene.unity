@@ -2454,7 +2454,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   updateTiming: 1
   threadedAnimation: 2
-  animationName: run
+  animationName: Itsuku_jump
   loop: 1
   timeScale: 1
   unscaledTime: 0
@@ -2557,8 +2557,6 @@ MeshRenderer:
   - {fileID: 2100000, guid: d3ad397e79ea94b5ea88083ea813599a, type: 2}
   - {fileID: 2100000, guid: 66704b66e6c4941a3928e90e8d60d9a9, type: 2}
   - {fileID: 2100000, guid: d3ad397e79ea94b5ea88083ea813599a, type: 2}
-  - {fileID: 2100000, guid: 5579eb9b43205448c938dd3cd7fc6984, type: 2}
-  - {fileID: 2100000, guid: 66704b66e6c4941a3928e90e8d60d9a9, type: 2}
   - {fileID: 2100000, guid: 5579eb9b43205448c938dd3cd7fc6984, type: 2}
   - {fileID: 2100000, guid: 66704b66e6c4941a3928e90e8d60d9a9, type: 2}
   - {fileID: 2100000, guid: 5579eb9b43205448c938dd3cd7fc6984, type: 2}
