@@ -100,3 +100,7 @@ InitTestScene*.unity*
 
 # 企画書などのドキュメント出力 (Google Slides 管理)
 /*.pptx
+
+# エディタ検証用スクリーンショット (MCP capture の出力先)
+/[Aa]ssets/[Ss]creenshots/
+/[Aa]ssets/[Ss]creenshots.meta
