@@ -1,0 +1,192 @@
+// ===== 設定 (シーンごとにここだけ変える) =====
+string scenePath = "Assets/Scenes/GameField_old/CarouselAntechamberScene.unity";
+bool saveScene = true;
+// terrainColors: 地形として扱う SpriteRenderer の色 (グレーボックス規約)。すり抜け床は PlatformEffector2D で判定。
+var terrainColors = new[] { new Color(0.72f, 0.70f, 0.68f), new Color(0.7f, 0.7f, 0.7f) };
+string[] extraTerrainNames = { };   // 色が違っても地形として扱いたい GameObject 名
+string[] excludeNames = { };        // 地形色でも触らない GameObject 名
+float slopeMaxAngleDiff = 4.0f;     // 坂タイル採用の角度差上限 (deg)
+float slopeMaxDeviation = 0.30f;    // 坂タイル採用の斜面ズレ上限 (unit)
+float slopeMaxRiseError = 0.25f;    // 坂タイル採用の段差誤差上限: |コライダーの上昇量 − タイル枚数| (タイル1枚=1セル上昇なので、上昇 1.5 の坂は 1枚でも 2枚でも合わない)
+// ==========================================
+var log = new System.Text.StringBuilder();
+const string TILES = "Assets/LocalData/StageAsset/Tiles/";
+const float CELL_PX = 546f;
+var rule   = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Tilemaps.TileBase>(TILES + "Rules/StageTerrainRule.asset");
+var marker = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Tilemaps.TileBase>(TILES + "stagetile_marker_solid.asset");
+var p08l = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Tilemaps.Tile>(TILES + "stagetile_floor_08_l.asset");
+var p08m = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Tilemaps.Tile>(TILES + "stagetile_floor_08_m.asset");
+var p08r = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Tilemaps.Tile>(TILES + "stagetile_floor_08_r.asset");
+var slopeTiles = new UnityEngine.Tilemaps.Tile[2, 4]; // [0=ascent,1=descent][w]
+for (int w = 1; w <= 3; w++) { slopeTiles[0, w] = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Tilemaps.Tile>(TILES + "stagetile_ascent_0" + w + ".asset"); slopeTiles[1, w] = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Tilemaps.Tile>(TILES + "stagetile_descent_0" + w + ".asset"); }
+if (rule == null || marker == null || p08m == null || slopeTiles[0, 3] == null) return "!! tile assets missing";
+var BODY = new Color(80f/255f, 0f, 54f/255f); // タイル本体の紫 (採用できない坂グレーボックスの着色用)
+System.Func<UnityEngine.Tilemaps.TileBase, bool> isMarker = t => t == marker || (t != null && t.name == "stagetile_marker_solid");
+
+var scene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
+if (scene.path != scenePath)
+{
+    // 同じ execute_code 呼び出し内で OpenScene → SetTile すると単発 SetTile (坂/マーカー/すり抜け床) が保存前に消える現象を確認済み。
+    // 必ず「開くだけ」で一度戻り、次の呼び出しで本処理を行う。
+    UnityEditor.SceneManagement.EditorSceneManager.OpenScene(scenePath);
+    return "シーンを開きました (" + scenePath + ")。同じコードをもう一度実行してください。";
+}
+log.AppendLine("scene: " + scene.name);
+
+// ---- Grid ----
+var grid = UnityEngine.Object.FindFirstObjectByType<Grid>();
+if (grid == null) { var g = new GameObject("Grid"); grid = g.AddComponent<Grid>(); log.AppendLine("Grid を新規作成"); }
+grid.cellSize = new Vector3(1, 1, 0); grid.cellGap = Vector3.zero;
+if (grid.transform.position != Vector3.zero) { log.AppendLine("!! Grid 位置が原点でない: " + grid.transform.position + " → 原点に移動"); grid.transform.position = Vector3.zero; }
+
+System.Func<string, int, UnityEngine.Tilemaps.Tilemap> GetLayer = (name, order) => {
+    UnityEngine.Tilemaps.Tilemap tm = null;
+    foreach (Transform c in grid.transform) if (c.name == name) tm = c.GetComponent<UnityEngine.Tilemaps.Tilemap>();
+    if (tm == null) { var go = new GameObject(name); go.transform.SetParent(grid.transform, false); tm = go.AddComponent<UnityEngine.Tilemaps.Tilemap>(); go.AddComponent<UnityEngine.Tilemaps.TilemapRenderer>(); }
+    tm.tileAnchor = new Vector3(0.5f, 0.5f, 0f);
+    var r = tm.GetComponent<UnityEngine.Tilemaps.TilemapRenderer>(); r.sortingLayerName = "Default"; r.sortingOrder = order;
+    return tm;
+};
+
+// 坂タイル1枚を置く: 斜面が (x0, y0)→(x0+w, y0+1) [ascent] / (x0, y0+1)→(x0+w, y0) [descent] になるアンカーに置き、足元セルはマーカーで上書き
+// (タイルの規約: 幅偶数は x+0.5 / 高さ2は y-0.5 オフセット。スプライトの下1行が胴体、上1行が三角)
+System.Action<UnityEngine.Tilemaps.Tilemap, int, int, int, bool> PlaceSlope = (tm, x0, y0, w, ascending) => {
+    int ax = (w == 3) ? x0 + 1 : x0, ay = y0;
+    var anchor = new Vector3Int(ax, ay, 0);
+    for (int x = x0; x < x0 + w; x++) for (int y = y0 - 1; y <= y0; y++) { var c = new Vector3Int(x, y, 0); if (c != anchor) tm.SetTile(c, marker); }
+    tm.SetTile(anchor, slopeTiles[ascending ? 0 : 1, w]);
+};
+
+var allTm = UnityEngine.Object.FindObjectsByType<UnityEngine.Tilemaps.Tilemap>(FindObjectsSortMode.None);
+UnityEngine.Tilemaps.Tilemap colliderTm = null;
+foreach (var t in allTm) if (t.GetComponent<UnityEngine.Tilemaps.TilemapCollider2D>() != null) colliderTm = t;
+
+int painted = 0, markers = 0, platCells = 0, rects = 0, plats = 0, rampsTiled = 0, rampsKept = 0, colored = 0, hidden = 0;
+
+if (colliderTm != null)
+{
+    // ===== ケースA: Tilemap 自体が地形 (TilemapCollider2D 持ち) → セル集合をそのまま RuleTile で塗り直す =====
+    log.AppendLine("mode: tilemap-terrain (" + colliderTm.name + ")");
+    if (colliderTm.transform.parent != grid.transform) colliderTm.transform.SetParent(grid.transform, true);
+    colliderTm.tileAnchor = new Vector3(0.5f, 0.5f, 0f);
+    var pos = new System.Collections.Generic.List<Vector3Int>(); var tiles = new System.Collections.Generic.List<UnityEngine.Tilemaps.TileBase>();
+    var slopeAnchors = new System.Collections.Generic.List<(Vector3Int, UnityEngine.Tilemaps.Tile)>();
+    foreach (var c in colliderTm.cellBounds.allPositionsWithin)
+    {
+        if (!colliderTm.HasTile(c)) continue;
+        var t = colliderTm.GetTile(c) as UnityEngine.Tilemaps.Tile;
+        if (isMarker(t)) continue;   // 前回実行のマーカーはそのまま (再実行可能)
+        if (t != null && (t.name.Contains("ascent") || t.name.Contains("descent"))) { slopeAnchors.Add((c, t)); continue; }
+        pos.Add(c); tiles.Add(rule);
+    }
+    colliderTm.SetTiles(pos.ToArray(), tiles.ToArray()); painted = pos.Count;
+    // 既存の坂タイル: スプライトが覆う空セルにマーカー (隣接判定で実体扱いにし、坂の脇に端キャップ/壁面を出さない)
+    foreach (var (a, t) in slopeAnchors)
+    {
+        int w = Mathf.RoundToInt(t.sprite.rect.width / CELL_PX), h = Mathf.RoundToInt(t.sprite.rect.height / CELL_PX);
+        int x0 = (w % 2 == 0) ? a.x : a.x - (w - 1) / 2;   // 偶数幅は +0.5 オフセット → a.x..a.x+w-1
+        int y0 = a.y - (h - 1);                              // 高さ2は -0.5 オフセット → a.y-1..a.y
+        for (int x = x0; x < x0 + w; x++) for (int y = y0; y <= a.y; y++) { var c = new Vector3Int(x, y, 0); if (!colliderTm.HasTile(c)) { colliderTm.SetTile(c, marker); markers++; } }
+    }
+    log.AppendLine("slopes kept: " + slopeAnchors.Count);
+}
+else
+{
+    // ===== ケースB: グレーボックス (Sprite+BoxCollider2D) → 見た目レイヤーとして Tilemap を生成。コライダーは既存のまま =====
+    log.AppendLine("mode: greybox");
+    foreach (var t in allTm) { if (t.transform.parent != grid.transform) t.transform.SetParent(grid.transform, true); if (t.name != "Platforms" && !t.name.StartsWith("Terrain")) { t.name = "Terrain"; } t.ClearAllTiles(); }
+    var layers = new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<Vector3Int>>(); // key = round(frac*20)
+    var platform = new System.Collections.Generic.List<(int x, int y, float dy, int kind)>(); // kind 0=l 1=m 2=r
+    var slopes = new System.Collections.Generic.List<(int x0, int y0, int w, int n, bool asc)>();
+    System.Func<Color, bool> isTerrainColor = c => { foreach (var tc in terrainColors) if (Mathf.Abs(c.r - tc.r) < 0.03f && Mathf.Abs(c.g - tc.g) < 0.03f && Mathf.Abs(c.b - tc.b) < 0.03f) return true; return false; };
+    foreach (var sr in UnityEngine.Object.FindObjectsByType<SpriteRenderer>(FindObjectsSortMode.None))
+    {
+        if (!sr.gameObject.activeInHierarchy) continue;   // renderer.enabled=false は前回実行で隠したものなので対象に含める (再実行可能)
+        var bc = sr.GetComponent<BoxCollider2D>(); if (bc == null || bc.isTrigger) continue;
+        if (System.Array.IndexOf(excludeNames, sr.name) >= 0) continue;
+        bool isPlat = bc.usedByEffector && sr.GetComponent<PlatformEffector2D>() != null;
+        bool isTerr = !isPlat && (isTerrainColor(sr.color) || sr.color == BODY || System.Array.IndexOf(extraTerrainNames, sr.name) >= 0);
+        if (!isPlat && !isTerr) { colored++; continue; }
+        var tr = sr.transform; var ls = tr.lossyScale;
+        float angZ = tr.eulerAngles.z; if (angZ > 180f) angZ -= 360f;
+        float angMod = Mathf.Repeat(tr.eulerAngles.z, 90f);
+        if (angMod > 1f && angMod < 89f)
+        {
+            // ---- 坂: 上面の線分を求め、角度と長さの合う坂タイルを敷く ----
+            float L = bc.size.x * Mathf.Abs(ls.x), T = bc.size.y * Mathf.Abs(ls.y);
+            Vector2 C = tr.TransformPoint(bc.offset); float rad = angZ * Mathf.Deg2Rad;
+            Vector2 dir = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad)), nrm = new Vector2(-Mathf.Sin(rad), Mathf.Cos(rad));
+            if (nrm.y < 0) { nrm = -nrm; }
+            Vector2 A = C + nrm * (T / 2) - dir * (L / 2), B = C + nrm * (T / 2) + dir * (L / 2);
+            Vector2 left = A.x < B.x ? A : B, right = A.x < B.x ? B : A;
+            bool asc = right.y > left.y; Vector2 low = asc ? left : right, high = asc ? right : left;
+            float rise = high.y - low.y, run = Mathf.Abs(high.x - low.x); float ang = Mathf.Atan2(rise, run) * Mathf.Rad2Deg;
+            int bestW = 0; float bestDiff = 999f;
+            for (int w = 1; w <= 3; w++) { float ta = Mathf.Atan2(1f, w) * Mathf.Rad2Deg; float d = Mathf.Abs(ta - ang); if (d < bestDiff) { bestDiff = d; bestW = w; } }
+            int n = Mathf.Max(1, Mathf.RoundToInt(rise));
+            int xl = Mathf.RoundToInt(low.x), yl = Mathf.RoundToInt(low.y);
+            // 斜面ズレ: タイル面 (低端から n 枚) と コライダー上面の差を、タイルが覆う範囲でサンプリング
+            float maxDev = 0f; float tanC = rise / Mathf.Max(run, 1e-3f);
+            for (int s = 0; s <= 20; s++) { float dx = (n * bestW) * s / 20f; float tileY = yl + dx / bestW; float xw = asc ? xl + dx : xl - dx; float colY = low.y + Mathf.Abs(xw - low.x) * tanC; if (Mathf.Abs(xw - low.x) > run + 0.01f) colY = high.y; maxDev = Mathf.Max(maxDev, Mathf.Abs(tileY - colY)); }
+            string info = sr.name + " angle=" + ang.ToString("0.0") + (asc ? " asc" : " desc") + " run=" + run.ToString("0.00") + " rise=" + rise.ToString("0.00") + " nearest=_0" + bestW + "(" + (Mathf.Atan2(1f, bestW) * Mathf.Rad2Deg).ToString("0.0") + "°, Δ" + bestDiff.ToString("0.0") + "°) tiles=" + n + " low=(" + low.x.ToString("0.00") + "," + low.y.ToString("0.00") + ")→snap(" + xl + "," + yl + ") maxDev=" + maxDev.ToString("0.00") + " riseErr=" + Mathf.Abs(rise - n).ToString("0.00");
+            if (bestDiff <= slopeMaxAngleDiff && maxDev <= slopeMaxDeviation && Mathf.Abs(rise - n) <= slopeMaxRiseError)
+            { slopes.Add((xl, yl, bestW, n, asc)); rampsTiled++; sr.enabled = false; hidden++; log.AppendLine("ramp TILED: " + info); }
+            else { rampsKept++; sr.color = BODY; sr.enabled = true; log.AppendLine("ramp kept as sprite: " + info); }
+            continue;
+        }
+        Vector2 center = tr.TransformPoint(bc.offset); Vector2 size = new Vector2(bc.size.x * Mathf.Abs(ls.x), bc.size.y * Mathf.Abs(ls.y));
+        float x0 = center.x - size.x / 2, x1 = center.x + size.x / 2, y0 = center.y - size.y / 2, y1 = center.y + size.y / 2;
+        int xmin = Mathf.CeilToInt(x0 - 0.5f - 1e-3f), xmax = Mathf.FloorToInt(x1 - 0.5f + 1e-3f);
+        if (xmax < xmin) xmin = xmax = Mathf.FloorToInt((x0 + x1) / 2);
+        if (isPlat)
+        {
+            plats++;
+            float hs = p08m.sprite.rect.height / CELL_PX; int yc = Mathf.FloorToInt(y1) - 1; float dy = y1 - (yc + 0.5f + hs / 2f);
+            for (int x = xmin; x <= xmax; x++) platform.Add((x, yc, dy, x == xmin && x != xmax ? 0 : (x == xmax && x != xmin ? 2 : 1)));
+        }
+        else
+        {
+            rects++;
+            // どの辺をセル境界に正確に合わせるか: 上面が整数なら上面 / 上面が小数で下面が整数なら下面 (天井) / 両方小数なら上面 (床優先)
+            float fTop = y1 - Mathf.Floor(y1), fBot = y0 - Mathf.Floor(y0);
+            bool topInt = fTop < 0.025f || fTop > 0.975f, botInt = fBot < 0.025f || fBot > 0.975f;
+            float anchor = (!topInt && botInt) ? y0 : y1;
+            int key = Mathf.RoundToInt((anchor - Mathf.Floor(anchor)) * 20f); if (key >= 20) key = 0; float f = key / 20f;
+            int yt = Mathf.FloorToInt(y1 - f + 0.5f) - 1, yb = Mathf.FloorToInt(y0 - f + 0.5f); if (yb > yt) yb = yt;
+            if (!layers.ContainsKey(key)) layers[key] = new System.Collections.Generic.List<Vector3Int>();
+            for (int x = xmin; x <= xmax; x++) for (int y = yb; y <= yt; y++) layers[key].Add(new Vector3Int(x, y, 0));
+        }
+        sr.enabled = false; hidden++;
+    }
+    if (slopes.Count > 0 && !layers.ContainsKey(0)) layers[0] = new System.Collections.Generic.List<Vector3Int>();
+    foreach (var kv in layers)
+    {
+        float f = kv.Key / 20f; string name = kv.Key == 0 ? "Terrain" : "Terrain_y" + f.ToString("0.00");
+        var tm = GetLayer(name, kv.Key == 0 ? 0 : 1); tm.transform.localPosition = new Vector3(0, f, 0); tm.ClearAllTiles();
+        var set = new System.Collections.Generic.HashSet<Vector3Int>(kv.Value); var arr = new Vector3Int[set.Count]; set.CopyTo(arr);
+        var ts = new UnityEngine.Tilemaps.TileBase[arr.Length]; for (int i = 0; i < ts.Length; i++) ts[i] = rule;
+        tm.SetTiles(arr, ts); painted += arr.Length; log.AppendLine("layer " + name + ": " + arr.Length + " cells");
+        if (kv.Key == 0)
+        {
+            // 坂は基準レイヤー (整数格子) に置く。連続する長い坂は同じタイルを n 枚繰り返す
+            foreach (var (xl, yl, w, n, asc) in slopes)
+                for (int i = 0; i < n; i++) { int x0 = asc ? xl + i * w : xl - (i + 1) * w; PlaceSlope(tm, x0, yl + i, w, asc); markers += 2 * w - 1; }
+        }
+    }
+    if (platform.Count > 0)
+    {
+        var tm = GetLayer("Platforms", 2); tm.transform.localPosition = Vector3.zero; tm.ClearAllTiles();
+        foreach (var (x, y, dy, kind) in platform) { var c = new Vector3Int(x, y, 0); tm.SetTile(c, kind == 0 ? p08l : kind == 2 ? p08r : p08m); tm.SetTransformMatrix(c, Matrix4x4.Translate(new Vector3(0, dy, 0))); platCells++; }
+    }
+    // 空になった Tilemap 層は消す
+    var empties = new System.Collections.Generic.List<GameObject>();
+    foreach (Transform c in grid.transform) { var tm = c.GetComponent<UnityEngine.Tilemaps.Tilemap>(); if (tm != null && tm.GetUsedTilesCount() == 0) empties.Add(c.gameObject); }
+    foreach (var e in empties) { UnityEngine.Object.DestroyImmediate(e); log.AppendLine("removed empty layer"); }
+}
+// マーカー (通常 Tile) を置いても隣の RuleTile は再評価されないので、最後に全タイルを再評価する
+foreach (var t in UnityEngine.Object.FindObjectsByType<UnityEngine.Tilemaps.Tilemap>(FindObjectsSortMode.None)) { t.CompressBounds(); t.RefreshAllTiles(); }
+UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(scene);
+if (saveScene) UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
+log.AppendLine("terrain rects=" + rects + " platforms=" + plats + " (" + platCells + " cells) ramps tiled=" + rampsTiled + " kept=" + rampsKept + " colored-skipped=" + colored + " sprites hidden=" + hidden);
+log.AppendLine("painted=" + painted + " markers=" + markers + " saved=" + saveScene);
+return log.ToString();
