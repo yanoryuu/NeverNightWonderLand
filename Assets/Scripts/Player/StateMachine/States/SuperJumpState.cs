@@ -21,6 +21,7 @@ public class SuperJumpState : PlayerState
         _damaged.Clear();
         Player.ClearJumpBuffers();
         Player.SetSkillInvulnerable(true);
+        Player.LeaveGround();
         Player.Rb.linearVelocity = new Vector2(Player.Rb.linearVelocity.x, Player.Consts.SuperJumpVelocity);
     }
 

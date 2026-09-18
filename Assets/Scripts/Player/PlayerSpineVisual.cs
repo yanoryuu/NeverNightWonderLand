@@ -26,16 +26,20 @@ public class PlayerSpineVisual : MonoBehaviour
 
     [Header("Spine アニメーション名")]
     [Tooltip("骨格に存在しない名前を入れた場合は待機用へフォールバックする。空欄も同じ扱い")]
-    [SerializeField] private string _idleAnimation = "walk";
-    [SerializeField] private string _runAnimation = "walk";
-    [SerializeField] private string _jumpAnimation = "";
-    [SerializeField] private string _fallAnimation = "";
+    [SerializeField] private string _idleAnimation = "Itsuku_idle_normal";
+    [SerializeField] private string _runAnimation = "Itsuku_run";
+    [SerializeField] private string _jumpAnimation = "Itsuku_jump";
+    [Tooltip("落下専用が無い間はジャンプと同じ名前にしておく。同名なら上昇→落下で再生が途切れない")]
+    [SerializeField] private string _fallAnimation = "Itsuku_jump";
     [SerializeField] private string _attackAnimation = "";
-    [SerializeField] private string _dashAnimation = "";
+    [SerializeField] private string _dashAnimation = "Itsuku_rush";
 
     [Header("挙動")]
     [Tooltip("待機用アニメーションが移動用と同じ場合、待機中は先頭フレームで静止させる")]
     [SerializeField] private bool _freezeIdleWhenShared = true;
+
+    [Tooltip("ジャンプ・落下・攻撃・ダッシュをループさせず 1 回だけ再生し、終端ポーズで保持する。待機・移動は常にループ")]
+    [SerializeField] private bool _holdOneShotAnimations = true;
 
     [Tooltip("この速度を超えたら移動アニメーションに切り替える。Warrior.controller の閾値と同じ")]
     [SerializeField] private float _runSpeedThreshold = 0.1f;
@@ -182,7 +186,8 @@ public class PlayerSpineVisual : MonoBehaviour
             return;
         }
 
-        var entry = _skeleton.AnimationState.SetAnimation(0, animationName, !frozen);
+        var loop = !frozen && IsLooping(animationName);
+        var entry = _skeleton.AnimationState.SetAnimation(0, animationName, loop);
         if (entry != null)
         {
             entry.MixDuration = immediate ? 0f : _mixDuration;
@@ -222,6 +227,20 @@ public class PlayerSpineVisual : MonoBehaviour
     private bool IsIdleFrozen()
     {
         return _freezeIdleWhenShared && _idleAnimation == _runAnimation;
+    }
+
+    /// <summary>
+    /// 待機・移動はループ再生、それ以外 (ジャンプ・落下・攻撃・ダッシュ) は 1 回再生で終端保持。
+    /// 上昇→落下で同じアニメーションを指定した場合は再生を継続するので、跳躍モーションが途中で巻き戻らない。
+    /// </summary>
+    private bool IsLooping(string animationName)
+    {
+        if (!_holdOneShotAnimations)
+        {
+            return true;
+        }
+
+        return animationName == _idleAnimation || animationName == _runAnimation;
     }
 
     private bool Exists(string animationName)

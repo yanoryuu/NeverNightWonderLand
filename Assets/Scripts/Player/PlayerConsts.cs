@@ -255,6 +255,15 @@ public class PlayerConsts : ScriptableObject
     [Tooltip("接地と見なすレイヤー")]
     [SerializeField] private LayerMask _groundLayer = ~0;
 
+    [Tooltip("歩ける坂の最大角度 (deg)。これより急な面は壁として扱い、接地とみなさない")]
+    [SerializeField] private float _maxSlopeAngle = 50f;
+
+    [Tooltip("足元からこの距離以内に地面があれば接地とみなして吸着する (units)。坂を下る時に体が浮いて落下判定になるのを防ぐ")]
+    [SerializeField] private float _groundSnapDistance = 0.25f;
+
+    [Tooltip("接地中に地面へ押し付ける速度 (units/sec)。坂で滑落しないよう、重力の代わりに法線方向へ与える")]
+    [SerializeField] private float _groundStickSpeed = 2f;
+
     #endregion
 
     #region Properties
@@ -311,6 +320,9 @@ public class PlayerConsts : ScriptableObject
 
     public float GroundCheckRadius => _groundCheckRadius;
     public LayerMask GroundLayer => _groundLayer;
+    public float MaxSlopeAngle => _maxSlopeAngle;
+    public float GroundSnapDistance => _groundSnapDistance;
+    public float GroundStickSpeed => _groundStickSpeed;
 
     /// <summary>
     /// jumpHeight と timeToApex から逆算した基準重力加速度 (正の値)。

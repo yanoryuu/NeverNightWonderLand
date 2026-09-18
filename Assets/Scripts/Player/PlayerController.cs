@@ -105,7 +105,14 @@ public class PlayerController : MonoBehaviour
     #region Runtime State
 
     private bool _isGrounded;
+    private Vector2 _groundNormal = Vector2.up; // 足元の地面法線。坂の上では傾く (平地・非接地は上向き)
+    private float _launchTimer;                 // ジャンプ等で地面を蹴った直後、接地判定と張り付きを止める残り時間
+    private bool _groundedVelocityApplied;      // この物理ステップで既に地面沿いの速度を与えたか (ApplyGravity の二重適用防止)
+    private CapsuleCollider2D _capsule;         // 坂判定のキャストに体の形を使う
     private readonly ReactiveProperty<int> _facing = new(1);  // 1 = 右, -1 = 左
+
+    // 地面を蹴った直後に足元の判定円がまだ床に重なっていても接地扱いしない猶予
+    private const float LaunchGraceTime = 0.1f;
 
     private PlayerRuntime _playerRuntime; // UI (Presenter) へ自身を公開するための実行時参照
 
@@ -224,6 +231,7 @@ public class PlayerController : MonoBehaviour
     {
         _rb = GetComponent<Rigidbody2D>();
         _ownColliders = GetComponents<Collider2D>();
+        _capsule = GetComponent<CapsuleCollider2D>();
         _animator = GetComponent<Animator>();
         Sprite = GetComponent<SpriteRenderer>();
         _health = GetComponent<PlayerHealth>();
@@ -338,6 +346,10 @@ public class PlayerController : MonoBehaviour
         {
             Gizmos.color = Color.green;
             Gizmos.DrawWireSphere(_groundCheck.position, _consts.GroundCheckRadius);
+
+            // 足元の地面法線 (坂の上では傾く)
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawLine(_groundCheck.position, _groundCheck.position + (Vector3)_groundNormal * 0.6f);
         }
 
         // 攻撃判定ボックス (装備中の近接攻撃)
@@ -638,6 +650,7 @@ public class PlayerController : MonoBehaviour
     /// <summary>壁と反対方向へ壁ジャンプする。direction は飛ぶ方向 (1=右, -1=左)。</summary>
     public void WallJump(int direction)
     {
+        LeaveGround();
         _rb.linearVelocity = new Vector2(direction * _consts.WallJumpVelocity.x, _consts.WallJumpVelocity.y);
         _facing.Value = direction;
         _jumpBufferTimer = 0f;
@@ -666,6 +679,7 @@ public class PlayerController : MonoBehaviour
 
     // 接地判定の結果バッファ (毎フレームの確保を避ける)
     private readonly Collider2D[] _groundHits = new Collider2D[8];
+    private readonly RaycastHit2D[] _groundCastHits = new RaycastHit2D[8];
 
     // 降り抜け (下入力+ジャンプ) 中に衝突を無効化しているすり抜け床と残り時間
     private const float DropThroughTime = 0.3f;
@@ -677,8 +691,15 @@ public class PlayerController : MonoBehaviour
     {
         var wasGrounded = _isGrounded;
         _isGrounded = false;
+        _groundNormal = Vector2.up;
+        _groundedVelocityApplied = false;
 
-        if (_groundCheck != null)
+        if (_launchTimer > 0f)
+        {
+            // ジャンプ・壁ジャンプ・ノックバック直後。判定円がまだ床に重なっていても接地扱いしない
+            _launchTimer -= Time.fixedDeltaTime;
+        }
+        else if (_groundCheck != null)
         {
             var filter = new ContactFilter2D
             {
@@ -686,6 +707,8 @@ public class PlayerController : MonoBehaviour
                 layerMask = _consts.GroundLayer,
                 useTriggers = false, // ヒントゾーン等のトリガーを地面と誤認しない
             };
+
+            // 1) 足元の判定円 (平地・段差の縁)
             var count = Physics2D.OverlapCircle(
                 (Vector2)_groundCheck.position, _consts.GroundCheckRadius, filter, _groundHits);
 
@@ -708,21 +731,15 @@ public class PlayerController : MonoBehaviour
                 break;
             }
 
-            // 坂の上では接地円が斜面から浮いて判定が途切れることがあるため、
-            // 実際の接触 (上向き法線のコンタクト) でも接地とみなす。
-            // 上昇中は除外する (ジャンプ直後の蹴り足や、すり抜け床の通過を接地扱いしない)
-            if (!_isGrounded && _rb.linearVelocity.y <= 0.1f)
+            // 2) 体 (カプセル) の形で真下へキャストし、地面の法線を取る。
+            //    坂の上では判定円が斜面から浮いて途切れるので、吸着距離の範囲まで接地とみなす。
+            //    坂を登る間は速度が上向きになるため、直前まで接地していたなら上昇中でも接地を維持する
+            //    (空中から上昇しながら床の脇を通る場合は除外し、ジャンプの途中で吸着しないようにする)
+            if (TryFindGroundBelow(filter, out var ground))
             {
-                var contactFilter = new ContactFilter2D
-                {
-                    useLayerMask = true,
-                    layerMask = _consts.GroundLayer,
-                    useTriggers = false,
-                    useNormalAngle = true,
-                    minNormalAngle = 45f,
-                    maxNormalAngle = 135f,
-                };
-                _isGrounded = _rb.IsTouching(contactFilter);
+                _groundNormal = ground.normal;
+                if (wasGrounded || _rb.linearVelocity.y <= 0.1f)
+                    _isGrounded = true;
             }
         }
 
@@ -749,18 +766,117 @@ public class PlayerController : MonoBehaviour
             _isRunning = false;
 
         var speed = _isRunning ? _consts.RunSpeed : _consts.MoveSpeed;
-        _rb.linearVelocity = new Vector2(_moveInput * speed, _rb.linearVelocity.y);
+        var velocityX = _moveInput * speed;
+
+        if (IsSnappedToGround)
+            ApplyGroundedVelocity(velocityX);
+        else
+            _rb.linearVelocity = new Vector2(velocityX, _rb.linearVelocity.y);
     }
 
     /// <summary>水平速度をゼロにする (裁断・回復・死亡など移動不可のステート用)。</summary>
     public void StopHorizontalMovement()
     {
-        _rb.linearVelocity = new Vector2(0f, _rb.linearVelocity.y);
+        if (IsSnappedToGround)
+            ApplyGroundedVelocity(0f);
+        else
+            _rb.linearVelocity = new Vector2(0f, _rb.linearVelocity.y);
+    }
+
+    /// <summary>接地中で、地面に沿った移動と張り付きを行うべきか (地面を蹴った直後は除く)。</summary>
+    private bool IsSnappedToGround => _isGrounded && _launchTimer <= 0f;
+
+    /// <summary>
+    /// 接地中の速度を地面に沿って与える。x は水平速度をそのまま保ち、y は斜面の傾きに合わせる。
+    /// さらに法線方向へ一定の張り付き速度を足す。法線成分は衝突解決で打ち消されるため、
+    /// 重力を積算していた時のように接線方向の成分が残って坂を滑り落ちることがない。
+    /// </summary>
+    private void ApplyGroundedVelocity(float velocityX)
+    {
+        var n = _groundNormal;
+        var alongSlopeY = n.y > 0.01f ? -velocityX * n.x / n.y : 0f;
+        _rb.linearVelocity = new Vector2(velocityX, alongSlopeY) - n * _consts.GroundStickSpeed;
+        _groundedVelocityApplied = true;
+    }
+
+    /// <summary>
+    /// 地面を蹴って離れる時に呼ぶ (ジャンプ・壁ジャンプ・大ジャンプ・ノックバック)。
+    /// 直後の数フレームは接地判定と地面への張り付きを止め、初速が打ち消されないようにする。
+    /// </summary>
+    public void LeaveGround()
+    {
+        _isGrounded = false;
+        _groundNormal = Vector2.up;
+        _launchTimer = LaunchGraceTime;
+    }
+
+    /// <summary>
+    /// 体の真下 (吸着距離以内) にある歩ける地面を探す。壁や最大傾斜より急な面は無視する。
+    /// カプセルの底と同じ丸みで下方向へキャストするので、坂の上でも接触点に近い法線が得られる。
+    /// </summary>
+    private bool TryFindGroundBelow(ContactFilter2D filter, out RaycastHit2D result)
+    {
+        result = default;
+        if (_capsule == null)
+            return false;
+
+        var bounds = _capsule.bounds;
+        var radius = Mathf.Max(bounds.extents.x * 0.9f, 0.01f);
+
+        // 開始円をわずかに持ち上げ、床に接した状態で「開始時点から重なっている」扱いにならないようにする
+        const float lift = 0.05f;
+        var origin = (Vector2)bounds.center + Vector2.up * lift;
+        var distance = (bounds.extents.y - radius) + lift + _consts.GroundSnapDistance;
+        var minNormalY = Mathf.Cos(_consts.MaxSlopeAngle * Mathf.Deg2Rad);
+
+        var count = Physics2D.CircleCast(origin, radius, Vector2.down, filter, _groundCastHits, distance);
+        var found = false;
+        for (var i = 0; i < count; i++)
+        {
+            var hit = _groundCastHits[i];
+            if (hit.collider == null || hit.fraction <= 0f)
+                continue;
+
+            // 降り抜け中の床は接地とみなさない
+            if (_dropThroughPlatforms.Contains(hit.collider))
+                continue;
+
+            // すり抜け床を下から通過している上昇中は接地とみなさない
+            if (_rb.linearVelocity.y > 0.1f
+                && hit.collider.usedByEffector
+                && hit.collider.GetComponent<PlatformEffector2D>() != null)
+            {
+                continue;
+            }
+
+            // 壁や急すぎる斜面
+            if (hit.normal.y < minNormalY)
+                continue;
+
+            if (!found || hit.fraction < result.fraction)
+            {
+                result = hit;
+                found = true;
+            }
+        }
+
+        return found;
     }
 
     /// <summary>手動重力を適用する。落下・低ジャンプ時は倍率を掛ける。赤ハサミ所持時は滑空できる。</summary>
     public void ApplyGravity()
     {
+        // 接地中は重力を積算せず、地面に沿った速度 + 法線方向の張り付きだけにする。
+        // 摩擦ゼロのマテリアルなので、重力を掛け続けると坂では接線成分が残って徐々に滑り落ちる
+        if (IsSnappedToGround)
+        {
+            // 同じステップで ApplyHorizontalMovement 等が既に速度を与えていれば何もしない。
+            // (与えた速度には張り付き分の x 成分が含まれるため、それを水平速度として読み直すと坂を登ってしまう)
+            if (!_groundedVelocityApplied)
+                ApplyGroundedVelocity(_rb.linearVelocity.x);
+            return;
+        }
+
         var velocityY = _rb.linearVelocity.y;
         var gravity = _consts.Gravity;
 
@@ -944,6 +1060,7 @@ public class PlayerController : MonoBehaviour
     /// <summary>ジャンプ初速を与える(JumpState.Enter から呼ばれる)。</summary>
     public void Jump()
     {
+        LeaveGround();
         _rb.linearVelocity = new Vector2(_rb.linearVelocity.x, _consts.JumpVelocity);
         _jumpBufferTimer = 0f;
         _coyoteTimer = 0f;
@@ -982,8 +1099,11 @@ public class PlayerController : MonoBehaviour
 
     public void ApplyDashMovement()
     {
-        // 向いている方向へ一定速度で飛び出す。重力は無効
-        _rb.linearVelocity = new Vector2(_facing.Value * _consts.DashSpeed, 0f);
+        // 向いている方向へ一定速度で飛び出す。重力は無効。接地中は坂に沿わせて浮かないようにする
+        if (IsSnappedToGround)
+            ApplyGroundedVelocity(_facing.Value * _consts.DashSpeed);
+        else
+            _rb.linearVelocity = new Vector2(_facing.Value * _consts.DashSpeed, 0f);
     }
 
     public void EndDash()
@@ -1215,6 +1335,7 @@ public class PlayerController : MonoBehaviour
     public void ApplyKnockback(Vector2 hitPoint)
     {
         var dir = transform.position.x >= hitPoint.x ? 1f : -1f;
+        LeaveGround();
         _rb.linearVelocity = new Vector2(dir * _consts.KnockbackVelocity.x, _consts.KnockbackVelocity.y);
     }
 
