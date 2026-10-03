@@ -104,4 +104,61 @@ public static class PrepProps
         Object.DestroyImmediate(go);
         return prefab;
     }
+
+    /// <summary>
+    /// 投げる針の弾 (MachiNeedle.prefab / MishinNeedle.prefab) の絵を新しい素材に差し替える (2026-10-03 PendingChanges 23)。何度流してもよい。
+    /// unity command run_script --file Docs/Area1/SceneScripts/prep_props.cs --entry PrepProps.Needles
+    /// ルート = 当たり (BoxCollider2D, 大きさは以前の見た目の矩形と同じ) と向き (Projectile が transform.right を速度に向ける) だけで scale 1。
+    /// 絵は子 "Art" (SpriteRenderer): 素材は針先が左下を向いた斜めの絵なので、針先が +X を向くように回し、
+    /// 針の軸 (針先〜頭の端) の中点がルートの原点に来るように置く (刺さると半分が壁に入り、頭が外に出る)。
+    /// 角度・位置は素材の不透明部分から求めた値 (針先と軸の直線の当てはめ, py)。
+    /// </summary>
+    public static string Needles()
+    {
+        var log = new System.Text.StringBuilder();
+        // (プレハブ, 絵, 当たりの大きさ, 絵の回転, 絵の scale (= 軸の長さ machi 0.8 / mishin 0.85 単位。ミシン針は線が細いので少し大きく), 絵の位置)
+        log.AppendLine(Needle("Assets/Prefabs/MachiNeedle.prefab", PropsDir + "/machi_needle.png",
+            new Vector2(0.6f, 0.1f), 126.34f, 0.7087f, new Vector2(-0.0214f, 0.0120f)));
+        log.AppendLine(Needle("Assets/Prefabs/MishinNeedle.prefab", PropsDir + "/mishin_needle.png",
+            new Vector2(0.4f, 0.14f), 119.72f, 0.7321f, new Vector2(-0.0161f, 0.0691f)));
+        AssetDatabase.SaveAssets();
+        return log.ToString();
+    }
+
+    static string Needle(string prefabPath, string spritePath, Vector2 colliderSize, float artRotation, float artScale, Vector2 artPos)
+    {
+        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(spritePath) ?? throw new System.Exception("missing " + spritePath);
+        var root = PrefabUtility.LoadPrefabContents(prefabPath);
+        var rootSr = root.GetComponent<SpriteRenderer>();
+        var material = rootSr != null ? rootSr.sharedMaterial : null;
+        var order = rootSr != null ? rootSr.sortingOrder : 5;
+        if (rootSr != null)
+            Object.DestroyImmediate(rootSr);
+        root.transform.localScale = Vector3.one;
+        var col = root.GetComponent<BoxCollider2D>();
+        col.size = colliderSize;
+        col.offset = Vector2.zero;
+
+        var art = root.transform.Find("Art");
+        if (art == null)
+        {
+            art = new GameObject("Art").transform;
+            art.SetParent(root.transform, false);
+        }
+        art.gameObject.layer = root.layer;
+        art.localPosition = artPos;
+        art.localRotation = Quaternion.Euler(0, 0, artRotation);
+        art.localScale = Vector3.one * artScale;
+        var sr = art.GetComponent<SpriteRenderer>();
+        if (sr == null) sr = art.gameObject.AddComponent<SpriteRenderer>();
+        sr.sprite = sprite;
+        sr.color = Color.white;
+        if (material != null)
+            sr.sharedMaterial = material;
+        sr.sortingOrder = order;
+
+        PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
+        PrefabUtility.UnloadPrefabContents(root);
+        return $"{prefabPath}: Art = {sprite.name} rot {artRotation} scale {artScale}, collider {colliderSize}";
+    }
 }

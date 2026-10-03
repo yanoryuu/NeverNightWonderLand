@@ -173,7 +173,8 @@ public static class BuildAB
         // ================= ボス: 指揮者ノクターン
         var arena = BossRoom(new RectInt(324, -60, 48, 24), Flag, new Vector2(344f, -52f), true,
             new[] { new RectInt(322, -54, 2, 9) },
-            "指揮者ノクターンを倒した! 鳴りやまなかった音楽が、ふっと止んだ……");
+            "指揮者ノクターンを倒した! 鳴りやまなかった音楽が、ふっと止んだ……",
+            threadDrop: 0);   // 糸はエリアボス専用の定数 EnemyConsts_A1Conductor の 40 本 (→ 12 粒) のまま (PendingChanges 18)
         var boss = GameObject.Find("Boss_" + Flag);
         boss.name = "Boss_Nocturne";
         boss.transform.localScale = Vector3.one * 2.5f;

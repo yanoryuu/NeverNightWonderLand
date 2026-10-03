@@ -103,8 +103,9 @@ public static class BuildH
         Prop("props/boss_door_lamp_on.png", 228.5f, -13.7f, 0.6f, OrderProp, false, warm);
         Prop("props/boss_door_lamp_on.png", 216.5f, -16.7f, 0.6f, OrderProp, false, warm);
         // コインの箱 (2026-10-03 PendingChanges 16: 決めた箱だけにコイン。取ったら二度と出ない。1 回の攻撃で壊れる箱は 1 つ = 17)
-        // 迷子センターの高い棚 (y-14) の右端に木箱 1 つ (コイン入り)
-        Crate(230.4f, -14f, "A1_Coin_H2_1");
+        // 迷子センターの高い棚 (y-14) の右端に木箱を 2 段 (下の箱にコイン)。
+        // 箱が 1 つだけだと怪しく見えるので、ふつうの壊せる木箱と一緒に積む (PendingChanges 20: 見分けがつかないように)
+        CrateStack(230.4f, -14f, 2, "A1_Coin_H2_1", 0);
 
         // ================= Hs1 (x273..291, y-21..-12): 屋根裏の回転灯。糸の大束 ×150 (2026-10-03: 新技の秘伝書から変更)
         ThreadPickupAt(288.5f, -20.2f, 150, "A1_Pickup_Hs1_1");

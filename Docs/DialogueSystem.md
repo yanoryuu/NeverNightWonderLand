@@ -224,8 +224,11 @@ DialogueScene に適用済みの調整 (参考):
 E を 2 フレームに 1 回連打 → 閉じてから 0.35 秒は開き直さない、糸 50 は一度だけ、HUD は戻る。鍛冶師も同様 (`after_smith.png`)、
 解禁前の会話 → 鍛冶強化の申し出の連続再生は従来どおり。DialogueScene を手動で二重ロードしても後の方が消え、会話は表示される。
 
-**黒背景について (未決定・変更していない)**: DialogueScene の `Canvas-BackGround` (ClearCamera の Screen Space - Camera, 全画面の不透明な黒) が
-会話中はステージを完全に隠す。描画順のバグとは別 (修正後も黒背景の上に会話が出る)。残すか・半透明にするか・消すかはユーザーの判断待ち。
+**黒背景 → 半透明に (2026-10-03 ユーザー決定, PendingChanges 24)**: DialogueScene の `Canvas-BackGround/Image` (ClearCamera の Screen Space - Camera, 全画面) を
+不透明の黒 (α1) から **黒 α0.45** にした。宴のカメラ (ClearCamera / SpriteCamera / UICamera) はどれも URP の Overlay・Clear Flags = Nothing で
+メインカメラのスタックに載るので、会話中 (ポーズ, timeScale 0) もメインカメラが描いたステージが暗く透けて見える。会話中に HUD などを隠すのは従来どおり。
+確認: A1_H の人形と会話 → ステージと人形が暗く見え、メッセージウィンドウの文字は読める (`Assets/Screenshots/Area1/decide3_dialogue_doll.png`)。
+濃さを変える時はこの Image の色のアルファだけを変える (シーンを開いて直接)。
 
 
 ### 2026-10-03 追補: 「DialogueScene が二重にロード」「There are 2 event systems」の警告

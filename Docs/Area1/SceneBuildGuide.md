@@ -544,3 +544,32 @@ UI ごとに専用プレハブ + 専用 UI シーン (`Assets/Scenes/UI/`, 名�
 - T3c の木箱: 1 回の攻撃で 1 個ずつ壊れ、下を壊すと上が落ちる (`props_crates_before/hit1/hit2`)。コインの箱からコインが飛び出し (`props_coin_pop_*`)、取るとコイン 1。H2 の箱 → 「コインを手に入れた (計 1 枚)」(`props_coin_box_h2_*`)。T3 を出て入り直すとコインの箱だけ無く、ほかの木箱は復活 (`props_coin_reenter_*`)。セーブの `coins` と `A1_Coin_*` フラグの出し入れ (`SaveCheck`)。
 - T2 の隠し壁: 1 回に 1 セル (`props_wall_before/hit1/hit4`)。H の床の落下攻撃ブロック: 落下攻撃で 1 列 (3 段) を突き抜けて Hs2 へ (`props_slam_before` / `props_slam_after_*`)。
 - Hs1 の糸の大束・T3b のまち針の新しい絵 (`props_thread_bundle_hs1_*` / `props_machi_needle_t3b_*`)、U2r の積んだ木箱 (`props_crates_u2r_*`)。
+
+### §14 追補: ボスの糸・コインの箱の見分け・投げる針の絵 (2026-10-03, PendingChanges 18・20・23)
+
+**ボスの糸** (18): `EnemyController._threadDropOverride` (0 以下 = 定数アセットの ThreadDrop) をビルダー `BossRoom(..., threadDrop = 20)` がボスにだけ入れる。EnemyConsts_Heavy (3) は普通の重装甲の敵 (U3 の 3 波目・D7 の大ネズミ) と共用なので触らない。
+
+| ボス | シーン | 糸 | 粒 |
+|---|---|---|---|
+| 改札の番人 | A1_B1 | 20 (`threadDrop: 20`) | 12 (値 1〜2) |
+| ゴンドラの道化 / 歯車の重馬 | A1_MB1 / A1_MB2 | 25 (`threadDrop: 25`) | 12 (値 2〜3) |
+| 指揮者ノクターン | A1_AB | 40 (専用定数 `EnemyConsts_A1Conductor`, `threadDrop: 0`) | 12 (値 3〜4) |
+
+**コインの箱は見分けがつかない** (20): `Crate` は色の引数を持たず、全部 `CrateColor` (0.92,0.84,0.74)・cargo_crate・1×1・hp 1・同じ Rigidbody2D・order 3。違いは GameObject 名 (`CoinCrate_<id>`, 画面に出ない) だけ。1 個だけ置くと目立つ場所 (H2 の棚・W1 のかご・FP2 の屋根) は、ふつうの壊せる木箱を 1 つ足した:
+
+| コイン Id | 置き方 (更新後) |
+|---|---|
+| `A1_Coin_H2_1` | 高い棚 x230.4 に 2 段積み、**下**の箱 |
+| `A1_Coin_W1_1` | かごの上に横に 2 個 (x42.2 / 43.2)、**左**の箱 |
+| `A1_Coin_FP2_1` | 売店の屋根に横に 2 個 (x426.6 / 427.6)、**右**の箱 |
+
+(T3c / U2r / D5 は元から積んだ木箱の中。) 壊せない飾りの木箱 (`Prop("props/cargo_crate.png", ...)`) はコインの箱のある部屋には無い。
+
+**投げる針の絵** (23): `PrepProps.Needles` (prep_props.cs, 何度流してもよい) が MachiNeedle / MishinNeedle の弾を作り直す。ルート (scale 1) = BoxCollider2D (まち針 0.6×0.1 / ミシン針 0.4×0.14, 以前の見た目の矩形と同じ) + Rigidbody2D + Projectile (向き = `transform.right` を速度へ)。絵は子 `Art`: 素材の針先は左下を向いているので、針先が +X を向く角度 (まち針 126.34° / ミシン針 119.72°) に回し、針の軸 (針先〜頭の端) の中点が原点に来る位置。軸の長さはまち針 0.8 / ミシン針 0.85 単位。刺さったまち針は半分が壁に入り、緑の玉の頭が外に出る。
+
+作り直し (Validate 全 0 error / 0 warning): B1 MB1 MB2 AB T3 H U2 D5 W1 FP。
+
+再生で確認 (`SceneScripts/playtest_props.cs`, `Assets/Screenshots/Area1/decide3_*.png`):
+- B1 のボスを倒す → 粒 12 個 (値 2×8 + 1×4 = 20) が床に散る (`decide3_boss_b1_*`) → 歩いて全部拾い糸 0→20。
+- T3c の 4 個の木箱 (コイン入りは 3 段積みの真ん中) の SpriteRenderer・Collider・Rigidbody2D・hp が同一、見た目も同じ (`decide3_coin_crate_t3c.png`)。
+- まち針: 水平に飛び (`decide3_machi_needle_flight_0p2s`)、壁に針先から刺さって頭が外に出る (`decide3_machi_needle_0p8s`)。ミシン針: 曲射で弧に沿って向きが変わる (`decide3_mishin_needle_0p12s/0p3s`)。

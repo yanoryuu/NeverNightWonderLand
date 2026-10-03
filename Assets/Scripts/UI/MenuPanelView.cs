@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// キーボード/パッド操作の汎用メニューパネル (ポーズ・拠点・ゲームオーバー・リザルト・タイトルが共用)。
@@ -19,11 +20,15 @@ public class MenuPanelView : MonoBehaviour
         public readonly Action OnSelect;
         public readonly bool Enabled;
 
-        public Entry(string label, Action onSelect, bool enabled = true)
+        /// <summary>行の左に出すアイコン (任意。行のアイコン _rowIcons を事前配置したメニューだけ表示される)。</summary>
+        public readonly Sprite Icon;
+
+        public Entry(string label, Action onSelect, bool enabled = true, Sprite icon = null)
         {
             Label = label;
             OnSelect = onSelect;
             Enabled = enabled;
+            Icon = icon;
         }
     }
 
@@ -68,6 +73,13 @@ public class MenuPanelView : MonoBehaviour
 
     [Tooltip("行テキスト (上から順に事前配置。項目数がこれを超えた分は表示されない)")]
     [SerializeField] private TMP_Text[] _rows;
+
+    [Tooltip("行のアイコン (任意。_rows と同じ順に事前配置。ショップの品物の絵など)。" +
+             "どれかの項目にアイコンがある時は、全行のラベルを _iconLabelX から書き始める")]
+    [SerializeField] private Image[] _rowIcons;
+
+    [Tooltip("アイコンがある時のラベルの書き出し位置 (行の左端からの px。TMP の <pos>)")]
+    [SerializeField] private float _iconLabelX = 92f;
 
     [Header("行の色")]
     [SerializeField] private Color _normalColor = Color.white;
@@ -259,6 +271,22 @@ public class MenuPanelView : MonoBehaviour
 
     private void Render()
     {
+        var anyIcon = false;
+        if (_rowIcons != null && _rowIcons.Length > 0)
+        {
+            foreach (var e in _entries)
+                anyIcon |= e.Icon != null;
+            for (var i = 0; i < _rowIcons.Length; i++)
+            {
+                var icon = _rowIcons[i];
+                if (icon == null)
+                    continue;
+                var sprite = i < _entries.Count ? _entries[i].Icon : null;
+                icon.gameObject.SetActive(sprite != null);
+                icon.sprite = sprite;
+            }
+        }
+
         for (var i = 0; i < _entries.Count; i++)
         {
             if (_rows[i] == null)
@@ -266,7 +294,7 @@ public class MenuPanelView : MonoBehaviour
 
             var selected = i == _index;
             var entry = _entries[i];
-            _rows[i].text = (selected ? "▶ " : "　 ") + entry.Label;
+            _rows[i].text = (selected ? "▶ " : "　 ") + (anyIcon ? $"<pos={_iconLabelX:0}>" : "") + entry.Label;
             _rows[i].color = !entry.Enabled
                 ? _disabledColor
                 : selected ? _selectedColor : _normalColor;

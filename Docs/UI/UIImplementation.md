@@ -165,7 +165,7 @@ UI 座標 = Canvas 中心原点・上が +y (anchor/pivot 中央, anchoredPositi
 ```bash
 py -3 Docs/UI/Build/gen_paper.py                     # 紙目・暗さの素材 (_gen/)
 unity command run_script --caller plugin --skill unity-cli --file Docs/UI/Build/import_ui.cs --entry ImportUI.Run --timeout_ms 600000 --timeout 620
-unity command run_script --caller plugin --skill unity-cli --file Docs/UI/Build/build_ui.cs --entry BuildUI.Catalog    # 仮文に戻るので注意
+unity command run_script --caller plugin --skill unity-cli --file Docs/UI/Build/build_ui.cs --entry BuildUI.Catalog    # 仮文に戻るので注意 (コインの説明は build_ui.cs の CoinDescription が入る)
 unity command run_script --caller plugin --skill unity-cli --file Docs/UI/Build/build_ui.cs --entry BuildUI.ItemMenu --timeout_ms 600000 --timeout 620
 unity command run_script --caller plugin --skill unity-cli --file Docs/UI/Build/build_ui.cs --entry BuildUI.StageNames
 ```
@@ -249,7 +249,7 @@ unity command run_script --caller plugin --skill unity-cli --file Docs/UI/Build/
 | アイテムのアイコン (選び直しの一覧) | ミシン針・まち針・布カッターの `ItemDefinition.Icon` / `IconEmpty` を本素材 `icons/icon_<id>.png` / `icon_<id>_gray.png` に (灰色 = 仮素材と同じ作り方: 輝度 ×0.58, アルファはそのまま)。糸玉・ボビン爆弾・針山は仮素材 (`_temp/`) のまま。`BuildUI.ItemIcons` |
 | HUD の糸の所持数 | `HUD.prefab` の `ThreadCount` に糸巻きの絵 `ThreadIcon` (36×36, 文字の左, `icons/icon_thread.png`) を足し、文字は「x所持数」(`ThreadCountPresenter`。「糸」の字は絵に置き換え)。`BuildUI.HudThreadIcon` (何度流してもよい) |
 | 装備品タブの右上の糸の帯 | 帯の左寄り (-170, 4) に糸巻きの絵 64×64 (`ThreadIcon`)、文字「糸  n」はそのまま。`BuildUI.ItemMenu` |
-| 収集品タブのコイン (16) | `CollectionCatalog` の 8 番目に「コイン」(Flag 無し・`Counter = Coins`・絵 `icons/icon_coin.png`)。1 枚以上で入手済みになり、枠の右下に「x枚数」(各枠に `Count` の文字を追加, 30pt)、詳細は説明の後に「持っている数: n 枚」。説明は TODO の仮文。`BuildUI.Catalog` → `BuildUI.ItemMenu` |
+| 収集品タブのコイン (16) | `CollectionCatalog` の 8 番目に「コイン」(Flag 無し・`Counter = Coins`・絵 `icons/icon_coin.png`)。1 枚以上で入手済みになり、枠の右下に「x枚数」(各枠に `Count` の文字を追加, 30pt)、詳細は説明の後に「持っている数: n 枚」。説明は仮文 (§13)。`BuildUI.Catalog` → `BuildUI.ItemMenu` |
 
 散らばる糸の粒は拾っても入手通知の帯を出さない (HUD の数が増えるだけ)。コインは「コインを手に入れた (計 n 枚)」を出す。HUD にコインは出さない。
 
@@ -257,7 +257,7 @@ unity command run_script --caller plugin --skill unity-cli --file Docs/UI/Build/
 ```bash
 unity command run_script --caller plugin --skill unity-cli --file Docs/UI/Build/import_ui.cs --entry ImportUI.Run --timeout_ms 600000 --timeout 620
 unity command run_script --caller plugin --skill unity-cli --file Docs/UI/Build/build_ui.cs --entry BuildUI.ItemIcons
-unity command run_script --caller plugin --skill unity-cli --file Docs/UI/Build/build_ui.cs --entry BuildUI.Catalog    # 仮文に戻るので注意
+unity command run_script --caller plugin --skill unity-cli --file Docs/UI/Build/build_ui.cs --entry BuildUI.Catalog    # 仮文に戻るので注意 (コインの説明は build_ui.cs の CoinDescription が入る)
 unity command run_script --caller plugin --skill unity-cli --file Docs/UI/Build/build_ui.cs --entry BuildUI.HudThreadIcon
 unity command run_script --caller plugin --skill unity-cli --file Docs/UI/Build/build_ui.cs --entry BuildUI.ItemMenu --timeout_ms 600000 --timeout 620
 ```
@@ -266,3 +266,16 @@ unity command run_script --caller plugin --skill unity-cli --file Docs/UI/Build/
 - HUD: 糸巻きの絵 + 「x2」(`Assets/Screenshots/Area1/props_thread_scatter_0p5s.png` など)。
 - 装備品タブ: 糸の帯の絵 (`props_menu_equip.png`)、選び直しの一覧でミシン針 x2・布カッター x1 は本素材のアイコン、まち針 x0 は灰色 (`props_menu_picker.png`)。
 - 収集品タブ: コイン 1 枚で枠に絵と「x1」(`props_menu_collection.png`)、詳細に「持っている数: 1 枚」(`props_menu_coin_detail.png`)。
+
+## 13. ショップの絵・コインの説明 (2026-10-03, PendingChanges 21・23)
+
+| 対象 | 対応 |
+|---|---|
+| コインの説明 (21) | 仮文「すり減った古い園内コイン。表には交差した鋏、裏には糸巻きが刻まれている。とうに使われなくなったはずなのに、これを今も大事に集めている誰かがいるらしい。」(呼びかけ調にしない・交換の仕組みには触れない)。文は `build_ui.cs` の `BuildUI.CoinDescription` にあり、`BuildUI.Catalog` を流し直しても消えない (直す時はここを直して Catalog を流す)。ほかの項目は TODO の仮文のまま |
+| ショップの品物の絵 (23) | ショップ (`ShopUI.prefab` の MenuPanelView, 文字だけの行) の各行 `Row0..9` に子 `Icon` (Image 40×40, 行の左から 40 = カーソル「▶ 」の右) を足し、`MenuPanelView._rowIcons` に繋いだ。`MenuPanelView.Entry` に任意の `Icon` を追加 (他のメニューは `_rowIcons` が空なので今までどおり)。どれかの行に絵がある時は全行の文字を `<pos=92>` から書く (「やめる」も同じ位置)。`ShopView` は品物の `ItemDefinition.Icon`、買えない時 (糸不足・最大数) は `IconEmpty` (灰色) を渡す。`BuildUI.ShopIcons` (何度流してもよい。ItemIcons の後) |
+
+ミシン針・まち針・布カッターの絵は §12 の本素材 (`icons/`)、糸玉・ボビン爆弾・針山は仮素材 (`_temp/`)。
+
+確認 (エディタ再生, A1_H, 糸 8): ショップの 6 品に絵が並ぶ (`Assets/Screenshots/Area1/decide3_shop_icons.png`)。
+
+**気づいた点 (未対応)**: ショップの説明文 (Body:「糸を消費してアイテムを購入する / 所持している糸: n」) が 1 行目の品物の行に重なっている (以前からの配置: Body は窓の上から 92、行の始まりは 100)。ショップの見た目は素材待ち (UIAssignment.md) なので今回は触っていない。

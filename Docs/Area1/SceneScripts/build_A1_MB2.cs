@@ -115,7 +115,8 @@ public static class BuildMB2
             new[] { new RectInt(376, -198, 2, 9) },
             "歯車の重馬を倒した! 奥の扉が開いた……",
             // 赤ハサミを未入手なら拠点の鍛冶屋への誘導の一文 (PendingChanges 11b, 呼びかけ調にしない)
-            "ハサミがかすかに震えた。……拠点の鍛冶屋なら、何か分かるかもしれない", followUpUnlessRed: true);
+            "ハサミがかすかに震えた。……拠点の鍛冶屋なら、何か分かるかもしれない", followUpUnlessRed: true,
+            threadDrop: 25);   // 中ボスの糸 25 本 → 12 粒 (PendingChanges 18)
         var boss = GameObject.Find("Boss_A1_MidBossLower");
         if (boss != null)
         {

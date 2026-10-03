@@ -303,7 +303,7 @@ BossArena の複数ウェーブ版。入るとゲートを閉じ、ウェーブ�
 | `_breakFadeTime` | float | 0.3 | 破壊演出時間 |
 
 配置例 (隠し壁): ビルダー `HiddenWall(x0,y0,x1,y1,"A1_Hidden_<部屋>", hp=1)` (セルごとの hp。以前の壁全体 HP3 から変更)。
-配置例 (木箱): ビルダー `Crate(x, floorY, coinId=null)` / `CrateStack(x, floorY, count, coinId, coinIndex)`。絵 = `Area1Gen/props/cargo_crate.png`、hp 1、Rigidbody2D (動的, 横と回転を固定) なので積むと乗り、下を壊すと上が落ちる。箱そのものは永続化しない。
+配置例 (木箱): ビルダー `Crate(x, floorY, coinId=null)` / `CrateStack(x, floorY, count, coinId, coinIndex)`。絵 = `Area1Gen/props/cargo_crate.png` (色は全部 `CrateColor`。コインの箱も見た目・手応えはふつうの箱と同じ = PendingChanges 20)、hp 1、Rigidbody2D (動的, 横と回転を固定) なので積むと乗り、下を壊すと上が落ちる。箱そのものは永続化しない。
 
 ### LootPiece / ThreadPiece / CoinPiece / ThreadDropSpawner (`Gimmick/Pickups/`) — 地面に散らばって拾う物 (2026-10-03 新規)
 - `LootPiece` (基底): Rigidbody2D (動的, 回転固定) + CircleCollider2D + 跳ねる物理マテリアル (`Prefabs/LootBounce`: 弾み 0.35 / 摩擦 0.8)。**layer 2 (Ignore Raycast)** で、`Rigidbody2D.excludeLayers = ~Ground` なので当たるのは layer 10 だけ (プレイヤー・敵・トリガーとは接触しない。すり抜け床は上から落ちれば乗る)。出てから `_pickupDelay` 0.35 秒後、プレイヤー中心から `_magnetRadius` 1.6 以内で吸い寄せ (物理を止めて直接動かす)、`_collectRadius` 0.55 以内で取得 → ふくらんで消える。消えるのは取得とシーン遷移だけ (時間では消えない)。出た位置から `_lostFallDistance` 40 下へ落ちたら (地形の外) その場で取得扱い。生成位置が地形の中なら上へずらす (`FreeSpawnPoint`)。
@@ -325,7 +325,7 @@ BossArena の複数ウェーブ版。入るとゲートを閉じ、ウェーブ�
 入るとゲートを閉じ、ボス (`EnemyController`) の撃破でフラグ+開放+通知。撃破済みならボスを消しゲート開放。必須: トリガー Collider2D (isTrigger 自動)。
 フィールド: `_flagId` (string, 例 `A1_Boss1`), `_boss` (EnemyController, シーンに置いた敵), `_gates` (GameObject[], 非アクティブで配置), `_defeatMessage` (string), `_followUpMessage` (string, 2026-10-03 追加, 既定 "" = 出さない。撃破通知に続けて出す世界観の一文), `_followUpUnlessUpgrade` (bool, 既定 false。true ならプレイヤーが `_followUpUpgrade` (ScissorUpgrade, 既定 Red) を持っている時は出さない)。
 エリア1 の中ボス 2 体 (A1_MB1 / A1_MB2): 赤ハサミ未入手なら撃破通知の後に「ハサミがかすかに震えた。……拠点の鍛冶屋なら、何か分かるかもしれない」(鍛冶屋に寄らない人への誘導。呼びかけ調にしない)。ビルダー `BossRoom(..., followUpMessage, followUpUnlessRed)`。
-配置: 部屋内側を覆う `Arena` トリガー + BossArena。ボスは Enemy/FlyingEnemy.prefab を localScale 2 倍, `_consts=EnemyConsts_Heavy`。ご褒美は FlagActivator で `_flagId` に連動。
+配置: 部屋内側を覆う `Arena` トリガー + BossArena。ボスは Enemy/FlyingEnemy.prefab を localScale 2 倍, `_consts=EnemyConsts_Heavy`。ボスの糸は `EnemyController._threadDropOverride` で上書き (ビルダー `BossRoom(..., threadDrop)`: B1 20 / MB1・MB2 25 / AB は専用定数の 40。Heavy は普通の敵と共用なので変えない = PendingChanges 18)。ご褒美は FlagActivator で `_flagId` に連動。
 
 ### BreakableSpeaker (`Gimmick/BreakableSpeaker.cs`)
 攻撃で壊せるスピーカー。破壊でフラグ+通知、破壊済みなら出現しない。必須: SpriteRenderer + Collider2D, layer 10 (攻撃が当たる)。

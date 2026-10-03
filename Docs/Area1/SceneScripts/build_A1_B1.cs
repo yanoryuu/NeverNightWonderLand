@@ -37,7 +37,8 @@ public static class BuildB1
         // ボス: 改札の番人 (地上型の仮ボス = Enemy ×2 + Heavy)。入ると左の扉が閉まる
         BossRoom(new RectInt(168, -57, 35, 24), "A1_Boss1", new Vector2(192f, -55f), false,
             new[] { new RectInt(165, -57, 2, 9) },
-            "改札の番人を倒した! 奥のスピーカー室の扉が開いた");
+            "改札の番人を倒した! 奥のスピーカー室の扉が開いた",
+            threadDrop: 20);   // ボスの糸 20 本 → 12 粒 (PendingChanges 18。Heavy の定数は普通の敵と共用なので上書き)
 
         // 撃破でスピーカー室への扉 (シャッター) が開く
         var door = GateObject("S1Door", new RectInt(207, -54, 3, 9), -1); // 岩 (0) の裏へスライドして消える

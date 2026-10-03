@@ -18,6 +18,7 @@ using UnityEngine.UI;
 //   unity command run_script --file Docs/UI/Build/build_ui.cs --entry BuildUI.ItemIcons  (消耗品アイテムのアイコン = _temp/ の仮素材)
 //   unity command run_script --file Docs/UI/Build/build_ui.cs --entry BuildUI.ItemMenu   (アイテム画面。Catalog の後)
 //   unity command run_script --file Docs/UI/Build/build_ui.cs --entry BuildUI.StageNames (旧セーブ表示用の場所・章の対応表)
+//   unity command run_script --file Docs/UI/Build/build_ui.cs --entry BuildUI.ShopIcons  (ショップの行に品物の絵。ItemIcons の後)
 public static class BuildUI
 {
     const string UI = "Assets/LocalData/UI/";
@@ -555,6 +556,55 @@ public static class BuildUI
         }
     }
 
+    const string ShopPrefabPath = "Assets/Prefabs/ShopUI.prefab";
+    public static float ShopIconSize = 40f;   // ショップ: 行の品物の絵 (行の高さ 44)
+    public static float ShopIconX = 40f;      // 行の左端から絵の左端まで (カーソル「▶ 」のぶん)
+    public static float ShopLabelX = 92f;     // 絵がある時の文字の書き出し (MenuPanelView._iconLabelX, TMP の <pos>)
+
+    /// <summary>
+    /// ショップ (ShopUI.prefab) の各行の左に品物の絵 (ItemDefinition のアイコン) を置く (PendingChanges 23)。何度流してもよい。
+    /// 見た目の素材が来るまでの最小限: 既存の行 (Row0..9) に子 Icon (Image) を足して MenuPanelView._rowIcons に繋ぐだけ。
+    /// 行の文字は MenuPanelView が「▶ <pos=92>名前  糸n  (所持 a/b)」で出す (絵が無い「やめる」も同じ位置から)。
+    /// </summary>
+    public static string ShopIcons()
+    {
+        var root = PrefabUtility.LoadPrefabContents(ShopPrefabPath);
+        try
+        {
+            var menu = root.GetComponentInChildren<MenuPanelView>(true) ?? throw new Exception("MenuPanelView missing in ShopUI.prefab");
+            var so = new SerializedObject(menu);
+            var rowsProp = so.FindProperty("_rows");
+            var icons = new List<Image>();
+            for (var i = 0; i < rowsProp.arraySize; i++)
+            {
+                var row = rowsProp.GetArrayElementAtIndex(i).objectReferenceValue as TMP_Text ?? throw new Exception("row missing " + i);
+                var old = row.transform.Find("Icon");
+                if (old != null)
+                    UnityEngine.Object.DestroyImmediate(old.gameObject);
+                var rt = Rect("Icon", row.transform, Vector2.zero, Vector2.one * ShopIconSize);
+                rt.anchorMin = rt.anchorMax = new Vector2(0f, 0.5f);
+                rt.pivot = new Vector2(0f, 0.5f);
+                rt.anchoredPosition = new Vector2(ShopIconX, 0f);
+                var img = AddImage(rt.gameObject, null);
+                img.preserveAspect = true;
+                rt.gameObject.SetActive(false);
+                icons.Add(img);
+            }
+            var iconsProp = so.FindProperty("_rowIcons");
+            iconsProp.arraySize = icons.Count;
+            for (var i = 0; i < icons.Count; i++)
+                iconsProp.GetArrayElementAtIndex(i).objectReferenceValue = icons[i];
+            so.FindProperty("_iconLabelX").floatValue = ShopLabelX;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            PrefabUtility.SaveAsPrefabAsset(root, ShopPrefabPath);
+            return $"ShopUI: {icons.Count} row icons ({ShopIconSize}px at x {ShopIconX}, label x {ShopLabelX})";
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+    }
+
     /// <summary>
     /// 消耗品アイテム (Assets/Items/*.asset の ItemDefinition) のアイコン。専用の絵が来るまで image-gen の仮素材
     /// (_temp/icon_&lt;id&gt;.png = 通常、icon_&lt;id&gt;_gray.png = 所持数 0) を入れる (UIAssignment.md「4回目の決定」3)。
@@ -600,6 +650,14 @@ public static class BuildUI
     /// 収集品・資料の一覧データ (CollectionCatalog.asset)。名前は各ピックアップ (KeyItemPickup._itemName) と同じ。
     /// 説明・本文は未作成なので TODO の仮文 (UIImplementation.md の質問を参照)。
     /// </summary>
+    /// <summary>
+    /// コインの説明 (仮文, PendingChanges 21: 世界観に合わせ、呼びかけ調にしない。交換などの仕組みは書かない)。
+    /// Catalog を流し直してもこの文が入る (アセットを手で直すと次の Catalog で戻るので、変える時はここを直す)。
+    /// </summary>
+    public const string CoinDescription =
+        "すり減った古い園内コイン。表には交差した鋏、裏には糸巻きが刻まれている。" +
+        "とうに使われなくなったはずなのに、これを今も大事に集めている誰かがいるらしい。";
+
     public static string Catalog()
     {
         var catalog = AssetDatabase.LoadAssetAtPath<CollectionCatalog>(CatalogPath);
@@ -628,7 +686,7 @@ public static class BuildUI
                 E("A1_Spool1", "糸巻き1", todoDesc, spool),
                 E("A1_Spool2", "糸巻き2", todoDesc, spool),
                 E("A1_Spool3", "糸巻き3", todoDesc, spool),
-                new() { Flag = "", Name = "コイン", Description = todoDesc, Icon = coin, Counter = CollectionCounter.Coins },
+                new() { Flag = "", Name = "コイン", Description = CoinDescription, Icon = coin, Counter = CollectionCounter.Coins },
             },
             new[]
             {

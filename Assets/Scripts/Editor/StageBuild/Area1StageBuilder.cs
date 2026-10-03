@@ -1055,12 +1055,14 @@ namespace NeverNight.StageBuild
         /// Rigidbody2D (動的, 横と回転は固定) なので積むと重なって乗り、下の箱を壊すと上の箱が落ちる。
         /// coinId を渡すとコインの箱 (A1_Coin_&lt;部屋&gt;_&lt;n&gt;): 壊すとコインが飛び出し、取った後は箱ごと出ない (2026-10-03 PendingChanges 16)。
         /// 箱そのものは永続化しない (コインの無い箱は再訪で復活)。1 回の攻撃で壊れるのは 1 個だけ (PendingChanges 17)。
+        /// コインの箱は見分けがつかないようにする (PendingChanges 20): 絵・色・大きさ・hp・物理・描画順はふつうの木箱と完全に同じ
+        /// (色は <see cref="CrateColor"/> 固定で、個別の色付けはできない)。違うのは GameObject 名 (CoinCrate_…, 画面には出ない) だけ。
         /// </summary>
-        public static GameObject Crate(float x, float floorY, string coinId = null, Color? tint = null, string name = null)
+        public static GameObject Crate(float x, float floorY, string coinId = null)
         {
-            var go = NewObject(name ?? (string.IsNullOrEmpty(coinId) ? "Crate" : "CoinCrate_" + coinId),
+            var go = NewObject(string.IsNullOrEmpty(coinId) ? "Crate" : "CoinCrate_" + coinId,
                 new Vector2(x, floorY + 0.5f), LayerGround, "Gimmicks");
-            AddSprite(go, Art("props/cargo_crate.png"), OrderGimmick, null, tint ?? new Color(0.92f, 0.84f, 0.74f));
+            AddSprite(go, Art("props/cargo_crate.png"), OrderGimmick, null, CrateColor);
             Box(go, new Vector2(0.96f, 1f), false);
             var rb = go.AddComponent<Rigidbody2D>();
             rb.bodyType = RigidbodyType2D.Dynamic;
@@ -1075,6 +1077,9 @@ namespace NeverNight.StageBuild
             AddComp<BreakableBox>(go, ("_maxHp", 1), ("_coinId", coinId ?? ""), ("_coinPrefab", coinPrefab));
             return go;
         }
+
+        /// <summary>壊せる木箱の色 (コインの有無に関係なく全部この色)。</summary>
+        public static readonly Color CrateColor = new Color(0.92f, 0.84f, 0.74f);
 
         /// <summary>
         /// 積んだ木箱 (下から順に Crate を重ねる)。coinIndex 番目 (0 = 一番下) の箱にコイン (coinId)。coinId が null ならコイン無し。
@@ -1110,13 +1115,17 @@ namespace NeverNight.StageBuild
         /// <summary>
         /// ボス部屋: arena = [x0,x1)×[y0,y1) のトリガー + BossArena、ボス (仮ボス: 2 倍 + Heavy)、
         /// gates = 閉じる壁の矩形 (layer 10, 非アクティブ, fence_gate の絵)。
+        /// threadDrop = ボスが落とす糸 (EnemyController._threadDropOverride。0 なら定数アセットのまま)。
+        /// Heavy は普通の重装甲の敵にも使うので、ボスの糸はここで上書きする (2026-10-03 PendingChanges 18: 20〜30 本 → 12 粒)。
         /// </summary>
         public static GameObject BossRoom(RectInt arena, string flagId, Vector2 bossPos, bool flying, RectInt[] gates, string defeatMessage,
-            string followUpMessage = "", bool followUpUnlessRed = false)
+            string followUpMessage = "", bool followUpUnlessRed = false, int threadDrop = 20)
         {
             var go = NewObject("BossArena_" + flagId, arena.center, LayerIgnoreRaycast, "Gimmicks");
             Box(go, arena.size, true);
             var boss = Enemy(bossPos.x, bossPos.y, flying, 2f, true, "Boss_" + flagId);
+            if (threadDrop > 0)
+                Set(boss.GetComponent<EnemyController>(), "_threadDropOverride", threadDrop);
             var gateObjs = new List<GameObject>();
             foreach (var g in gates)
             {

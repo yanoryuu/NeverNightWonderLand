@@ -36,6 +36,9 @@ public class EnemyController : MonoBehaviour, IDamageable
     [Tooltip("挙動を定義する定数アセット")]
     [SerializeField] private EnemyConsts _consts;
 
+    [Tooltip("撃破時の糸の数の上書き (0 以下なら定数アセットの ThreadDrop)。ボス部屋のボスだけ増やす用 (2026-10-03 PendingChanges 18)")]
+    [SerializeField] private int _threadDropOverride;
+
     private Rigidbody2D _rb;
     private SpriteRenderer _sprite;
     private Collider2D _collider;
@@ -62,6 +65,9 @@ public class EnemyController : MonoBehaviour, IDamageable
     public ReadOnlyReactiveProperty<int> Guard => _guard;
     public ReadOnlyReactiveProperty<bool> IsBroken => _isBroken;
     public EnemyConsts Consts => _consts;
+
+    /// <summary>撃破時に落とす糸の数 (上書きがあればそれ、無ければ定数アセットの値)。</summary>
+    public int ThreadDrop => _threadDropOverride > 0 ? _threadDropOverride : _consts != null ? _consts.ThreadDrop : 0;
     public bool IsDead => _state == State.Dead;
 
     /// <summary>被弾硬直 (または糸玉拘束) 中か。EnemyAnimator が参照する。</summary>
@@ -388,8 +394,9 @@ public class EnemyController : MonoBehaviour, IDamageable
 
         // リザルト集計と素材「糸」のドロップ
         GameSession.EnemiesDefeated++;
-        if (_consts.ThreadDrop > 0)
-            ThreadDropped?.Invoke(transform.position, _consts.ThreadDrop, Mathf.Abs(transform.lossyScale.y));
+        var threadDrop = ThreadDrop;
+        if (threadDrop > 0)
+            ThreadDropped?.Invoke(transform.position, threadDrop, Mathf.Abs(transform.lossyScale.y));
 
         // 当たり判定を消して縮小フェードで消滅
         foreach (var col in GetComponentsInChildren<Collider2D>())

@@ -77,7 +77,8 @@ public class ShopView : MonoBehaviour
             var count = _inventory.GetCount(item);
             var label = $"{item.DisplayName}  糸{sale.Price}  (所持 {count}/{item.MaxCount})";
             var canBuy = count < item.MaxCount && _inventory.Thread.CurrentValue >= sale.Price;
-            entries.Add(new MenuPanelView.Entry(label, () => Purchase(sale), canBuy));
+            // 品物の絵 (ItemDefinition のアイコン)。買えない時は灰色の絵 (アイテム画面の 0 個と同じ)
+            entries.Add(new MenuPanelView.Entry(label, () => Purchase(sale), canBuy, canBuy ? item.Icon : item.IconEmpty));
         }
 
         entries.Add(new MenuPanelView.Entry("やめる", CloseMenu));
