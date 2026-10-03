@@ -20,10 +20,17 @@ public class EnemyController : MonoBehaviour, IDamageable
     public static readonly List<EnemyController> Active = new();
 
     /// <summary>
-    /// 撃破時の素材「糸」ドロップ通知 (位置, 数, 敵の大きさ = scale)。ThreadDropSpawner (プレイヤー) が購読し、
-    /// 地面に散らばる粒にする (拾った時に糸が増える)。
+    /// 撃破時の素材「糸」ドロップ通知 (位置, 数, 敵の大きさ = scale, 散らす範囲 = <see cref="LootArea"/>)。
+    /// ThreadDropSpawner (プレイヤー) が購読し、地面に散らばる粒にする (拾った時に糸が増える)。
+    /// 範囲の幅が 0 なら普通の敵 (その場から小さく散る)、幅があればボス (範囲いっぱいに噴き出す)。
     /// </summary>
-    public static event Action<Vector2, int, float> ThreadDropped;
+    public static event Action<Vector2, int, float, Rect> ThreadDropped;
+
+    /// <summary>
+    /// ボスの糸を散らす範囲 (ワールド座標の矩形。BossArena がトリガーの範囲を入れる)。幅 0 = 普通の敵。
+    /// (2026-10-04 PendingChanges 25: ボスの糸は闘技場いっぱいにばらまく)
+    /// </summary>
+    public Rect LootArea { get; set; }
 
     private enum State
     {
@@ -396,7 +403,7 @@ public class EnemyController : MonoBehaviour, IDamageable
         GameSession.EnemiesDefeated++;
         var threadDrop = ThreadDrop;
         if (threadDrop > 0)
-            ThreadDropped?.Invoke(transform.position, threadDrop, Mathf.Abs(transform.lossyScale.y));
+            ThreadDropped?.Invoke(transform.position, threadDrop, Mathf.Abs(transform.lossyScale.y), LootArea);
 
         // 当たり判定を消して縮小フェードで消滅
         foreach (var col in GetComponentsInChildren<Collider2D>())

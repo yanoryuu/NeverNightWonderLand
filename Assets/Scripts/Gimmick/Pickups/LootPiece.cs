@@ -38,6 +38,8 @@ public abstract class LootPiece : MonoBehaviour
     private float _spawnY;
     private bool _magnet;
     private bool _collected;
+    private bool _hasBounds;
+    private Rect _bounds;
 
     protected virtual void Awake()
     {
@@ -60,6 +62,34 @@ public abstract class LootPiece : MonoBehaviour
         _rb.linearVelocity = velocity;
         transform.rotation = Quaternion.Euler(0f, 0f, Random.Range(-35f, 35f)); // 向きを少しばらす (回転は固定なので転がらない)
         _spawnY = transform.position.y;
+    }
+
+    /// <summary>
+    /// 飛んでいける範囲 (ワールド座標) を決める (ボスの糸: 闘技場の中)。左右の端では跳ね返り、上の端では落ち始める。
+    /// 撃破でゲートが開いた出入口や天井の抜け穴から外へ飛び出さないようにするため。
+    /// </summary>
+    public void SetBounds(Rect bounds)
+    {
+        _bounds = bounds;
+        _hasBounds = bounds.width > 0f && bounds.height > 0f;
+    }
+
+    private void FixedUpdate()
+    {
+        if (!_hasBounds || _collected || _magnet || _rb == null || !_rb.simulated)
+            return;
+
+        var pos = _rb.position;
+        var vel = _rb.linearVelocity;
+        var r = 0.25f;
+        var changed = false;
+        if (pos.x < _bounds.xMin + r && vel.x < 0f) { vel.x = -vel.x * 0.5f; pos.x = _bounds.xMin + r; changed = true; }
+        else if (pos.x > _bounds.xMax - r && vel.x > 0f) { vel.x = -vel.x * 0.5f; pos.x = _bounds.xMax - r; changed = true; }
+        if (pos.y > _bounds.yMax - r && vel.y > 0f) { vel.y = 0f; pos.y = _bounds.yMax - r; changed = true; }
+        if (!changed)
+            return;
+        _rb.position = pos;
+        _rb.linearVelocity = vel;
     }
 
     /// <summary>

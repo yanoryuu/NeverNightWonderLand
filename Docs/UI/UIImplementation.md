@@ -278,4 +278,4 @@ unity command run_script --caller plugin --skill unity-cli --file Docs/UI/Build/
 
 確認 (エディタ再生, A1_H, 糸 8): ショップの 6 品に絵が並ぶ (`Assets/Screenshots/Area1/decide3_shop_icons.png`)。
 
-**気づいた点 (未対応)**: ショップの説明文 (Body:「糸を消費してアイテムを購入する / 所持している糸: n」) が 1 行目の品物の行に重なっている (以前からの配置: Body は窓の上から 92、行の始まりは 100)。ショップの見た目は素材待ち (UIAssignment.md) なので今回は触っていない。
+**ショップの説明文の重なり (2026-10-04 修正, PendingChanges 26)**: 説明文 (Body:「糸を消費してアイテムを購入する / 所持している糸: n」) が 1 行目の品物に重なっていた (Body は窓の上から 92 (26pt 2 行 ≈ 165 まで)、行の始まりは 100)。`BuildUI.ShopLayout` (build_ui.cs, 何度流してもよい) で Body を上から **80**・**24pt** (2 行 ≈ 144 まで)、行の範囲 `Rows` を上から **160** (下の余白 30 はそのまま: anchoredPosition.y −65 / sizeDelta.y −190) に。窓 680×560・行の間隔 48・絵の位置は変えていない (新しいレイアウトは作らない)。7 行 (6 品 + やめる) で最後の行は窓の上から 492〜536。10 行 (Row9) まで使うと窓の下へはみ出す (以前から)。確認: A1_H でショップを開く (`Assets/Screenshots/Area1/decide4_shop.png`)。

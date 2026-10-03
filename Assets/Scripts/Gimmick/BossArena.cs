@@ -57,6 +57,10 @@ public class BossArena : MonoBehaviour
             return;
 
         _boss.OnDied += OnBossDied;
+
+        // ボスの糸は闘技場 (このトリガーの範囲) いっぱいに散らす (PendingChanges 25)
+        var b = GetComponent<Collider2D>().bounds;
+        _boss.LootArea = new Rect(b.min.x, b.min.y, b.size.x, b.size.y);
     }
 
     private void OnTriggerEnter2D(Collider2D other)

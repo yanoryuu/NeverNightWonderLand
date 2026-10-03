@@ -19,6 +19,7 @@ using UnityEngine.UI;
 //   unity command run_script --file Docs/UI/Build/build_ui.cs --entry BuildUI.ItemMenu   (アイテム画面。Catalog の後)
 //   unity command run_script --file Docs/UI/Build/build_ui.cs --entry BuildUI.StageNames (旧セーブ表示用の場所・章の対応表)
 //   unity command run_script --file Docs/UI/Build/build_ui.cs --entry BuildUI.ShopIcons  (ショップの行に品物の絵。ItemIcons の後)
+//   unity command run_script --file Docs/UI/Build/build_ui.cs --entry BuildUI.ShopLayout (ショップの説明文と 1 行目が重ならない位置)
 public static class BuildUI
 {
     const string UI = "Assets/LocalData/UI/";
@@ -560,6 +561,39 @@ public static class BuildUI
     public static float ShopIconSize = 40f;   // ショップ: 行の品物の絵 (行の高さ 44)
     public static float ShopIconX = 40f;      // 行の左端から絵の左端まで (カーソル「▶ 」のぶん)
     public static float ShopLabelX = 92f;     // 絵がある時の文字の書き出し (MenuPanelView._iconLabelX, TMP の <pos>)
+
+    // ショップの説明文 (Body) と品物の行 (Rows) の位置 (窓 680x560 の上端からの距離, PendingChanges 26)。
+    // 以前は Body が上から 92 (26pt 2 行 ≈ 165 まで) で Rows が 100 から始まり、1 行目に重なっていた。
+    public static float ShopBodyTop = 80f;     // 説明文の上端 (タイトル 24..84 の文字の下)
+    public static float ShopBodyFont = 24f;    // 説明文の文字 (26 → 24。2 行で ≈ 144 まで)
+    public static float ShopRowsTop = 160f;    // 1 行目の上端 (100 → 160)
+    public static float ShopRowsBottom = 30f;  // 行の範囲の下端の余白 (以前のまま)
+
+    /// <summary>
+    /// ショップの説明文 (「糸を消費してアイテムを購入する / 所持している糸: n」) と 1 行目の品物が重ならないように、
+    /// 説明文を少し上・小さくし、行の範囲を下げる (窓の大きさ・行の間隔 48 は変えない)。何度流してもよい。
+    /// </summary>
+    public static string ShopLayout()
+    {
+        var root = PrefabUtility.LoadPrefabContents(ShopPrefabPath);
+        try
+        {
+            var window = root.GetComponentsInChildren<RectTransform>(true).FirstOrDefault(t => t.name == "Window") ?? throw new Exception("Window missing");
+            var body = window.Find("Body") as RectTransform ?? throw new Exception("Body missing");
+            var rows = window.Find("Rows") as RectTransform ?? throw new Exception("Rows missing");
+            body.anchoredPosition = new Vector2(body.anchoredPosition.x, -ShopBodyTop);
+            body.GetComponent<TMP_Text>().fontSize = ShopBodyFont;
+            // Rows は窓いっぱいに伸ばした矩形: 上の余白 = -size.y/2 - pos.y, 下の余白 = -size.y/2 + pos.y
+            rows.sizeDelta = new Vector2(rows.sizeDelta.x, -(ShopRowsTop + ShopRowsBottom));
+            rows.anchoredPosition = new Vector2(rows.anchoredPosition.x, (ShopRowsBottom - ShopRowsTop) * 0.5f);
+            PrefabUtility.SaveAsPrefabAsset(root, ShopPrefabPath);
+            return $"ShopUI: Body top {ShopBodyTop} font {ShopBodyFont}, Rows top {ShopRowsTop} (pos {rows.anchoredPosition}, size {rows.sizeDelta})";
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+    }
 
     /// <summary>
     /// ショップ (ShopUI.prefab) の各行の左に品物の絵 (ItemDefinition のアイコン) を置く (PendingChanges 23)。何度流してもよい。
