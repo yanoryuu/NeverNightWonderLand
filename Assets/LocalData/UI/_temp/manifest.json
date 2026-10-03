@@ -1,0 +1,176 @@
+[
+ {
+  "file": "picker_row.png",
+  "widthPx": 560,
+  "heightPx": 80,
+  "use": "picker list row plate (normal)",
+  "nineSlice": {
+   "l": 28,
+   "r": 28,
+   "t": 28,
+   "b": 28
+  }
+ },
+ {
+  "file": "picker_row_selected.png",
+  "widthPx": 560,
+  "heightPx": 80,
+  "use": "picker list row plate (selected; arrow at left)",
+  "nineSlice": {
+   "l": 28,
+   "r": 28,
+   "t": 28,
+   "b": 28
+  }
+ },
+ {
+  "file": "picker_row_disabled.png",
+  "widthPx": 560,
+  "heightPx": 80,
+  "use": "picker list row plate (disabled / count 0)",
+  "nineSlice": {
+   "l": 28,
+   "r": 28,
+   "t": 28,
+   "b": 28
+  }
+ },
+ {
+  "file": "picker_header.png",
+  "widthPx": 560,
+  "heightPx": 90,
+  "use": "picker slot-name header plate, no text (stitch marks at both ends)",
+  "nineSlice": {
+   "l": 40,
+   "r": 40,
+   "t": 30,
+   "b": 30
+  }
+ },
+ {
+  "file": "icon_machi_needle.png",
+  "widthPx": 256,
+  "heightPx": 256,
+  "use": "item icon machi_needle (image-gen, keyed)",
+  "nineSlice": null
+ },
+ {
+  "file": "icon_machi_needle_gray.png",
+  "widthPx": 256,
+  "heightPx": 256,
+  "use": "item icon machi_needle greyed",
+  "nineSlice": null
+ },
+ {
+  "file": "icon_mishin_needle.png",
+  "widthPx": 256,
+  "heightPx": 256,
+  "use": "item icon mishin_needle (image-gen, keyed)",
+  "nineSlice": null
+ },
+ {
+  "file": "icon_mishin_needle_gray.png",
+  "widthPx": 256,
+  "heightPx": 256,
+  "use": "item icon mishin_needle greyed",
+  "nineSlice": null
+ },
+ {
+  "file": "icon_cloth_cutter.png",
+  "widthPx": 256,
+  "heightPx": 256,
+  "use": "item icon cloth_cutter (image-gen, keyed)",
+  "nineSlice": null
+ },
+ {
+  "file": "icon_cloth_cutter_gray.png",
+  "widthPx": 256,
+  "heightPx": 256,
+  "use": "item icon cloth_cutter greyed",
+  "nineSlice": null
+ },
+ {
+  "file": "icon_thread_ball.png",
+  "widthPx": 256,
+  "heightPx": 256,
+  "use": "item icon thread_ball (image-gen, keyed)",
+  "nineSlice": null
+ },
+ {
+  "file": "icon_thread_ball_gray.png",
+  "widthPx": 256,
+  "heightPx": 256,
+  "use": "item icon thread_ball greyed",
+  "nineSlice": null
+ },
+ {
+  "file": "icon_bobbin_bomb.png",
+  "widthPx": 256,
+  "heightPx": 256,
+  "use": "item icon bobbin_bomb (image-gen, keyed)",
+  "nineSlice": null
+ },
+ {
+  "file": "icon_bobbin_bomb_gray.png",
+  "widthPx": 256,
+  "heightPx": 256,
+  "use": "item icon bobbin_bomb greyed",
+  "nineSlice": null
+ },
+ {
+  "file": "icon_pin_cushion.png",
+  "widthPx": 256,
+  "heightPx": 256,
+  "use": "item icon pin_cushion (image-gen, keyed)",
+  "nineSlice": null
+ },
+ {
+  "file": "icon_pin_cushion_gray.png",
+  "widthPx": 256,
+  "heightPx": 256,
+  "use": "item icon pin_cushion greyed",
+  "nineSlice": null
+ },
+ {
+  "file": "icon_machi_needle_proc.png",
+  "widthPx": 256,
+  "heightPx": 256,
+  "use": "procedural fallback icon machi_needle",
+  "nineSlice": null
+ },
+ {
+  "file": "icon_mishin_needle_proc.png",
+  "widthPx": 256,
+  "heightPx": 256,
+  "use": "procedural fallback icon mishin_needle",
+  "nineSlice": null
+ },
+ {
+  "file": "icon_cloth_cutter_proc.png",
+  "widthPx": 256,
+  "heightPx": 256,
+  "use": "procedural fallback icon cloth_cutter",
+  "nineSlice": null
+ },
+ {
+  "file": "icon_thread_ball_proc.png",
+  "widthPx": 256,
+  "heightPx": 256,
+  "use": "procedural fallback icon thread_ball",
+  "nineSlice": null
+ },
+ {
+  "file": "icon_bobbin_bomb_proc.png",
+  "widthPx": 256,
+  "heightPx": 256,
+  "use": "procedural fallback icon bobbin_bomb",
+  "nineSlice": null
+ },
+ {
+  "file": "icon_pin_cushion_proc.png",
+  "widthPx": 256,
+  "heightPx": 256,
+  "use": "procedural fallback icon pin_cushion",
+  "nineSlice": null
+ }
+]

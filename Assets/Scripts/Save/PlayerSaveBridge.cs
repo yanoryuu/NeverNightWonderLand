@@ -55,6 +55,34 @@ public class PlayerSaveBridge : MonoBehaviour
         return true;
     }
 
+    /// <summary>拠点でセーブする時のデータ (復帰位置 = 拠点の位置)。</summary>
+    public SaveData CollectAt(SavePoint savePoint)
+    {
+        var data = Collect();
+        if (savePoint != null)
+        {
+            data.posX = savePoint.transform.position.x;
+            data.posY = savePoint.transform.position.y + 0.5f;
+        }
+
+        return data;
+    }
+
+    /// <summary>場所の表示名: StageInfo の部屋名 → 旧ステージの AreaTitleView の名前 → シーン名。</summary>
+    private static string CurrentPlaceName()
+    {
+        if (StageInfo.Current != null && !string.IsNullOrEmpty(StageInfo.Current.AreaName))
+            return StageInfo.Current.AreaName;
+
+        foreach (var title in FindObjectsByType<AreaTitleView>(FindObjectsSortMode.None))
+        {
+            if (!title.gameObject.scene.name.EndsWith("UI") && !string.IsNullOrEmpty(title.AreaName))
+                return title.AreaName;
+        }
+
+        return StageLoader.Instance != null ? StageLoader.Instance.CurrentStageName : SceneManager.GetActiveScene().name;
+    }
+
     /// <summary>現在の状態からセーブデータを組み立てる。復帰位置は呼び出し側 (拠点) が上書きする。</summary>
     public SaveData Collect()
     {
@@ -70,6 +98,10 @@ public class PlayerSaveBridge : MonoBehaviour
             forgeLevel = _progression != null ? _progression.ForgeLevel : 0,
             thread = _inventory != null ? _inventory.Thread.CurrentValue : 0,
             progressFlags = GameProgress.Collect(),
+            savedAt = System.DateTime.Now.ToString("o"),
+            playTimeSeconds = GameSession.PlayTimeSeconds,
+            chapterName = StageInfo.Current != null ? StageInfo.Current.ChapterName : "",
+            placeName = CurrentPlaceName(),
         };
 
         if (_inventory != null)

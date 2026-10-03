@@ -19,6 +19,12 @@ public static class GameSession
     /// <summary>今回の挑戦の開始時刻 (Time.time)。</summary>
     public static float RunStartTime;
 
+    /// <summary>
+    /// 累計プレイ時間 (秒)。ゲーム中 (PlayerScene の StageLoader がある間、ポーズ・メニュー中を除く) に実時間で加算され、
+    /// セーブに記録される。はじめからで 0、つづきからでセーブの値に戻る。
+    /// </summary>
+    public static double PlayTimeSeconds;
+
     /// <summary>エリア開始時にリザルト集計をリセットする。</summary>
     public static void ResetRun()
     {

@@ -1,29 +1,34 @@
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 /// <summary>
-/// タイトル画面。はじめから / つづきから (セーブがある時のみ) / ゲーム終了。
-/// UI は実行時に生成せず、シーン上で事前配置したタイトルロゴとメニューパネルを参照する
-/// (素材の差し替えはシーン/プレハブ側で行う)。
+/// タイトル画面 (2 画面 + スロット選択)。UI は実行時に生成せず、シーン上で事前配置したものを参照する。
+/// (1) PRESS ANY BUTTON: 何かボタンで (2) へ。
+/// (2) メニュー: はじめから / つづきから / 設定 / トロフィー (設定・トロフィーは未実装のため無効表示)。戻るで (1) へ。
+/// はじめから → 記録先スロットの選択 → 開始ステージへ。つづきから → ロードするスロットの選択 → セーブ地点へ。
 /// </summary>
 public class TitleScreen : MonoBehaviour
 {
-    [Tooltip("メニューに使う日本語フォント")]
-    [SerializeField] private TMP_FontAsset _font;
-
-    [Tooltip("ゲームタイトル (ロゴテキストへ反映される)")]
-    [SerializeField] private string _gameTitle = "Never Night Wonderland";
+    private enum State { PressAny, Menu, Slots }
 
     [Tooltip("「はじめから」で読み込むシーン名")]
-    [SerializeField] private string _startSceneName = "TutorialScene";
+    [SerializeField] private string _startSceneName = "A1_T1";
 
-    [Tooltip("タイトルロゴのテキスト (事前配置)")]
-    [SerializeField] private TMP_Text _titleLabel;
+    [Header("参照 (シーン上で事前配置)")]
+    [Tooltip("画面 (1) PRESS ANY BUTTON のルート")]
+    [SerializeField] private GameObject _pressAnyScreen;
 
-    [Tooltip("メニューパネル (事前配置)")]
-    [SerializeField] private MenuPanelView _menu;
+    [Tooltip("画面 (2) とスロット画面の背景 (完成形から切り出した仮の背景)")]
+    [SerializeField] private GameObject _menuBackground;
+
+    [Tooltip("画面 (2) のメニュー (紙 + ボタン 4 つ + 戻る矢印)")]
+    [SerializeField] private ImageMenuView _menu;
+
+    [Tooltip("セーブスロット画面 (SaveSlotUI プレハブ)")]
+    [SerializeField] private SaveSlotView _slots;
+
+    private State _state;
+    private int _stateFrame;
 
     private void Awake()
     {
@@ -32,56 +37,86 @@ public class TitleScreen : MonoBehaviour
 
     private void Start()
     {
-        if (_titleLabel != null)
-            _titleLabel.text = _gameTitle;
-
-        if (_menu == null)
+        if (_menu == null || _slots == null)
         {
-            Debug.LogError($"[{nameof(TitleScreen)}] MenuPanelView が設定されていません。", this);
+            Debug.LogError($"[{nameof(TitleScreen)}] メニュー / スロット画面が設定されていません。", this);
             return;
         }
 
-        _menu.Initialize(_font);
-        _menu.AllowCancel = false;
-        _menu.SetTitle("");
-        _menu.SetBody("");
+        _menu.Initialize();
+        _menu.OnCancelled += ShowPressAny;
+        ShowPressAny();
+    }
 
-        var hasSave = SaveSystem.Exists();
+    private void Update()
+    {
+        // 画面 (1): 何かボタンで (2) へ (切り替えたのと同じフレームの押下は無視する)
+        if (_state == State.PressAny && Time.frameCount != _stateFrame && MenuInput.AnyButtonPressed())
+            ShowMenu(0);
+    }
+
+    private void SetState(State state)
+    {
+        _state = state;
+        _stateFrame = Time.frameCount;
+        if (_pressAnyScreen != null)
+            _pressAnyScreen.SetActive(state == State.PressAny);
+        if (_menuBackground != null)
+            _menuBackground.SetActive(state != State.PressAny);
+    }
+
+    private void ShowPressAny()
+    {
+        _menu.Close();
+        SetState(State.PressAny);
+    }
+
+    private void ShowMenu(int selectIndex)
+    {
+        SetState(State.Menu);
         _menu.SetEntries(new List<MenuPanelView.Entry>
         {
-            new("はじめから", StartNewGame),
-            new("つづきから", ContinueGame, hasSave),
-            new("ゲーム終了", QuitGame),
-        });
+            new(null, StartNewGame),
+            new(null, ContinueGame, SaveSystem.AnyExists()),
+            new(null, null, false), // 設定 (未実装)
+            new(null, null, false), // トロフィー (未実装)
+        }, selectIndex);
         _menu.Open();
     }
 
     private void StartNewGame()
     {
-        GameSession.PendingLoad = null;
-        // PlayerScene を土台に開始ステージを Additive で重ねる (PlayerScene 未登録なら旧方式)
-        StageLoader.LoadWithPlayerScene(_startSceneName);
+        _menu.Close();
+        SetState(State.Slots);
+        _slots.Open(SaveSlotView.Mode.NewGame, slot =>
+        {
+            SaveSystem.ActiveSlot = slot;
+            GameSession.PendingLoad = null;
+            GameSession.PlayTimeSeconds = 0;
+            GameProgress.Clear();
+            // PlayerScene を土台に開始ステージを Additive で重ねる (PlayerScene 未登録なら旧方式)
+            StageLoader.LoadWithPlayerScene(_startSceneName);
+        }, () => ShowMenu(0), showBackground: false);
     }
 
     private void ContinueGame()
     {
-        var save = SaveSystem.TryLoad();
-        if (save == null || string.IsNullOrEmpty(save.sceneName))
+        _menu.Close();
+        SetState(State.Slots);
+        _slots.Open(SaveSlotView.Mode.Load, slot =>
         {
-            Notifier.Notify("セーブデータが読み込めなかった");
-            return;
-        }
+            var save = SaveSystem.TryLoad(slot);
+            if (save == null || string.IsNullOrEmpty(save.sceneName))
+            {
+                Notifier.Notify("セーブデータが読み込めなかった");
+                ShowMenu(1);
+                return;
+            }
 
-        GameSession.PendingLoad = save;
-        StageLoader.LoadWithPlayerScene(save.sceneName);
-    }
-
-    private void QuitGame()
-    {
-#if UNITY_EDITOR
-        UnityEditor.EditorApplication.isPlaying = false;
-#else
-        Application.Quit();
-#endif
+            SaveSystem.ActiveSlot = slot;
+            GameSession.PendingLoad = save;
+            GameSession.PlayTimeSeconds = save.playTimeSeconds;
+            StageLoader.LoadWithPlayerScene(save.sceneName);
+        }, () => ShowMenu(1), showBackground: false);
     }
 }

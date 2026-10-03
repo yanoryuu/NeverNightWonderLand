@@ -332,10 +332,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _uiSceneNames:
   - PlayerUI
+  - StageUI
   - PauseUI
   - HomeUI
+  - ShopUI
   - GameOverUI
   - ResultUI
+  - SaveSlotUI
+  - ItemMenuUI
 --- !u!4 &476055280
 Transform:
   m_ObjectHideFlags: 0

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 /// <summary>
 /// キーボード/パッド操作の汎用メニューパネル (ポーズ・拠点・ゲームオーバー・リザルト・タイトルが共用)。
@@ -32,6 +31,22 @@ public class MenuPanelView : MonoBehaviour
 
     /// <summary>いずれかのメニューが開いているか (ポーズトグルの多重防止用)。</summary>
     public static bool AnyOpen => _openCount > 0;
+
+    /// <summary>
+    /// 最後にメニューが閉じたフレーム。閉じたのと同じ押下 (Esc など) で別のメニュー (ポーズ等) が
+    /// 開いてしまわないよう、開く側がこのフレームを避ける。
+    /// </summary>
+    public static int LastClosedFrame { get; private set; } = -1;
+
+    /// <summary>MenuPanelView 以外のメニュー (ImageMenuView / SaveSlotView / ItemMenuView) の開閉を AnyOpen に反映する。</summary>
+    public static void NotifyOpened() => _openCount++;
+
+    /// <summary><see cref="NotifyOpened"/> と対で呼ぶ。</summary>
+    public static void NotifyClosed()
+    {
+        _openCount = Mathf.Max(0, _openCount - 1);
+        LastClosedFrame = Time.frameCount;
+    }
 
     /// <summary>Esc / B での「戻る」を受け付けるか (ゲームオーバー等では false)。</summary>
     public bool AllowCancel { get; set; } = true;
@@ -63,6 +78,7 @@ public class MenuPanelView : MonoBehaviour
     private int _index;
     private bool _initialized;
     private bool _isValid;
+    private int _openedFrame = -1; // 開いたのと同じ押下で決定/戻るが走らないように (他メニューからの戻り)
 
     #region Setup
 
@@ -121,7 +137,8 @@ public class MenuPanelView : MonoBehaviour
             _body.text = body ?? "";
     }
 
-    public void SetEntries(IReadOnlyList<Entry> entries)
+    /// <summary>項目を設定する。selectIndex が有効な項目ならそこを選択、それ以外は最初の有効な項目。</summary>
+    public void SetEntries(IReadOnlyList<Entry> entries, int selectIndex = -1)
     {
         if (!_isValid)
             return;
@@ -144,7 +161,9 @@ public class MenuPanelView : MonoBehaviour
                 _rows[i].gameObject.SetActive(i < _entries.Count);
         }
 
-        _index = FirstEnabledIndex();
+        _index = selectIndex >= 0 && selectIndex < _entries.Count && _entries[selectIndex].Enabled
+            ? selectIndex
+            : FirstEnabledIndex();
         Render();
     }
 
@@ -154,6 +173,7 @@ public class MenuPanelView : MonoBehaviour
             return;
 
         IsOpen = true;
+        _openedFrame = Time.frameCount;
         _openCount++;
         _root.SetActive(true);
         Render();
@@ -165,46 +185,34 @@ public class MenuPanelView : MonoBehaviour
             return;
 
         IsOpen = false;
-        _openCount = Mathf.Max(0, _openCount - 1);
+        NotifyClosed();
         if (_root != null)
             _root.SetActive(false);
     }
 
     #endregion
 
+    private void OnDisable()
+    {
+        // シーン破棄などで閉じずに消えた時も AnyOpen を戻す
+        if (IsOpen)
+        {
+            IsOpen = false;
+            NotifyClosed();
+        }
+    }
+
     #region Navigation
 
     private void Update()
     {
-        if (!IsOpen || _entries.Count == 0)
+        if (!IsOpen || _entries.Count == 0 || Time.frameCount == _openedFrame)
             return;
 
-        // プレイヤー不在のシーン (タイトル等) でもデバイス切替を追跡できるようにする
-        InputDeviceTracker.Poll();
-
-        var move = 0;
-        var submit = false;
-        var cancel = false;
-
-        var keyboard = Keyboard.current;
-        if (keyboard != null)
-        {
-            if (keyboard.wKey.wasPressedThisFrame || keyboard.upArrowKey.wasPressedThisFrame) move -= 1;
-            if (keyboard.sKey.wasPressedThisFrame || keyboard.downArrowKey.wasPressedThisFrame) move += 1;
-            submit |= keyboard.enterKey.wasPressedThisFrame
-                      || keyboard.spaceKey.wasPressedThisFrame
-                      || keyboard.jKey.wasPressedThisFrame;
-            cancel |= keyboard.escapeKey.wasPressedThisFrame;
-        }
-
-        var gamepad = Gamepad.current;
-        if (gamepad != null)
-        {
-            if (gamepad.dpad.up.wasPressedThisFrame) move -= 1;
-            if (gamepad.dpad.down.wasPressedThisFrame) move += 1;
-            submit |= gamepad.buttonSouth.wasPressedThisFrame;
-            cancel |= gamepad.buttonEast.wasPressedThisFrame;
-        }
+        var input = MenuInput.Read();
+        var move = input.Move;
+        var submit = input.Submit;
+        var cancel = input.Cancel;
 
         if (move != 0)
         {

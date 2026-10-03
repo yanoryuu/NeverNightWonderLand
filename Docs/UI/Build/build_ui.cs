@@ -1,0 +1,958 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using TMPro;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+
+// タイトル / セーブスロット / ポーズ / アイテム画面の UI 組み立てレシピ (Docs/UI/UIImplementation.md)。
+// 座標は完成形 (4000x2250) を 1920x1080 に縮めて部品を照合した実測値 (Canvas 中心原点, 上が +y)。
+// 何度流してもよい (プレハブ/シーンの該当部分を作り直す)。先に import_ui.cs を流しておくこと。
+//   unity command run_script --file Docs/UI/Build/build_ui.cs --entry BuildUI.SaveSlot
+//   unity command run_script --file Docs/UI/Build/build_ui.cs --entry BuildUI.Pause
+//   unity command run_script --file Docs/UI/Build/build_ui.cs --entry BuildUI.Title
+//   unity command run_script --file Docs/UI/Build/build_ui.cs --entry BuildUI.Catalog    (収集品・資料の一覧データ)
+//   unity command run_script --file Docs/UI/Build/build_ui.cs --entry BuildUI.ItemMenu   (アイテム画面。Catalog の後)
+//   unity command run_script --file Docs/UI/Build/build_ui.cs --entry BuildUI.StageNames (旧セーブ表示用の場所・章の対応表)
+public static class BuildUI
+{
+    const string UI = "Assets/LocalData/UI/";
+    const string FontPath = "Assets/Font/YDW_bananaslip_plus_240809/YDWbananaslipplus SDF.asset";
+    const string SaveSlotPrefabPath = "Assets/Prefabs/SaveSlotUI.prefab";
+    const string SaveSlotScenePath = "Assets/Scenes/UI/SaveSlotUI.unity";
+    const string PausePrefabPath = "Assets/Prefabs/PauseUI.prefab";
+    const string TitleScenePath = "Assets/Scenes/TitleScene.unity";
+    const string PlayerScenePath = "Assets/Scenes/PlayerScene.unity";
+
+    static readonly Color Orange = new Color32(235, 160, 68, 255); // 完成形の文字色 #EBA044
+    static readonly Color Maroon = new Color32(73, 0, 0, 255);     // 枠の中・スロットの文字色 #490000
+
+    // ---- 文字の大きさ (完成形の字の高さに合わせて調整した値) ----
+    public static float TitleButtonFont = 45f;
+    public static float PauseButtonFont = 37f;
+    public static float HeadingFont = 46f;
+    public static float SlotNumberFont = 40f;
+    public static float SlotChapterFont = 38f;
+    public static float SlotPlaceFont = 22f;
+    public static float SlotDateFont = 14f;
+    public static float SlotTimeFont = 23.5f;
+    public static float LabelSpacing = 3f;   // 完成形はボタンの文字を字間を空けて組んでいる
+    public static float HeadingSpacing = 1f;
+
+    static TMP_FontAsset Font => AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+
+    static Sprite S(string rel)
+    {
+        var s = AssetDatabase.LoadAssetAtPath<Sprite>(UI + rel);
+        if (s == null) throw new Exception("sprite missing: " + rel);
+        return s;
+    }
+
+    #region helpers
+
+    static RectTransform Rect(string name, Transform parent, Vector2 pos, Vector2 size)
+    {
+        var go = new GameObject(name, typeof(RectTransform));
+        go.layer = 5;
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(parent, false);
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = pos;
+        rt.sizeDelta = size;
+        return rt;
+    }
+
+    static RectTransform Stretch(string name, Transform parent)
+    {
+        var rt = Rect(name, parent, Vector2.zero, Vector2.zero);
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        return rt;
+    }
+
+    static Image AddImage(GameObject go, Sprite sprite)
+    {
+        go.AddComponent<CanvasRenderer>();
+        var img = go.AddComponent<Image>();
+        img.sprite = sprite;
+        img.raycastTarget = false;
+        return img;
+    }
+
+    /// <summary>素材をそのままの大きさ (1 px = 1 単位) で置く。</summary>
+    static Image Img(string name, Transform parent, string sprite, Vector2 pos)
+    {
+        var s = S(sprite);
+        var rt = Rect(name, parent, pos, s.rect.size);
+        return AddImage(rt.gameObject, s);
+    }
+
+    static Image FullImg(string name, Transform parent, string sprite)
+    {
+        var rt = Stretch(name, parent);
+        return AddImage(rt.gameObject, S(sprite));
+    }
+
+    static TextMeshProUGUI Txt(string name, Transform parent, string text, Vector2 pos, Vector2 size,
+        float fontSize, Color color, TextAlignmentOptions align, float spacing = 0f)
+    {
+        var rt = Rect(name, parent, pos, size);
+        rt.gameObject.AddComponent<CanvasRenderer>();
+        var t = rt.gameObject.AddComponent<TextMeshProUGUI>();
+        t.font = Font;
+        t.fontSharedMaterial = Font.material;
+        t.text = text;
+        t.fontSize = fontSize;
+        t.enableAutoSizing = false;
+        t.color = color;
+        t.alignment = align;
+        t.characterSpacing = spacing;
+        t.textWrappingMode = TextWrappingModes.NoWrap;
+        t.overflowMode = TextOverflowModes.Overflow;
+        t.raycastTarget = false;
+        return t;
+    }
+
+    static GameObject NewCanvasRoot(string name, int sortOrder)
+    {
+        var go = new GameObject(name, typeof(RectTransform));
+        go.layer = 5;
+        var canvas = go.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = sortOrder;
+        var scaler = go.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+        scaler.matchWidthOrHeight = 0.5f;
+        return go;
+    }
+
+    static void SetRef(UnityEngine.Object target, string field, UnityEngine.Object value)
+    {
+        var so = new SerializedObject(target);
+        var p = so.FindProperty(field) ?? throw new Exception($"field {field} not found on {target}");
+        p.objectReferenceValue = value;
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    /// <summary>ImageMenuView._items を設定する。</summary>
+    static void SetMenuItems(ImageMenuView menu, GameObject root, List<(RectTransform rt, Image img, TMP_Text label)> items)
+    {
+        var so = new SerializedObject(menu);
+        so.FindProperty("_root").objectReferenceValue = root;
+        var arr = so.FindProperty("_items");
+        arr.arraySize = items.Count;
+        for (var i = 0; i < items.Count; i++)
+        {
+            var e = arr.GetArrayElementAtIndex(i);
+            e.FindPropertyRelative("Root").objectReferenceValue = items[i].rt;
+            e.FindPropertyRelative("Frame").objectReferenceValue = items[i].img;
+            e.FindPropertyRelative("Label").objectReferenceValue = items[i].label;
+        }
+
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    /// <summary>画像ボタン (枠 + 文字)。labelOffset は完成形の文字 (字面) の中心のボタン中心からのずれ。</summary>
+    static (RectTransform, Image, TMP_Text) Button(string name, Transform parent, string sprite, Vector2 pos,
+        string label, Vector2 labelOffset, float fontSize)
+    {
+        var img = Img(name, parent, sprite, pos);
+        var t = Txt("Label", img.transform, label, labelOffset, new Vector2(img.rectTransform.sizeDelta.x - 40, 80),
+            fontSize, Orange, TextAlignmentOptions.Midline, LabelSpacing);
+        return (img.rectTransform, img, t);
+    }
+
+    static void ClearChildren(Transform t)
+    {
+        for (var i = t.childCount - 1; i >= 0; i--)
+            UnityEngine.Object.DestroyImmediate(t.GetChild(i).gameObject);
+    }
+
+    #endregion
+
+    #region SaveSlotUI
+
+    /// <summary>セーブスロット画面のプレハブ (SaveSlotUI.prefab) と UI シーン (SaveSlotUI.unity) を作る。</summary>
+    public static string SaveSlot()
+    {
+        var root = NewCanvasRoot("SaveSlotUI", 20); // ポーズ (10)・ゲームオーバー (11) より上
+        BuildSaveSlotContents(root);
+        var prefab = PrefabUtility.SaveAsPrefabAsset(root, SaveSlotPrefabPath);
+        UnityEngine.Object.DestroyImmediate(root);
+
+        // UI シーン (ゲーム中に Additive で重ねる)
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        PrefabUtility.InstantiatePrefab(prefab, scene);
+        EditorSceneManager.SaveScene(scene, SaveSlotScenePath);
+        AddToBuildSettings(SaveSlotScenePath);
+
+        // PlayerScene の UISceneBootstrap に SaveSlotUI を足す
+        var player = EditorSceneManager.OpenScene(PlayerScenePath, OpenSceneMode.Single);
+        var log = "";
+        foreach (var boot in player.GetRootGameObjects().SelectMany(g => g.GetComponentsInChildren<UISceneBootstrap>(true)))
+        {
+            var so = new SerializedObject(boot);
+            var arr = so.FindProperty("_uiSceneNames");
+            var names = Enumerable.Range(0, arr.arraySize).Select(i => arr.GetArrayElementAtIndex(i).stringValue).ToList();
+            if (!names.Contains("SaveSlotUI"))
+            {
+                arr.arraySize++;
+                arr.GetArrayElementAtIndex(arr.arraySize - 1).stringValue = "SaveSlotUI";
+                so.ApplyModifiedPropertiesWithoutUndo();
+                log += "PlayerScene bootstrap += SaveSlotUI\n";
+            }
+        }
+
+        EditorSceneManager.SaveScene(player);
+        return "SaveSlotUI built\n" + log;
+    }
+
+    static void BuildSaveSlotContents(GameObject root)
+    {
+        var view = root.AddComponent<SaveSlotView>();
+        var screen = Stretch("Root", root.transform);
+
+        var bg = FullImg("Background", screen, "_gen/background_pause.png"); // ゲーム中に開いた時だけ (ポーズと同じ暗さ)
+        Img("Paper", screen, "_gen/paper_menu.png", new Vector2(18f, -200.5f)); // 紙目・暗さ入り (gen_paper.py)
+        Img("Frame", screen, "load/load_frame.png", new Vector2(0f, -47f));
+
+        // 記録 (はじめから/セーブ) の時は枠の絵の見出しを枠の地の色で隠して差し替える
+        var cover = Rect("HeadingCover", screen, new Vector2(0f, 252f), new Vector2(620f, 58f));
+        AddImage(cover.gameObject, null).color = Maroon;
+        var heading = Txt("HeadingText", screen, "どのデータに記録しますか?", new Vector2(-0.5f, 250f), new Vector2(760f, 60f),
+            HeadingFont, Orange, TextAlignmentOptions.Midline, HeadingSpacing);
+
+        var so = new SerializedObject(view);
+        so.FindProperty("_root").objectReferenceValue = screen.gameObject;
+        so.FindProperty("_background").objectReferenceValue = bg.gameObject;
+        so.FindProperty("_headingCover").objectReferenceValue = cover.gameObject;
+        so.FindProperty("_headingText").objectReferenceValue = heading;
+
+        float[] slotY = { 74f, -83f, -240f };
+        var slots = so.FindProperty("_slots");
+        slots.arraySize = slotY.Length;
+        for (var i = 0; i < slotY.Length; i++)
+        {
+            // スロット内の座標はスロット中心からの相対 (完成形の字面から実測)
+            var frame = Img($"Slot{i + 1:00}", screen, "load/load_inframe.png", new Vector2(0f, slotY[i]));
+            var t = frame.transform;
+            var number = Txt("Number", t, $"{i + 1:00}", new Vector2(-291f, -3f), new Vector2(90f, 60f), SlotNumberFont, Maroon, TextAlignmentOptions.Midline);
+            var chapter = Txt("Chapter", t, "第1章", new Vector2(-200f + 100f, -1f), new Vector2(200f, 50f), SlotChapterFont, Maroon, TextAlignmentOptions.MidlineLeft);
+            var place = Txt("Place", t, "場所", new Vector2(33f + 92.5f, -3f), new Vector2(185f, 40f), SlotPlaceFont, Maroon, TextAlignmentOptions.MidlineLeft);
+            var date = Txt("Date", t, "2000/01/01", new Vector2(325f - 80f, 31f), new Vector2(160f, 24f), SlotDateFont, Maroon, TextAlignmentOptions.MidlineRight);
+            var time = Txt("PlayTime", t, "00:00:00", new Vector2(326f - 80f, -4f), new Vector2(160f, 40f), SlotTimeFont, Maroon, TextAlignmentOptions.MidlineRight);
+            var empty = Txt("Empty", t, "データなし", new Vector2(-200f + 100f, -1f), new Vector2(200f, 50f), SlotChapterFont, Maroon, TextAlignmentOptions.MidlineLeft);
+            empty.gameObject.SetActive(false);
+            // 章「第1章 鳴りやまぬ遊園地」は 2 行 (SaveSlotView.FormatChapter) にして枠に収まる大きさまで縮める
+            chapter.rectTransform.sizeDelta = new Vector2(200f, 66f);
+            chapter.enableAutoSizing = true;
+            chapter.fontSizeMin = 14f;
+            chapter.fontSizeMax = SlotChapterFont;
+            chapter.lineSpacing = -12f;
+            chapter.overflowMode = TextOverflowModes.Ellipsis;
+            // 場所: 長い名前は縮め、それでも入らなければ … で切る (枠からはみ出さない)
+            place.enableAutoSizing = true;
+            place.fontSizeMin = 14f;
+            place.fontSizeMax = SlotPlaceFont;
+            place.overflowMode = TextOverflowModes.Ellipsis;
+
+            var e = slots.GetArrayElementAtIndex(i);
+            e.FindPropertyRelative("Root").objectReferenceValue = frame.rectTransform;
+            e.FindPropertyRelative("Frame").objectReferenceValue = frame;
+            e.FindPropertyRelative("Number").objectReferenceValue = number;
+            e.FindPropertyRelative("Chapter").objectReferenceValue = chapter;
+            e.FindPropertyRelative("PlaceIcon").objectReferenceValue = null;
+            e.FindPropertyRelative("Place").objectReferenceValue = place;
+            e.FindPropertyRelative("Date").objectReferenceValue = date;
+            e.FindPropertyRelative("PlayTime").objectReferenceValue = time;
+            e.FindPropertyRelative("Empty").objectReferenceValue = empty;
+        }
+
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        Img("DownArrow", screen, "load/load_inframearrow.png", new Vector2(-6.5f, -350f));
+        Img("BackArrow", screen, "load/load_arrow.png", new Vector2(-375f, -476f));
+        screen.gameObject.SetActive(false);
+    }
+
+    #endregion
+
+    #region Pause
+
+    /// <summary>PauseUI.prefab の中身を完成形のポーズ画面に作り直す (ルートの Canvas / PauseMenuView / スコープはそのまま)。</summary>
+    public static string Pause()
+    {
+        var root = PrefabUtility.LoadPrefabContents(PausePrefabPath);
+        try
+        {
+            var old = root.transform.Find("PauseMenu");
+            if (old != null)
+                UnityEngine.Object.DestroyImmediate(old.gameObject);
+
+            var host = Stretch("PauseMenu", root.transform);
+            var menu = host.gameObject.AddComponent<ImageMenuView>();
+            var screen = Stretch("Root", host);
+
+            FullImg("Background", screen, "_gen/background_pause.png"); // all_background + 周辺の暗さ (gen_paper.py)
+            Img("Paper", screen, "_gen/paper_pause.png", new Vector2(18.5f, -235.5f)); // 紙目・暗さ入り
+            Img("Sign", screen, "pause/pause.png", new Vector2(-2f, 347f));
+
+            float[] y = { 119.5f, -3.5f, -125.5f, -248.5f, -371.5f };
+            string[] labels = { "再開", "セーブ", "設定", "メインメニューに戻る", "ゲームを終了" };
+            Vector2[] offsets = { new(-0.5f, 3f), new(1.5f, 4.5f), new(-0.5f, 3.5f), new(0f, 4f), new(1.5f, 4.5f) };
+            var items = new List<(RectTransform, Image, TMP_Text)>();
+            for (var i = 0; i < y.Length; i++)
+                items.Add(Button($"Button{i}", screen, "pause/pause_button.png", new Vector2(-0.5f, y[i]), labels[i], offsets[i], PauseButtonFont));
+
+            Img("BackArrow", screen, "pause/pause_arrow.png", new Vector2(-295f, -476f));
+            SetMenuItems(menu, screen.gameObject, items);
+            screen.gameObject.SetActive(false);
+
+            SetRef(root.GetComponent<PauseMenuView>(), "_menu", menu);
+
+            // 「メインメニューに戻る」の確認 (専用の絵が無いので既存の部品で組んだ仮: 暗幕 shushu_black +
+            // 文字の無い看板 pause_frame + ボタン pause_button ×2)
+            var oldConfirm = root.transform.Find("ConfirmMenu");
+            if (oldConfirm != null)
+                UnityEngine.Object.DestroyImmediate(oldConfirm.gameObject);
+            var confirmHost = Stretch("ConfirmMenu", root.transform);
+            var confirm = confirmHost.gameObject.AddComponent<ImageMenuView>();
+            var cRoot = Stretch("Root", confirmHost);
+            Dim(cRoot);
+            var sign = Img("Sign", cRoot, "pause/pause_frame.png", new Vector2(0f, 150f));
+            Txt("Question", sign.transform, "メインメニューに戻りますか?", new Vector2(0f, 0f), new Vector2(520f, 80f),
+                PauseButtonFont, Orange, TextAlignmentOptions.Midline, LabelSpacing);
+            var cItems = new List<(RectTransform, Image, TMP_Text)>
+            {
+                Button("Button0", cRoot, "pause/pause_button.png", new Vector2(0f, -60f), "はい", new Vector2(0f, 4f), PauseButtonFont),
+                Button("Button1", cRoot, "pause/pause_button.png", new Vector2(0f, -183f), "いいえ", new Vector2(0f, 4f), PauseButtonFont),
+            };
+            SetMenuItems(confirm, cRoot.gameObject, cItems);
+            cRoot.gameObject.SetActive(false);
+            SetRef(root.GetComponent<PauseMenuView>(), "_confirm", confirm);
+            PrefabUtility.SaveAsPrefabAsset(root, PausePrefabPath);
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+
+        return "PauseUI rebuilt";
+    }
+
+    #endregion
+
+    #region Title
+
+    /// <summary>TitleScene の Canvas を作り直す (画面 1 / 画面 2 / スロット画面)。</summary>
+    public static string Title()
+    {
+        var scene = EditorSceneManager.OpenScene(TitleScenePath, OpenSceneMode.Single);
+        foreach (var g in scene.GetRootGameObjects())
+        {
+            if (g.name == "TitleCanvas" || g.name == "SaveSlotUI")
+                UnityEngine.Object.DestroyImmediate(g);
+        }
+
+        var title = scene.GetRootGameObjects().Select(g => g.GetComponent<TitleScreen>()).First(c => c != null);
+
+        var canvas = NewCanvasRoot("TitleCanvas", 0);
+        SceneManager.MoveGameObjectToScene(canvas, scene);
+
+        // 画面 (1): 背景は完成形 (ロゴ・PRESS ANY BUTTON・光の枠が焼き込み) をそのまま仮に使う。
+        // 部品 (枠・ロゴ・メッセージ) は本番の背景が来た時のために位置を合わせて非表示で置いておく
+        var press = Stretch("PressAnyScreen", canvas.transform);
+        FullImg("Background", press, "_temp/title_bg_temp.png");
+        var parts = Stretch("FinalArtParts", press);
+        Img("StartBackground", parts, "start/start_background.png", Vector2.zero);
+        Img("Logo", parts, "start/start_logo.png", new Vector2(-0.5f, 112f));
+        Img("Message", parts, "start/start_message.png", new Vector2(3f, -314.5f));
+        parts.gameObject.SetActive(false);
+
+        // 画面 (2) とスロット画面の背景: 完成形 (start2) の背景 (中央は紙で隠れる)
+        var menuBg = FullImg("MenuBackground", canvas.transform, "_temp/menu_bg_temp.png");
+        menuBg.gameObject.SetActive(false);
+
+        // 画面 (2): 紙 + ボタン 4 つ + 戻る矢印
+        var host = Stretch("TitleMenu", canvas.transform);
+        var menu = host.gameObject.AddComponent<ImageMenuView>();
+        var screen = Stretch("Root", host);
+        Img("Paper", screen, "_gen/paper_menu.png", new Vector2(18f, -200.5f)); // 紙目・暗さ入り (gen_paper.py)
+        float[] y = { 225.5f, 46.5f, -145.5f, -337.5f };
+        string[] labels = { "はじめから", "つづきから", "設定", "トロフィー" };
+        Vector2[] offsets = { new(0f, 2f), new(0f, 3f), new(2f, 4f), new(4f, 3f) }; // 「はじめから」は中央揃え (2回目の決定 10)
+        var items = new List<(RectTransform, Image, TMP_Text)>();
+        for (var i = 0; i < y.Length; i++)
+            items.Add(Button($"Button{i}", screen, "start2/start2_frame.png", new Vector2(0f, y[i]), labels[i], offsets[i], TitleButtonFont));
+        Img("BackArrow", screen, "start2/start2_arrow.png", new Vector2(-374f, -476f));
+        SetMenuItems(menu, screen.gameObject, items);
+        screen.gameObject.SetActive(false);
+
+        // スロット画面 (SaveSlotUI プレハブ)
+        var slotPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SaveSlotPrefabPath);
+        var slots = (GameObject)PrefabUtility.InstantiatePrefab(slotPrefab, scene);
+
+        var so = new SerializedObject(title);
+        so.FindProperty("_pressAnyScreen").objectReferenceValue = press.gameObject;
+        so.FindProperty("_menuBackground").objectReferenceValue = menuBg.gameObject;
+        so.FindProperty("_menu").objectReferenceValue = menu;
+        so.FindProperty("_slots").objectReferenceValue = slots.GetComponent<SaveSlotView>();
+        so.FindProperty("_startSceneName").stringValue = "A1_T1"; // 2回目の決定 14
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        return "TitleScene built";
+    }
+
+    #endregion
+
+    #region ItemMenuUI
+
+    const string ItemPrefabPath = "Assets/Prefabs/ItemMenuUI.prefab";
+    const string ItemScenePath = "Assets/Scenes/UI/ItemMenuUI.unity";
+    const string CatalogPath = "Assets/Items/CollectionCatalog.asset";
+    const string StageNameCatalogPath = "Assets/Resources/StageNameCatalog.asset";
+    const string FallbackFontPath = "Assets/Art/Fonts/JapaneseUI SDF.asset";
+    const string PropsPath = "Assets/LocalData/StageAsset/Area1Gen/props/";
+
+    // ---- アイテム画面の文字 (完成形に文字の見本が無い所は枠に収まる大きさ。仮) ----
+    public static float ItemNameFont = 40f;       // 装備品: 左下の帯 (名前)
+    public static float ItemDetailFont = 30f;     // 装備品: 左の大枠 (説明)
+    public static float ItemThreadFont = 44f;     // 装備品: 右上の帯 (糸)
+    public static float ItemHeadingFont = 34f;    // 装備品: 中央の見出し「ハサミ強化」
+    public static float ItemRowFont = 30f;        // 装備品: 中央の 3 行
+    public static float ItemCaptionFont = 28f;    // 装備品: 小枠の見出し (□ 攻撃 など)
+    public static float ItemSlotFont = 32f;       // 装備品: 小枠の名前
+    public static float ItemPickerFont = 28f;     // 装備品: アイテムの選び直しの行
+    public static int PickerRows = 7;             // 装備品: 選び直しの行数 (アイテム 6 種 + はずす。超えたら送る)
+    public static float PickerRowPitch = 70f;     // 装備品: 選び直しの行の間隔
+    public static float CollectionCellFont = 26f; // 収集品: 枠の名前
+    public static float CollectionNameFont = 44f; // 収集品詳細: 名前
+    public static float CollectionTextFont = 30f; // 収集品詳細: 説明
+    public static float JournalRowFont = 36f;     // 資料: 一覧のタイトル
+    public static float JournalTitleFont = 74f;   // 資料詳細: タイトル (完成形の「タイトル」の字の大きさに合わせた)
+    public static float JournalBodyFont = 39f;    // 資料詳細: 本文 (完成形の見本文と字の高さ・幅・1 行 28 字が一致)
+    public static float JournalBodyScrollY = 20f;     // 資料詳細: 本文のスクロールの目印の高さ (一覧の目印と重ならない位置。仮)
+    public static float JournalBodyLineSpacing = 141f; // 資料詳細: 本文の行間 (完成形の行の間隔 93.5px に合わせた)
+
+    /// <summary>
+    /// 暗幕 (shushu_black = 不透明度 80% の黒) の代わり。このプロジェクトは Linear 色空間で UI を線形空間で重ねるため、
+    /// 素材の 80% のままだと完成形 (sRGB で重ねた暗さ) より明るくなる。完成形の暗くなり方 (背景 54〜63 → 14、紙 157 → 55) に合う
+    /// 不透明度 0.89 の黒を置く (sRGB の暗い所は線形に近いので一定の換算式では合わない。実測で合わせた)。
+    /// </summary>
+    public static float DimAlpha = 0.89f;
+
+    static Image Dim(Transform parent)
+    {
+        var img = AddImage(Stretch("Dim", parent).gameObject, null);
+        img.color = new Color(0f, 0f, 0f, DimAlpha);
+        return img;
+    }
+
+    static TextMeshProUGUI WrapTxt(string name, Transform parent, string text, Vector2 pos, Vector2 size, float fontSize,
+        Color color, TextAlignmentOptions align, float minSize = 0f)
+    {
+        var t = Txt(name, parent, text, pos, size, fontSize, color, align);
+        t.textWrappingMode = TextWrappingModes.Normal;
+        t.overflowMode = TextOverflowModes.Ellipsis;
+        if (minSize > 0f)
+        {
+            t.enableAutoSizing = true;
+            t.fontSizeMin = minSize;
+            t.fontSizeMax = fontSize;
+        }
+
+        return t;
+    }
+
+    static void SetCell(SerializedProperty e, RectTransform root, Image icon, TMP_Text label)
+    {
+        e.FindPropertyRelative("Root").objectReferenceValue = root;
+        e.FindPropertyRelative("Icon").objectReferenceValue = icon;
+        e.FindPropertyRelative("Label").objectReferenceValue = label;
+    }
+
+    /// <summary>絵の置き場 (Icon)。素材が無い間は非表示 (ItemMenuTab.SetIcon が切り替える)。</summary>
+    static Image IconSlot(Transform parent, Vector2 pos, Vector2 size)
+    {
+        var rt = Rect("Icon", parent, pos, size);
+        var img = AddImage(rt.gameObject, null);
+        img.preserveAspect = true;
+        rt.gameObject.SetActive(false);
+        return img;
+    }
+
+    /// <summary>
+    /// 収集品・資料の一覧データ (CollectionCatalog.asset)。名前は各ピックアップ (KeyItemPickup._itemName) と同じ。
+    /// 説明・本文は未作成なので TODO の仮文 (UIImplementation.md の質問を参照)。
+    /// </summary>
+    public static string Catalog()
+    {
+        var catalog = AssetDatabase.LoadAssetAtPath<CollectionCatalog>(CatalogPath);
+        if (catalog == null)
+        {
+            catalog = ScriptableObject.CreateInstance<CollectionCatalog>();
+            AssetDatabase.CreateAsset(catalog, CatalogPath);
+        }
+
+        const string todoDesc = "TODO: 説明文は未作成";
+        const string todoBody = "TODO: 本文は未作成";
+        // 絵: ステージの拾い物の絵を仮に使う (UIAssignment.md「3回目の決定」2)。秘伝書はステージにも専用の絵が無いので空 (名前の文字)
+        var heartPin = AssetDatabase.LoadAssetAtPath<Sprite>(PropsPath + "heart_pin.png") ?? throw new Exception("heart_pin.png missing");
+        var spool = AssetDatabase.LoadAssetAtPath<Sprite>(PropsPath + "thread_spool.png") ?? throw new Exception("thread_spool.png missing");
+        CollectionCatalog.Entry E(string flag, string name, string desc, Sprite icon = null) =>
+            new() { Flag = flag, Name = name, Description = desc, Icon = icon };
+        catalog.SetEntries(
+            new[]
+            {
+                E("A1_HeartPin1", "ハートピン1", todoDesc, heartPin),
+                E("A1_HeartPin2", "ハートピン2", todoDesc, heartPin),
+                E("A1_HeartPin3", "ハートピン3", todoDesc, heartPin),
+                E("A1_HeartPin4", "ハートピン4", todoDesc, heartPin),
+                E("A1_Spool1", "糸巻き1", todoDesc, spool),
+                E("A1_Spool2", "糸巻き2", todoDesc, spool),
+                E("A1_Spool3", "糸巻き3", todoDesc, spool),
+                E("A1_Skill_SpinSlash", "新技「回転斬り」の秘伝書", todoDesc),
+            },
+            new[]
+            {
+                E("A1_Lore_Journal1", "日誌「閉園しなかった夜」その1", todoBody),
+                E("A1_Lore_Journal2", "日誌「閉園しなかった夜」その2", todoBody),
+                E("A1_Lore_Journal3", "日誌「閉園しなかった夜」その3", todoBody),
+                E("A1_Lore_Journal4", "日誌「閉園しなかった夜」その4 (噴水の碑文)", todoBody),
+                E("A1_Lore_Journal5", "日誌「閉園しなかった夜」その5 (整備員の手記)", todoBody),
+            });
+        EditorUtility.SetDirty(catalog);
+        AssetDatabase.SaveAssets();
+        return "CollectionCatalog: 8 collectibles, 5 journals";
+    }
+
+    /// <summary>
+    /// 旧形式のセーブ (場所・章が空) を表示するための対応表 Resources/StageNameCatalog.asset を
+    /// Build Settings のシーンファイルの部屋名 (_areaName) から作り直す。章: A{n}_ はその章、旧ステージ (GameField_old) は第1章。
+    /// </summary>
+    public static string StageNames()
+    {
+        var entries = new List<StageNameCatalog.Entry>();
+        var re = new System.Text.RegularExpressions.Regex("_areaName: (\"(?:[^\"\\\\]|\\\\.)*\"|.*)");
+        foreach (var s in EditorBuildSettings.scenes)
+        {
+            var name = System.IO.Path.GetFileNameWithoutExtension(s.path);
+            if (name.EndsWith("UI") || !System.IO.File.Exists(s.path))
+                continue;
+
+            var m = re.Match(System.IO.File.ReadAllText(s.path));
+            if (!m.Success)
+                continue;
+
+            var raw = m.Groups[1].Value.Trim();
+            var place = raw.StartsWith("\"") ? System.Text.RegularExpressions.Regex.Unescape(raw.Substring(1, raw.Length - 2)) : raw;
+            var chapter = StageInfo.ChapterFromSceneName(name);
+            if (string.IsNullOrEmpty(chapter) && s.path.Contains("/GameField_old/"))
+                chapter = StageInfo.ChapterTitle(1); // 旧ステージ (遊園地) は第1章とみなす (仮)
+            entries.Add(new StageNameCatalog.Entry { SceneName = name, PlaceName = place, ChapterName = chapter });
+        }
+
+        if (!AssetDatabase.IsValidFolder("Assets/Resources"))
+            AssetDatabase.CreateFolder("Assets", "Resources");
+        var catalog = AssetDatabase.LoadAssetAtPath<StageNameCatalog>(StageNameCatalogPath);
+        if (catalog == null)
+        {
+            catalog = ScriptableObject.CreateInstance<StageNameCatalog>();
+            AssetDatabase.CreateAsset(catalog, StageNameCatalogPath);
+        }
+
+        catalog.SetEntries(entries);
+        EditorUtility.SetDirty(catalog);
+        AssetDatabase.SaveAssets();
+        return $"StageNameCatalog: {entries.Count} scenes\n" + string.Join("\n", entries.Select(e => $"{e.SceneName} = {e.PlaceName} / {e.ChapterName}"));
+    }
+
+    /// <summary>
+    /// 丸数字 (ハートピン①など) のために YDW フォントへ足していた JapaneseUI SDF のフォールバックを外す
+    /// (名前を「ハートピン1」表記にして不要になった。UIAssignment.md「3回目の決定」9)。何度流してもよい。
+    /// </summary>
+    static string RemoveFontFallback()
+    {
+        var fallback = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FallbackFontPath);
+        var font = Font;
+        if (fallback == null || font == null || font.fallbackFontAssetTable == null || !font.fallbackFontAssetTable.Contains(fallback))
+            return "";
+
+        font.fallbackFontAssetTable.Remove(fallback);
+        EditorUtility.SetDirty(font);
+        AssetDatabase.SaveAssets();
+        return "YDW font fallback -= JapaneseUI SDF\n";
+    }
+
+    /// <summary>
+    /// アイテム画面のプレハブ (ItemMenuUI.prefab) と UI シーン (ItemMenuUI.unity) を作る。
+    /// 座標は完成形 item/*/装備_*.png を 1920x1080 に縮めて部品を照合した実測値。先に Catalog を流しておくこと。
+    /// </summary>
+    public static string ItemMenu()
+    {
+        var log = RemoveFontFallback();
+        var catalog = AssetDatabase.LoadAssetAtPath<CollectionCatalog>(CatalogPath) ?? throw new Exception("run BuildUI.Catalog first");
+
+        var root = NewCanvasRoot("ItemMenuUI", 9); // ポーズ (10) の下、ショップ (6) の上
+        var view = root.AddComponent<ItemMenuView>();
+        var screen = Stretch("Root", root.transform);
+        FullImg("Background", screen, "item/all_background.png"); // 完成形の背景と一致 (暗さの追加なし)
+
+        var tabsHost = Stretch("Tabs", screen);
+        var equip = BuildEquipTab(tabsHost);
+        var collection = BuildCollectionTab(tabsHost, catalog);
+        var journal = BuildJournalTab(tabsHost, catalog);
+
+        // 見出し (詳細の暗幕より上に描くので最後に置く)
+        var header = Img("Header", screen, "item/soubi/soubi_select.png", new Vector2(566.5f, 459f));
+        var ticket = Img("TitleTicket", screen, "item/soubi/soubi_title.png", new Vector2(-660f, 389.5f));
+
+        var so = new SerializedObject(view);
+        so.FindProperty("_root").objectReferenceValue = screen.gameObject;
+        so.FindProperty("_header").objectReferenceValue = header;
+        so.FindProperty("_titleTicket").objectReferenceValue = ticket;
+        void Arr(string field, params UnityEngine.Object[] values)
+        {
+            var p = so.FindProperty(field);
+            p.arraySize = values.Length;
+            for (var i = 0; i < values.Length; i++)
+                p.GetArrayElementAtIndex(i).objectReferenceValue = values[i];
+        }
+
+        Arr("_headerSprites", S("item/soubi/soubi_select.png"), S("item/shushu/shushu_select.png"), S("item/shiryou/shiryou_select.png"));
+        Arr("_titleSprites", S("item/soubi/soubi_title.png"), S("item/shushu/shushu_title.png"), S("item/shiryou/shiryou_title.png"));
+        Arr("_tabs", equip, collection, journal);
+        var pos = so.FindProperty("_titlePositions");
+        Vector2[] titlePos = { new(-660f, 389.5f), new(-661f, 389f), new(-660f, 389.5f) };
+        pos.arraySize = titlePos.Length;
+        for (var i = 0; i < titlePos.Length; i++)
+            pos.GetArrayElementAtIndex(i).vector2Value = titlePos[i];
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        screen.gameObject.SetActive(false);
+        var prefab = PrefabUtility.SaveAsPrefabAsset(root, ItemPrefabPath);
+        UnityEngine.Object.DestroyImmediate(root);
+
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        PrefabUtility.InstantiatePrefab(prefab, scene);
+        EditorSceneManager.SaveScene(scene, ItemScenePath);
+        AddToBuildSettings(ItemScenePath);
+        log += AddToPlayerSceneBootstrap("ItemMenuUI");
+        return "ItemMenuUI built\n" + log;
+    }
+
+    static string AddToPlayerSceneBootstrap(string sceneName)
+    {
+        var player = EditorSceneManager.OpenScene(PlayerScenePath, OpenSceneMode.Single);
+        var log = "";
+        foreach (var boot in player.GetRootGameObjects().SelectMany(g => g.GetComponentsInChildren<UISceneBootstrap>(true)))
+        {
+            var so = new SerializedObject(boot);
+            var arr = so.FindProperty("_uiSceneNames");
+            var names = Enumerable.Range(0, arr.arraySize).Select(i => arr.GetArrayElementAtIndex(i).stringValue).ToList();
+            if (names.Contains(sceneName))
+                continue;
+
+            arr.arraySize++;
+            arr.GetArrayElementAtIndex(arr.arraySize - 1).stringValue = sceneName;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            log += $"PlayerScene bootstrap += {sceneName}\n";
+        }
+
+        EditorSceneManager.SaveScene(player);
+        return log;
+    }
+
+    /// <summary>装備品タブ (案A)。</summary>
+    static ItemEquipTab BuildEquipTab(Transform parent)
+    {
+        var host = Stretch("Equip", parent);
+        var tab = host.gameObject.AddComponent<ItemEquipTab>();
+        var root = Stretch("Root", host);
+
+        // 左の大枠: 絵 + 説明
+        var big = Img("DetailFrame", root, "item/soubi/soubi_frame1.png", new Vector2(-522f, -44.5f));
+        var icon = IconSlot(big.transform, new Vector2(0f, 90f), new Vector2(240f, 240f));
+        var detail = WrapTxt("DetailText", big.transform, "", Vector2.zero, new Vector2(560f, 420f), ItemDetailFont, Orange,
+            TextAlignmentOptions.TopLeft, 18f);
+        // 左下の帯: 名前
+        var nameStrip = Img("NameFrame", root, "item/soubi/soubi_frame2.png", new Vector2(-522f, -397f));
+        var name = Txt("Name", nameStrip.transform, "", new Vector2(0f, 4f), new Vector2(540f, 70f), ItemNameFont, Orange,
+            TextAlignmentOptions.Midline, LabelSpacing);
+        name.enableAutoSizing = true;
+        name.fontSizeMin = 20f;
+        name.fontSizeMax = ItemNameFont;
+        name.overflowMode = TextOverflowModes.Ellipsis;
+        // 右上の帯: 糸
+        var threadStrip = Img("ThreadFrame", root, "item/soubi/soubi_frame2.png", new Vector2(522f, 308f));
+        var thread = Txt("Thread", threadStrip.transform, "糸  0", new Vector2(0f, 4f), new Vector2(540f, 70f), ItemThreadFont, Orange,
+            TextAlignmentOptions.Midline, LabelSpacing);
+
+        // 中央の縦長の枠: ハサミ強化
+        var mid = Img("UpgradeFrame", root, "item/soubi/soubi_frame3.png", new Vector2(0f, -132.5f));
+        var upgradeGroup = Stretch("Upgrades", mid.transform);
+        Txt("Heading", upgradeGroup, "ハサミ強化", new Vector2(0f, 250f), new Vector2(240f, 50f), ItemHeadingFont, Orange,
+            TextAlignmentOptions.Midline, HeadingSpacing);
+        var rows = new List<TMP_Text>();
+        float[] rowY = { 130f, 30f, -70f };
+        for (var i = 0; i < rowY.Length; i++)
+        {
+            var t = Txt($"Row{i}", upgradeGroup, "", new Vector2(0f, rowY[i]), new Vector2(230f, 60f), ItemRowFont, Orange,
+                TextAlignmentOptions.Midline);
+            t.enableAutoSizing = true;
+            t.fontSizeMin = 18f;
+            t.fontSizeMax = ItemRowFont;
+            rows.Add(t);
+        }
+
+        // 同じ枠の中: アイテムスロットの選び直し (スロットの枠で決定した時だけ、ハサミ強化と入れ替えて出す)。
+        // 選び直し用の絵は無いので、中央の縦長の枠とハサミ強化と同じ文字の組み方で作った (仮)
+        var pickerGroup = Stretch("ItemPicker", mid.transform);
+        var pickerHeading = Txt("Heading", pickerGroup, "", new Vector2(0f, 250f), new Vector2(260f, 50f), ItemHeadingFont, Orange,
+            TextAlignmentOptions.Midline, HeadingSpacing);
+        pickerHeading.enableAutoSizing = true;
+        pickerHeading.fontSizeMin = 18f;
+        pickerHeading.fontSizeMax = ItemHeadingFont;
+        var pickerRows = new List<TMP_Text>();
+        for (var i = 0; i < PickerRows; i++)
+        {
+            var t = Txt($"Row{i}", pickerGroup, "", new Vector2(0f, 175f - i * PickerRowPitch), new Vector2(250f, 56f), ItemPickerFont,
+                Orange, TextAlignmentOptions.Midline);
+            t.enableAutoSizing = true;
+            t.fontSizeMin = 16f;
+            t.fontSizeMax = ItemPickerFont;
+            pickerRows.Add(t);
+        }
+
+        pickerGroup.gameObject.SetActive(false);
+
+        // 右の小枠 4 つ: □ / △ / 下 / 左右
+        Vector2[] cellPos = { new(348f, 40f), new(696f, 40f), new(348f, -312f), new(696f, -312f) };
+        string[] captions = { "□ 攻撃", "△ 攻撃", "↓ アイテム", "← → アイテム" };
+        var cells = new List<(RectTransform, Image, TMP_Text)>();
+        for (var i = 0; i < cellPos.Length; i++)
+        {
+            var f = Img($"Slot{i}", root, "item/soubi/soubi_frame4.png", cellPos[i]);
+            Txt("Caption", f.transform, captions[i], new Vector2(0f, 105f), new Vector2(250f, 50f), ItemCaptionFont, Orange,
+                TextAlignmentOptions.Midline);
+            var ic = IconSlot(f.transform, new Vector2(0f, 0f), new Vector2(150f, 150f));
+            var label = WrapTxt("Name", f.transform, "", new Vector2(0f, -20f), new Vector2(250f, 170f), ItemSlotFont, Orange,
+                TextAlignmentOptions.Center, 18f);
+            cells.Add((f.rectTransform, ic, label));
+        }
+
+        var so = new SerializedObject(tab);
+        so.FindProperty("_root").objectReferenceValue = root.gameObject;
+        so.FindProperty("_detailIcon").objectReferenceValue = icon;
+        so.FindProperty("_detailText").objectReferenceValue = detail;
+        so.FindProperty("_nameText").objectReferenceValue = name;
+        so.FindProperty("_threadText").objectReferenceValue = thread;
+        var up = so.FindProperty("_upgradeRows");
+        up.arraySize = rows.Count;
+        for (var i = 0; i < rows.Count; i++)
+            SetCell(up.GetArrayElementAtIndex(i), rows[i].rectTransform, null, rows[i]);
+        so.FindProperty("_upgradeGroup").objectReferenceValue = upgradeGroup.gameObject;
+        so.FindProperty("_pickerGroup").objectReferenceValue = pickerGroup.gameObject;
+        so.FindProperty("_pickerHeading").objectReferenceValue = pickerHeading;
+        var pr = so.FindProperty("_pickerRows");
+        pr.arraySize = pickerRows.Count;
+        for (var i = 0; i < pickerRows.Count; i++)
+            SetCell(pr.GetArrayElementAtIndex(i), pickerRows[i].rectTransform, null, pickerRows[i]);
+        var sc = so.FindProperty("_slotCells");
+        sc.arraySize = cells.Count;
+        for (var i = 0; i < cells.Count; i++)
+            SetCell(sc.GetArrayElementAtIndex(i), cells[i].Item1, cells[i].Item2, cells[i].Item3);
+        so.ApplyModifiedPropertiesWithoutUndo();
+        root.gameObject.SetActive(false);
+        return tab;
+    }
+
+    /// <summary>収集品タブ (18 枠 × 3 ページ + 詳細)。</summary>
+    static ItemCollectionTab BuildCollectionTab(Transform parent, CollectionCatalog catalog)
+    {
+        var host = Stretch("Collection", parent);
+        var tab = host.gameObject.AddComponent<ItemCollectionTab>();
+        var root = Stretch("Root", host);
+
+        float[] xs = { -733f, -440f, -146.5f, 146.5f, 440f, 733f };
+        float[] ys = { 120f, -122f, -365f };
+        var cells = new List<(RectTransform, Image, TMP_Text)>();
+        for (var r = 0; r < ys.Length; r++)
+        for (var c = 0; c < xs.Length; c++)
+        {
+            var f = Img($"Cell{r * xs.Length + c:00}", root, "item/shushu/shushu_frame.png", new Vector2(xs[c], ys[r]));
+            var ic = IconSlot(f.transform, new Vector2(0f, 6f), new Vector2(180f, 170f));
+            var label = WrapTxt("Name", f.transform, "", new Vector2(0f, 6f), new Vector2(200f, 170f), CollectionCellFont, Orange,
+                TextAlignmentOptions.Center, 16f);
+            cells.Add((f.rectTransform, ic, label));
+        }
+
+        var dots = Img("PageDots", root, "item/shushu/shushu_page1.png", new Vector2(913f, -115f));
+        Img("PageArrows", root, "item/shushu/shushu_arrow.png", new Vector2(913f, -115f));
+
+        // 詳細: 暗幕 (一覧の上・見出しの下) + 左の絵の枠 + 右の文字の枠 + BACK / NEXT / 閉じる
+        var detail = Stretch("Detail", root);
+        Dim(detail);
+        var itemFrame = Img("ItemFrame", detail, "item/shushu/shushu_detail/shushu_frame_item.png", new Vector2(-422.5f, -85.5f));
+        var dIcon = IconSlot(itemFrame.transform, Vector2.zero, new Vector2(460f, 460f));
+        var dIconName = WrapTxt("IconName", itemFrame.transform, "", Vector2.zero, new Vector2(460f, 400f), CollectionNameFont, Orange,
+            TextAlignmentOptions.Center, 20f);
+        var textFrame = Img("TextFrame", detail, "item/shushu/shushu_detail/shushu_frame_text.png", new Vector2(315.5f, -85f));
+        var dName = Txt("Name", textFrame.transform, "", new Vector2(0f, 200f), new Vector2(660f, 70f), CollectionNameFont, Maroon,
+            TextAlignmentOptions.Midline, HeadingSpacing);
+        dName.enableAutoSizing = true;
+        dName.fontSizeMin = 22f;
+        dName.fontSizeMax = CollectionNameFont;
+        var dText = WrapTxt("Text", textFrame.transform, "", new Vector2(0f, -45f), new Vector2(660f, 380f), CollectionTextFont, Maroon,
+            TextAlignmentOptions.TopLeft, 18f);
+        var back = Img("Back", detail, "item/shushu/shushu_detail/shushu_back.png", new Vector2(-818.5f, -108.5f));
+        var next = Img("Next", detail, "item/shushu/shushu_detail/shushu_next.png", new Vector2(826.5f, -108.5f));
+        Img("Close", detail, "item/shushu/shushu_detail/shushu_close.png", new Vector2(752.5f, 189f));
+        detail.gameObject.SetActive(false);
+
+        var so = new SerializedObject(tab);
+        so.FindProperty("_root").objectReferenceValue = root.gameObject;
+        so.FindProperty("_catalog").objectReferenceValue = catalog;
+        var arr = so.FindProperty("_cells");
+        arr.arraySize = cells.Count;
+        for (var i = 0; i < cells.Count; i++)
+            SetCell(arr.GetArrayElementAtIndex(i), cells[i].Item1, cells[i].Item2, cells[i].Item3);
+        so.FindProperty("_pageDots").objectReferenceValue = dots;
+        var pages = so.FindProperty("_pageSprites");
+        pages.arraySize = 3;
+        for (var i = 0; i < 3; i++)
+            pages.GetArrayElementAtIndex(i).objectReferenceValue = S($"item/shushu/shushu_page{i + 1}.png");
+        so.FindProperty("_detailRoot").objectReferenceValue = detail.gameObject;
+        so.FindProperty("_detailIcon").objectReferenceValue = dIcon;
+        so.FindProperty("_detailIconName").objectReferenceValue = dIconName;
+        so.FindProperty("_detailName").objectReferenceValue = dName;
+        so.FindProperty("_detailText").objectReferenceValue = dText;
+        so.FindProperty("_backArrow").objectReferenceValue = back;
+        so.FindProperty("_nextArrow").objectReferenceValue = next;
+        so.ApplyModifiedPropertiesWithoutUndo();
+        root.gameObject.SetActive(false);
+        return tab;
+    }
+
+    /// <summary>資料タブ (紙 + 日誌の枠の一覧 + スクロールの目印 + 詳細)。</summary>
+    static ItemJournalTab BuildJournalTab(Transform parent, CollectionCatalog catalog)
+    {
+        var host = Stretch("Journal", parent);
+        var tab = host.gameObject.AddComponent<ItemJournalTab>();
+        var root = Stretch("Root", host);
+
+        Img("Paper", root, "_gen/paper_journal.png", new Vector2(19f, -300.5f)); // load_paper + 紙目・暗さ (gen_paper.py)
+
+        // 一覧: 紙の上端の少し下から画面の下端までで切り抜く (送った枠が紙の上にはみ出さない)
+        var clip = Rect("ListClip", root, new Vector2(0f, -150f), new Vector2(960f, 780f));
+        clip.gameObject.AddComponent<RectMask2D>();
+        var content = Rect("Content", clip, new Vector2(0f, 150f), new Vector2(960f, 1080f)); // 中身の座標 = 画面の座標
+        float[] rowY = { 134f, -41f, -216.5f, -392f, -567.5f };
+        var rows = new List<(RectTransform, TMP_Text)>();
+        for (var i = 0; i < rowY.Length; i++)
+        {
+            var f = Img($"Row{i}", content, "item/shiryou/shiryou_frame.png", new Vector2(0f, rowY[i]));
+            var t = Txt("Title", f.transform, "", new Vector2(0f, 2f), new Vector2(740f, 80f), JournalRowFont, Maroon,
+                TextAlignmentOptions.Midline, HeadingSpacing);
+            t.enableAutoSizing = true;
+            t.fontSizeMin = 20f;
+            t.fontSizeMax = JournalRowFont;
+            t.overflowMode = TextOverflowModes.Ellipsis;
+            rows.Add((f.rectTransform, t));
+        }
+
+        // スクロールの目印: 矢印 (shiryou_arrow) + 溝 (橙) + つまみ (濃い赤)。溝とつまみは素材に無いので手続きの角丸 (_gen/pill.png)
+        Img("ScrollArrows", root, "item/shiryou/shiryou_arrow.png", new Vector2(484f, -216.5f));
+        var track = Rect("ScrollTrack", root, new Vector2(483.5f, -216f), new Vector2(10f, 72f));
+        var trackImg = AddImage(track.gameObject, S("_gen/pill.png"));
+        trackImg.type = Image.Type.Sliced;
+        trackImg.color = Orange;
+        var thumb = Rect("Thumb", track, Vector2.zero, new Vector2(10f, 30f));
+        thumb.anchorMin = thumb.anchorMax = new Vector2(0.5f, 1f);
+        thumb.pivot = new Vector2(0.5f, 1f);
+        thumb.anchoredPosition = Vector2.zero;
+        var thumbImg = AddImage(thumb.gameObject, S("_gen/pill.png"));
+        thumbImg.type = Image.Type.Sliced;
+        thumbImg.color = Maroon;
+
+        // 詳細: 暗幕 (紙・一覧の上、見出しの下) + タイトル + 区切り + 本文 + 閉じる
+        var detail = Stretch("Detail", root);
+        Dim(detail);
+        var title = Txt("Title", detail, "", new Vector2(5f, 254f), new Vector2(900f, 90f), JournalTitleFont, Color.white,
+            TextAlignmentOptions.Midline, LabelSpacing);
+        title.enableAutoSizing = true;
+        title.fontSizeMin = 28f;
+        title.fontSizeMax = JournalTitleFont;
+        title.overflowMode = TextOverflowModes.Ellipsis;
+        Img("Separator", detail, "item/shiryou/shiryou_detail/アセット 36.png", new Vector2(-0.5f, 178.5f));
+        // 本文: 切り抜き (RectMask2D) の上端に付けて下へ伸ばす。長い時は上下で送る (UIAssignment.md「3回目の決定」5)
+        var viewport = Rect("BodyViewport", detail, new Vector2(4.5f, -163.5f), new Vector2(870f, 560f));
+        viewport.gameObject.AddComponent<RectMask2D>();
+        var body = WrapTxt("Body", viewport, "", Vector2.zero, new Vector2(870f, 560f), JournalBodyFont, Color.white,
+            TextAlignmentOptions.TopLeft);
+        body.rectTransform.anchorMin = body.rectTransform.anchorMax = new Vector2(0.5f, 1f);
+        body.rectTransform.pivot = new Vector2(0.5f, 1f);
+        body.rectTransform.anchoredPosition = Vector2.zero;
+        body.overflowMode = TextOverflowModes.Overflow; // 切り抜きで隠す (… にしない)
+        body.lineSpacing = JournalBodyLineSpacing;
+        // 本文のスクロールの目印: 一覧と同じ矢印 (shiryou_arrow) + 溝・つまみ (_gen/pill.png)。本文の右、上寄せ
+        // (暗幕の下に透ける一覧の目印 (484, -216.5) と重ならない高さ)。送れない時は隠す
+        var bodyScroll = Rect("BodyScroll", detail, new Vector2(484f, JournalBodyScrollY), new Vector2(18f, 167f));
+        Img("Arrows", bodyScroll, "item/shiryou/shiryou_arrow.png", Vector2.zero);
+        var bTrack = Rect("Track", bodyScroll, new Vector2(-0.5f, 0.5f), new Vector2(10f, 72f));
+        var bTrackImg = AddImage(bTrack.gameObject, S("_gen/pill.png"));
+        bTrackImg.type = Image.Type.Sliced;
+        bTrackImg.color = Orange;
+        var bThumb = Rect("Thumb", bTrack, Vector2.zero, new Vector2(10f, 30f));
+        bThumb.anchorMin = bThumb.anchorMax = new Vector2(0.5f, 1f);
+        bThumb.pivot = new Vector2(0.5f, 1f);
+        bThumb.anchoredPosition = Vector2.zero;
+        var bThumbImg = AddImage(bThumb.gameObject, S("_gen/pill.png"));
+        bThumbImg.type = Image.Type.Sliced;
+        bThumbImg.color = Maroon;
+        bodyScroll.gameObject.SetActive(false);
+        Img("Close", detail, "item/shiryou/shiryou_detail/アセット 35.png", new Vector2(751.5f, 354f));
+        detail.gameObject.SetActive(false);
+
+        var so = new SerializedObject(tab);
+        so.FindProperty("_root").objectReferenceValue = root.gameObject;
+        so.FindProperty("_catalog").objectReferenceValue = catalog;
+        so.FindProperty("_content").objectReferenceValue = content;
+        var arr = so.FindProperty("_rows");
+        arr.arraySize = rows.Count;
+        for (var i = 0; i < rows.Count; i++)
+            SetCell(arr.GetArrayElementAtIndex(i), rows[i].Item1, null, rows[i].Item2);
+        so.FindProperty("_scrollThumb").objectReferenceValue = thumb;
+        so.FindProperty("_scrollTrack").objectReferenceValue = track;
+        so.FindProperty("_detailRoot").objectReferenceValue = detail.gameObject;
+        so.FindProperty("_detailTitle").objectReferenceValue = title;
+        so.FindProperty("_detailBody").objectReferenceValue = body;
+        so.FindProperty("_bodyViewport").objectReferenceValue = viewport;
+        so.FindProperty("_bodyScrollIndicator").objectReferenceValue = bodyScroll.gameObject;
+        so.FindProperty("_bodyScrollTrack").objectReferenceValue = bTrack;
+        so.FindProperty("_bodyScrollThumb").objectReferenceValue = bThumb;
+        so.ApplyModifiedPropertiesWithoutUndo();
+        root.gameObject.SetActive(false);
+        return tab;
+    }
+
+    #endregion
+
+    static void AddToBuildSettings(string path)
+    {
+        var scenes = EditorBuildSettings.scenes.ToList();
+        if (scenes.Any(s => s.path == path))
+            return;
+
+        scenes.Add(new EditorBuildSettingsScene(path, true));
+        EditorBuildSettings.scenes = scenes.ToArray();
+    }
+}

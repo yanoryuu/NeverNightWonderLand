@@ -104,3 +104,7 @@ InitTestScene*.unity*
 # エディタ検証用スクリーンショット (MCP capture の出力先)
 /[Aa]ssets/[Ss]creenshots/
 /[Aa]ssets/[Ss]creenshots.meta
+
+# テストプレイ: 入力の記録・ボットのレポート (ローカル専用。Docs/TestPlay/README.md)
+/[Tt]est[Pp]lay/[Rr]ecordings/
+/[Tt]est[Pp]lay/[Rr]eports/

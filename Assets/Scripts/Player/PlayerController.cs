@@ -1,6 +1,5 @@
 using R3;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using VContainer;
 
 /// <summary>
@@ -15,9 +14,6 @@ using VContainer;
 public class PlayerController : MonoBehaviour
 {
     #region Constants
-
-    // スティックの遊び(デッドゾーン)。これを超えたら入力ありとみなす
-    private const float StickDeadZone = 0.3f;
 
     // 裁断の先行入力を保持する時間 (sec)。攻撃モーション中に押しても直後に発動できる
     private const float FinisherBufferTime = 0.25f;
@@ -333,8 +329,10 @@ public class PlayerController : MonoBehaviour
         if (_consts == null)
             return;
 
+        RemoveAppliedExternalVelocity();
         UpdateGrounded();
         _stateMachine.CurrentState.PhysicsUpdate();
+        ApplyExternalVelocity();
     }
 
     private void OnDrawGizmosSelected()
@@ -373,114 +371,29 @@ public class PlayerController : MonoBehaviour
 
     private void ReadInput()
     {
-        _moveInput = 0f;
-        _verticalInput = 0f;
-        var jumpPressedThisFrame = false;
-        var dashPressedThisFrame = false;
-        var attackPressedThisFrame = false;
-        var specialPressedThisFrame = false;
-        var finisherPressedThisFrame = false;
-        var healPressedThisFrame = false;
-        var interactPressedThisFrame = false;
-        ItemSlot? itemSlotPressedThisFrame = null;
-        var grapplePressedThisFrame = false;
+        // 入力はハブ経由で読む (通常はキーボード/パッドの直読み。割り当ては PlayerInputSource.ReadDevice)。
+        // テストプレイ (エディタ/Development Build) では仮想入力・記録の再生に差し替えられる
+        var input = PlayerInputSource.ReadForPlayer();
 
-        var keyboard = Keyboard.current;
-        if (keyboard != null)
-        {
-            // [I] ホールド中は方向キーをアイテム選択に使う (移動・回復には反映しない)
-            var itemHeld = keyboard.iKey.isPressed;
-            if (itemHeld)
-            {
-                if (keyboard.sKey.wasPressedThisFrame || keyboard.downArrowKey.wasPressedThisFrame)
-                    itemSlotPressedThisFrame = ItemSlot.Down;
-                else if (keyboard.aKey.wasPressedThisFrame || keyboard.leftArrowKey.wasPressedThisFrame)
-                    itemSlotPressedThisFrame = ItemSlot.Left;
-                else if (keyboard.dKey.wasPressedThisFrame || keyboard.rightArrowKey.wasPressedThisFrame)
-                    itemSlotPressedThisFrame = ItemSlot.Right;
-            }
-            else
-            {
-                if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed) _moveInput -= 1f;
-                if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed) _moveInput += 1f;
-                if (keyboard.downArrowKey.isPressed || keyboard.sKey.isPressed) _verticalInput -= 1f;
-                healPressedThisFrame = keyboard.sKey.wasPressedThisFrame;
-            }
-
-            if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed) _verticalInput += 1f;
-
-            _jumpHeld = keyboard.spaceKey.isPressed;
-            jumpPressedThisFrame = keyboard.spaceKey.wasPressedThisFrame;
-            _dashHeld = keyboard.leftShiftKey.isPressed;
-
-            // キーボード: Shift = ダッシュ, J = 近接攻撃, K = 特殊攻撃, L = 裁断,
-            //             S = 回復, E = インタラクト, I ホールド+方向 = アイテム使用, F = 糸移動 (青)
-            dashPressedThisFrame = keyboard.leftShiftKey.wasPressedThisFrame;
-            attackPressedThisFrame = keyboard.jKey.wasPressedThisFrame;
-            specialPressedThisFrame = keyboard.kKey.wasPressedThisFrame;
-            finisherPressedThisFrame = keyboard.lKey.wasPressedThisFrame;
-            interactPressedThisFrame = keyboard.eKey.wasPressedThisFrame;
-            grapplePressedThisFrame = keyboard.fKey.wasPressedThisFrame;
-        }
-
-        var gamepad = Gamepad.current;
-        if (gamepad != null)
-        {
-            // L1 ホールド中は十字キーをアイテム選択に使う (移動・インタラクトには反映しない)。
-            // スティックでの移動は L1 ホールド中も有効
-            var itemHeld = gamepad.leftShoulder.isPressed;
-
-            // 慣性なしの移動に合わせ、スティックはデッドゾーンを超えたら最大入力として扱う
-            var stickX = gamepad.leftStick.x.ReadValue();
-            if (stickX < -StickDeadZone || (!itemHeld && gamepad.dpad.left.isPressed)) _moveInput = -1f;
-            else if (stickX > StickDeadZone || (!itemHeld && gamepad.dpad.right.isPressed)) _moveInput = 1f;
-
-            var stickY = gamepad.leftStick.y.ReadValue();
-            if (stickY > StickDeadZone || (!itemHeld && gamepad.dpad.up.isPressed)) _verticalInput = 1f;
-            else if (stickY < -StickDeadZone || (!itemHeld && gamepad.dpad.down.isPressed)) _verticalInput = -1f;
-
-            if (itemHeld)
-            {
-                if (gamepad.dpad.down.wasPressedThisFrame) itemSlotPressedThisFrame = ItemSlot.Down;
-                else if (gamepad.dpad.left.wasPressedThisFrame) itemSlotPressedThisFrame = ItemSlot.Left;
-                else if (gamepad.dpad.right.wasPressedThisFrame) itemSlotPressedThisFrame = ItemSlot.Right;
-            }
-
-            // ホロウナイト準拠の配置:
-            // ジャンプ = ×(A), 近接攻撃 = □(X), 特殊攻撃 = △(Y), 回復 = ○(B/フォーカス枠),
-            // ダッシュ = R2, 裁断 = R1(クイックキャスト枠), 糸移動 = L2(スーパーダッシュ枠),
-            // アイテム = L1 ホールド+十字, インタラクト = 上入力
-            _jumpHeld |= gamepad.buttonSouth.isPressed;
-            jumpPressedThisFrame |= gamepad.buttonSouth.wasPressedThisFrame;
-            dashPressedThisFrame |= gamepad.rightTrigger.wasPressedThisFrame;
-            _dashHeld |= gamepad.rightTrigger.isPressed;
-            attackPressedThisFrame |= gamepad.buttonWest.wasPressedThisFrame;
-            specialPressedThisFrame |= gamepad.buttonNorth.wasPressedThisFrame;
-            finisherPressedThisFrame |= gamepad.rightShoulder.wasPressedThisFrame;
-            healPressedThisFrame |= gamepad.buttonEast.wasPressedThisFrame;
-            grapplePressedThisFrame |= gamepad.leftTrigger.wasPressedThisFrame;
-
-            // インタラクト = 上入力 (十字キー上 / 左スティック上) — ホロウナイトと同じ
-            interactPressedThisFrame |= (!itemHeld && gamepad.dpad.up.wasPressedThisFrame)
-                                        || gamepad.leftStick.up.wasPressedThisFrame;
-        }
-
-        _moveInput = Mathf.Clamp(_moveInput, -1f, 1f);
+        _moveInput = Mathf.Clamp(input.Move, -1f, 1f);
+        _verticalInput = input.Vertical;
+        _jumpHeld = input.JumpHeld;
+        _dashHeld = input.DashHeld;
 
         // 先行入力(ジャンプ/裁断バッファ)を更新
-        if (jumpPressedThisFrame)
+        if (input.JumpPressed)
             _jumpBufferTimer = _consts.JumpBufferTime;
-        if (finisherPressedThisFrame)
+        if (input.FinisherPressed)
             _finisherBufferTimer = FinisherBufferTime;
 
         // 押されたフレームのみ true。各ステートが TryConsume で消費する
-        _dashPressed = dashPressedThisFrame;
-        _attackPressed = attackPressedThisFrame;
-        _specialPressed = specialPressedThisFrame;
-        _healPressed = healPressedThisFrame;
-        _interactPressed = interactPressedThisFrame;
-        _itemSlotPressed = itemSlotPressedThisFrame;
-        _grapplePressed = grapplePressedThisFrame;
+        _dashPressed = input.DashPressed;
+        _attackPressed = input.AttackPressed;
+        _specialPressed = input.SpecialPressed;
+        _healPressed = input.HealPressed;
+        _interactPressed = input.InteractPressed;
+        _itemSlotPressed = input.ItemSlot;
+        _grapplePressed = input.GrapplePressed;
     }
 
     private void UpdateTimers()
@@ -693,6 +606,7 @@ public class PlayerController : MonoBehaviour
         _isGrounded = false;
         _groundNormal = Vector2.up;
         _groundedVelocityApplied = false;
+        _groundCollider = null;
 
         if (_launchTimer > 0f)
         {
@@ -728,6 +642,7 @@ public class PlayerController : MonoBehaviour
                 }
 
                 _isGrounded = true;
+                _groundCollider = _groundHits[i];
                 break;
             }
 
@@ -740,6 +655,10 @@ public class PlayerController : MonoBehaviour
                 _groundNormal = ground.normal;
                 if (wasGrounded || _rb.linearVelocity.y <= 0.1f)
                     _isGrounded = true;
+
+                // 真下の面を優先して「乗っている物」とする (動く足場の運搬・コンベアの判定用)
+                if (_isGrounded)
+                    _groundCollider = ground.collider;
             }
         }
 
@@ -766,7 +685,7 @@ public class PlayerController : MonoBehaviour
             _isRunning = false;
 
         var speed = _isRunning ? _consts.RunSpeed : _consts.MoveSpeed;
-        var velocityX = _moveInput * speed;
+        var velocityX = _moveInput * speed * _moveSpeedMultiplier;
 
         if (IsSnappedToGround)
             ApplyGroundedVelocity(velocityX);
@@ -878,7 +797,7 @@ public class PlayerController : MonoBehaviour
         }
 
         var velocityY = _rb.linearVelocity.y;
-        var gravity = _consts.Gravity;
+        var gravity = _consts.Gravity * _gravityMultiplier;
 
         if (velocityY < 0f)
             gravity *= _consts.FallGravityMultiplier;
@@ -886,7 +805,7 @@ public class PlayerController : MonoBehaviour
             gravity *= _consts.LowJumpMultiplier;
 
         velocityY -= gravity * Time.fixedDeltaTime;
-        velocityY = Mathf.Max(velocityY, -_consts.MaxFallSpeed);
+        velocityY = Mathf.Max(velocityY, -_consts.MaxFallSpeed * _maxFallSpeedMultiplier);
 
         // 滑空 (赤ハサミ): 落下中にジャンプ長押しで落下速度を抑える
         if (velocityY < 0f && _jumpHeld && !_isGrounded
@@ -1061,7 +980,7 @@ public class PlayerController : MonoBehaviour
     public void Jump()
     {
         LeaveGround();
-        _rb.linearVelocity = new Vector2(_rb.linearVelocity.x, _consts.JumpVelocity);
+        _rb.linearVelocity = new Vector2(_rb.linearVelocity.x, _consts.JumpVelocity * _jumpMultiplier);
         _jumpBufferTimer = 0f;
         _coyoteTimer = 0f;
     }
@@ -1079,6 +998,123 @@ public class PlayerController : MonoBehaviour
     public PlayerState GetGroundedState()
     {
         return Mathf.Abs(_moveInput) > 0.01f ? MoveState : IdleState;
+    }
+
+    #endregion
+
+    #region External Forces (ギミック用)
+
+    // ギミック (コンベア・横風・水中・動く足場) からの外力と移動倍率。
+    // 移動は毎ステップ速度を直接指定する方式なので、Unity の Effector2D の力は上書きされて効かない。
+    // そこで「ステートが速度を決めた後に外力ぶんを上乗せし、次のステップの頭で取り除く」方式で足し込む。
+    // ステートからは外力抜きの速度 (自前の移動) だけが見える。ゾーンが無い時は何もしない (従来と同一挙動)。
+
+    private Vector2 _externalVelocity;        // 次の物理ステップで上乗せする外力 (AddExternalVelocity で積む・1ステップで消費)
+    private Vector2 _appliedExternalVelocity; // 直前のステップで実際に上乗せした量
+    private Vector2 _preExternalVelocity;     // 上乗せ前の (ステートが決めた) 速度
+    private Collider2D _groundCollider;       // 乗っている地面のコライダー (非接地なら null)
+
+    private readonly System.Collections.Generic.Dictionary<Object, PlayerMovementModifier> _movementModifiers = new();
+    private float _moveSpeedMultiplier = 1f;
+    private float _jumpMultiplier = 1f;
+    private float _gravityMultiplier = 1f;
+    private float _maxFallSpeedMultiplier = 1f;
+
+    /// <summary>乗っている地面のコライダー (非接地なら null)。コンベア・安全地点の判定に使う。</summary>
+    public Collider2D GroundCollider => _groundCollider;
+
+    /// <summary>
+    /// 次の物理ステップだけ外力速度を足す (コンベア・横風など)。効かせ続けるゾーンは毎 FixedUpdate 呼ぶこと。
+    /// 複数のゾーンから呼ばれた場合は合算される。
+    /// </summary>
+    public void AddExternalVelocity(Vector2 velocity) => _externalVelocity += velocity;
+
+    /// <summary>
+    /// 移動倍率 (水中の減速など) を登録する。source ごとに1つで、同じ source で呼ぶと上書き。
+    /// 複数登録された場合は積で効く。ゾーンから出たら <see cref="RemoveMovementModifier"/> で外すこと。
+    /// </summary>
+    public void SetMovementModifier(Object source, PlayerMovementModifier modifier)
+    {
+        if (source == null)
+            return;
+
+        _movementModifiers[source] = modifier;
+        RecalculateMovementModifiers();
+    }
+
+    public void RemoveMovementModifier(Object source)
+    {
+        if (source != null && _movementModifiers.Remove(source))
+            RecalculateMovementModifiers();
+    }
+
+    /// <summary>
+    /// 指定位置へ瞬間移動する (トゲ・穴から安全地点への復帰など)。速度と外力の持ち越しも消す。
+    /// </summary>
+    public void Teleport(Vector2 position)
+    {
+        transform.position = position;
+        _rb.position = position;
+        _rb.linearVelocity = Vector2.zero;
+        _externalVelocity = Vector2.zero;
+        _appliedExternalVelocity = Vector2.zero;
+        Physics2D.SyncTransforms();
+    }
+
+    private void RecalculateMovementModifiers()
+    {
+        _moveSpeedMultiplier = _jumpMultiplier = _gravityMultiplier = _maxFallSpeedMultiplier = 1f;
+        foreach (var m in _movementModifiers.Values)
+        {
+            _moveSpeedMultiplier *= m.MoveSpeed;
+            _jumpMultiplier *= m.Jump;
+            _gravityMultiplier *= m.Gravity;
+            _maxFallSpeedMultiplier *= m.MaxFallSpeed;
+        }
+    }
+
+    /// <summary>
+    /// 物理ステップの頭で、直前に上乗せした外力を取り除く。
+    /// 衝突で外力ぶんが打ち消されていた場合 (壁に押し付けられた等) でも、
+    /// ステートが決めた速度より大きく・逆向きにはならないようにクランプする。
+    /// </summary>
+    private void RemoveAppliedExternalVelocity()
+    {
+        if (_appliedExternalVelocity == Vector2.zero)
+            return;
+
+        var v = _rb.linearVelocity - _appliedExternalVelocity;
+        v.x = Mathf.Clamp(v.x, Mathf.Min(0f, _preExternalVelocity.x), Mathf.Max(0f, _preExternalVelocity.x));
+        v.y = Mathf.Clamp(v.y, Mathf.Min(0f, _preExternalVelocity.y), Mathf.Max(0f, _preExternalVelocity.y));
+        _rb.linearVelocity = v;
+        _appliedExternalVelocity = Vector2.zero;
+    }
+
+    /// <summary>
+    /// ステートの PhysicsUpdate の後に外力を上乗せする。ゾーンから積まれた外力に加え、
+    /// Kinematic の Rigidbody2D (動く足場・ピストン) に乗っていれば、その接地点の速度で運ぶ。
+    /// </summary>
+    private void ApplyExternalVelocity()
+    {
+        var external = _externalVelocity;
+        _externalVelocity = Vector2.zero;
+
+        if (IsSnappedToGround && _groundCollider != null)
+        {
+            var body = _groundCollider.attachedRigidbody;
+            if (body != null && body.bodyType == RigidbodyType2D.Kinematic)
+            {
+                var feet = _groundCheck != null ? (Vector2)_groundCheck.position : _rb.position;
+                external += body.GetPointVelocity(feet);
+            }
+        }
+
+        if (external == Vector2.zero)
+            return;
+
+        _preExternalVelocity = _rb.linearVelocity;
+        _rb.linearVelocity += external;
+        _appliedExternalVelocity = external;
     }
 
     #endregion
@@ -1382,8 +1418,10 @@ public class PlayerController : MonoBehaviour
     /// </summary>
     private void UpdateAnimatorParameters()
     {
-        _animator.SetFloat(ParamSpeed, Mathf.Abs(_rb.linearVelocity.x));
-        _animator.SetFloat(ParamYVelocity, _rb.linearVelocity.y);
+        // 外力 (コンベア・風・足場の運搬) のぶんは除く。立ち止まって運ばれている時に走りモーションにしない
+        var velocity = _rb.linearVelocity - _appliedExternalVelocity;
+        _animator.SetFloat(ParamSpeed, Mathf.Abs(velocity.x));
+        _animator.SetFloat(ParamYVelocity, velocity.y);
         _animator.SetBool(ParamIsGrounded, _isGrounded);
         _animator.SetBool(ParamIsDashing, _isDashing);
         _animator.SetBool(ParamIsAttacking, _isAttacking);

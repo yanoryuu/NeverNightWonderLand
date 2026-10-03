@@ -27,6 +27,9 @@ public class StageLoader : MonoBehaviour
     private string _pendingEntranceId; // 次のステージで使う入り口 Id (TransitionTo で指定)
     private bool _isLoading;           // ロード中の多重遷移防止
 
+    /// <summary>ステージのロード (暗転を含む) 中か。</summary>
+    public bool IsLoading => _isLoading;
+
     private void Awake()
     {
         Instance = this;
@@ -36,6 +39,14 @@ public class StageLoader : MonoBehaviour
     {
         if (Instance == this)
             Instance = null;
+    }
+
+    private void Update()
+    {
+        // 累計プレイ時間 (実時間)。セーブ画面に表示する。
+        // ポーズ・メニュー (ポーズ / 拠点 / ショップ / アイテム画面 / セーブスロット等、MenuPanelView.AnyOpen に数えるもの) の間は止める
+        if (!MenuPanelView.AnyOpen)
+            GameSession.PlayTimeSeconds += Time.unscaledDeltaTime;
     }
 
     private void Start()
@@ -116,7 +127,13 @@ public class StageLoader : MonoBehaviour
             {
                 var old = SceneManager.GetSceneByName(unloadAfter);
                 if (old.IsValid() && old.isLoaded)
+                {
+                    // 全ステージが共通のワールド座標なので、旧ステージの岩 (当たり) が新ステージの入り口と重なることがある。
+                    // 非同期の破棄を待つ間に押し出されないよう、旧ステージの物は先に止めておく (縦の遷移の到着ずれ対策)
+                    foreach (var root in old.GetRootGameObjects())
+                        root.SetActive(false);
                     SceneManager.UnloadSceneAsync(old);
+                }
             }
 
             var scene = SceneManager.GetSceneByName(stageName);

@@ -1,0 +1,122 @@
+[
+ {
+  "file": "rim_truss.png",
+  "widthPx": 3276,
+  "heightPx": 546,
+  "cells": [
+   6.0,
+   1.0
+  ],
+  "tileable": "x",
+  "pivot": "center",
+  "assembly_note": "Straight rim segment, 6x1 cells, tiles seamlessly left-right (3276px = integer number of lattice periods). To build the wheel: lay N=94 copies end to end on a circle of centerline radius ~49140px (90 units), each rotated 360/N deg tangent to the circle (rotation = angle-90deg, so bulbs face OUTWARD); chord length 3276 gives radius R=L/(2 sin(pi/N)); N must satisfy 2*pi*R/3276. Overlap ends ~0 px. Can also be repeated horizontally for straight rim pieces."
+ },
+ {
+  "file": "spoke_beam.png",
+  "widthPx": 2184,
+  "heightPx": 273,
+  "cells": [
+   4.0,
+   0.5
+  ],
+  "tileable": "x",
+  "pivot": "center",
+  "assembly_note": "Radial spoke 4x0.5 cells. Tile along the radius from hub to rim (about 21 copies for R=90 units, last one cropped or scaled), rotate each spoke by 360/16 deg (16 spokes) or 360/N. Start under the hub sprite (hub drawn on top) and end under/at the inner edge of the rim."
+ },
+ {
+  "file": "hub_axle.png",
+  "widthPx": 4368,
+  "heightPx": 4368,
+  "cells": [
+   8.0,
+   8.0
+  ],
+  "tileable": null,
+  "pivot": "center",
+  "assembly_note": "Central hub 8x8 cells, centered at wheel center, drawn on top of spoke starts. Has 8 stub fittings at 45 deg steps; spokes at multiples of 22.5 deg also fit since spokes slide under the hub. Rotate slowly for animation."
+ },
+ {
+  "file": "support_leg.png",
+  "widthPx": 1092,
+  "heightPx": 3276,
+  "cells": [
+   2.0,
+   6.0
+  ],
+  "tileable": "y",
+  "pivot": "center",
+  "assembly_note": "Vertical A-frame tower leg, 2x6 cells, tiles top-bottom. Stack vertically (pivot center) to the required height, then rotate +-lean angle (~atan(half-base/height)) so both legs meet at the hub; draw behind spokes. Segment is ~300px wide in a 1092px cell, so it can be scaled horizontally x1.5-2 for a chunkier leg."
+ },
+ {
+  "file": "leg_crossbrace.png",
+  "widthPx": 3276,
+  "heightPx": 546,
+  "cells": [
+   6.0,
+   1.0
+  ],
+  "tileable": "x",
+  "pivot": "center",
+  "assembly_note": "Horizontal cross-brace between the two legs, 6x1 cells, tiles left-right. Repeat to span leg gap at chosen height; place at several heights (e.g. 30%/60% down the legs). Image content is ~300px tall inside a 546px cell."
+ },
+ {
+  "file": "gondola_hanger.png",
+  "widthPx": 546,
+  "heightPx": 1092,
+  "cells": [
+   1.0,
+   2.0
+  ],
+  "tileable": null,
+  "pivot": "top",
+  "assembly_note": "Arm with pivot bolt at top and hook ring at bottom, 1x2 cells. Place its top pivot at the rim (outer/lower edge) of each gondola position, keep it upright (rotate opposite to wheel rotation so it always hangs vertical); hang gondola_platform from the bottom ring."
+ },
+ {
+  "file": "rim_bulb.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "tileable": null,
+  "pivot": "center",
+  "assembly_note": "Single glowing bulb with baked warm glow halo (additive-like, soft alpha). Place along the rim at ~3-4 per rim segment, optionally pulse/blink with SpriteRenderer color or scale; or use in Light2D sprites."
+ },
+ {
+  "file": "wheel_base_station.png",
+  "widthPx": 4368,
+  "heightPx": 2184,
+  "cells": [
+   8.0,
+   4.0
+  ],
+  "tileable": null,
+  "pivot": "bottom",
+  "assembly_note": "Boarding station building 8x4 cells (content ~2.8 cells tall, flat walkable roof/top deck, ticket gate + stairs left). Place at the foot of the wheel so the deck top aligns with the lowest gondola position; pivot bottom."
+ },
+ {
+  "file": "machine_room_wall.png",
+  "widthPx": 1092,
+  "heightPx": 1092,
+  "cells": [
+   2.0,
+   2.0
+  ],
+  "tileable": "xy",
+  "pivot": "center",
+  "assembly_note": "Opaque dark background panel for the hub machine room, 2x2 cells, tiles in both directions (blended seam, low contrast). Fill the room backdrop with a grid of copies (Tiled draw mode) behind gameplay tiles."
+ },
+ {
+  "file": "far_wheel_silhouette_arc.png",
+  "widthPx": 3840,
+  "heightPx": 1024,
+  "cells": [
+   7.033,
+   1.875
+  ],
+  "tileable": "x",
+  "pivot": "center",
+  "assembly_note": "Faint lilac (alpha ~60%) distant-wheel parallax layer, 3840x1024, tiles left-right (rim lattice band with V-shaped spokes, period 480px). Procedurally drawn, straight band (not curved) so it loops; for distant parallax tile horizontally on a slow-scrolling layer, optionally rotate or warp for a curve."
+ }
+]

@@ -45,4 +45,18 @@ public class SaveData
 
     /// <summary>進行フラグ (中ボス撃破など。GameProgress が管理)。</summary>
     public string[] progressFlags;
+
+    // ---- スロット一覧の表示用 (ロード画面) ----
+
+    /// <summary>セーブ日時 (ISO 8601。DateTime.ToString("o"))。空なら旧形式 (ファイル更新日時で代用)。</summary>
+    public string savedAt;
+
+    /// <summary>累計プレイ時間 (秒)。</summary>
+    public double playTimeSeconds;
+
+    /// <summary>章の表示名 (StageInfo.ChapterName)。</summary>
+    public string chapterName;
+
+    /// <summary>場所の表示名 (StageInfo の部屋名)。</summary>
+    public string placeName;
 }

@@ -40,11 +40,31 @@ public class PlayerInteractor : MonoBehaviour
             _current.Value.Interact(gameObject);
     }
 
-    private IInteractable FindNearestInteractable()
+    /// <summary>
+    /// インタラクト範囲内にある T (例: SavePoint) を探す (最寄りでなくてもよい。無ければ null)。
+    /// ポーズの「セーブ」の有効判定 (拠点の近くか) に使う。
+    /// </summary>
+    public T FindInRange<T>() where T : class
+    {
+        foreach (var hit in OverlapInteractRange())
+        {
+            var found = hit.GetComponentInParent<T>();
+            if (found != null)
+                return found;
+        }
+
+        return null;
+    }
+
+    private Collider2D[] OverlapInteractRange()
     {
         var consts = _controller.Consts;
-        var hits = Physics2D.OverlapCircleAll(
-            transform.position, consts.InteractRadius, consts.InteractableLayer);
+        return Physics2D.OverlapCircleAll(transform.position, consts.InteractRadius, consts.InteractableLayer);
+    }
+
+    private IInteractable FindNearestInteractable()
+    {
+        var hits = OverlapInteractRange();
 
         IInteractable nearest = null;
         var nearestSqr = float.MaxValue;

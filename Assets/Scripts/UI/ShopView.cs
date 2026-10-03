@@ -4,7 +4,7 @@ using UnityEngine;
 
 /// <summary>
 /// ショップ画面 (拠点)。ShopKeeper のインタラクトから開き、糸を消費してアイテムを購入する。
-/// UI はシーン上で事前配置した MenuPanelView を参照する (実行時生成なし)。
+/// ShopUI シーン (Additive) に置かれ、UI はプレハブ上で事前配置した MenuPanelView を参照する (実行時生成なし)。
 /// 品揃えと価格は _lineup で設定する。所持数は各アイテムの最大数まで。
 /// </summary>
 public class ShopView : MonoBehaviour
@@ -22,7 +22,7 @@ public class ShopView : MonoBehaviour
     [Tooltip("メニューに使う日本語フォント")]
     [SerializeField] private TMP_FontAsset _font;
 
-    [Tooltip("メニューパネル (シーン上で事前配置)")]
+    [Tooltip("メニューパネル (プレハブ上で事前配置)")]
     [SerializeField] private MenuPanelView _menu;
 
     [Tooltip("品揃え")]

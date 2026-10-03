@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// ステージシーンから UI シーン群 (HUD の PlayerUI、ポーズの PauseUI など) を
+/// ステージシーンから UI シーン群 (HUD の PlayerUI、エリア名・案内の StageUI、ポーズの PauseUI、拠点の HomeUI、ショップの ShopUI、セーブスロットの SaveSlotUI、アイテム画面の ItemMenuUI など) を
 /// Additive でロードするブートストラップ。既にロード済みのシーンは何もしないので、
 /// エディタでどのシーンから再生しても UI が乗る。
 /// UI シーン側の LifetimeScope はルート (GameLifetimeScope) に自動接続されるため、
@@ -11,7 +11,7 @@ using UnityEngine.SceneManagement;
 public class UISceneBootstrap : MonoBehaviour
 {
     [Tooltip("Additive でロードする UI シーン名 (Build Settings に登録しておくこと)")]
-    [SerializeField] private string[] _uiSceneNames = { "PlayerUI", "PauseUI", "HomeUI", "GameOverUI", "ResultUI" };
+    [SerializeField] private string[] _uiSceneNames = { "PlayerUI", "StageUI", "PauseUI", "HomeUI", "ShopUI", "GameOverUI", "ResultUI", "SaveSlotUI", "ItemMenuUI" };
 
     private void Awake()
     {

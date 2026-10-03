@@ -5,12 +5,17 @@ using UnityEngine;
 /// <summary>
 /// 攻撃練習用の壊れる箱。防御値は持たず、HP/防御値どちらのダメージも合算して HP で受ける
 /// (どのスタイルでも壊せるようにするため)。
+/// _flagId を設定すると破壊状態が GameProgress で永続化され、再訪しても壊れたまま (隠し壁用)。
+/// 空なら従来どおりシーンに入り直すたびに復活する。
 /// </summary>
 [RequireComponent(typeof(SpriteRenderer))]
 public class BreakableBox : MonoBehaviour, IDamageable
 {
     [Tooltip("耐久値。HPダメージ+防御値ダメージの合算で削られる")]
     [SerializeField] private int _maxHp = 1;
+
+    [Tooltip("破壊状態の永続化フラグ (GameProgress)。空なら再入場で復活する。例: A1_Hidden_U2")]
+    [SerializeField] private string _flagId = "";
 
     [Tooltip("被弾フラッシュの時間 (sec)")]
     [SerializeField] private float _hitFlashTime = 0.1f;
@@ -29,6 +34,13 @@ public class BreakableBox : MonoBehaviour, IDamageable
 
     private void Awake()
     {
+        // 破壊済み (永続化フラグあり) なら出現させない
+        if (!string.IsNullOrEmpty(_flagId) && GameProgress.Has(_flagId))
+        {
+            Destroy(gameObject);
+            return;
+        }
+
         _sprite = GetComponent<SpriteRenderer>();
         _baseColor = _sprite.color;
         _hp = _maxHp;
@@ -68,6 +80,10 @@ public class BreakableBox : MonoBehaviour, IDamageable
     private void Break()
     {
         _broken = true;
+
+        if (!string.IsNullOrEmpty(_flagId))
+            GameProgress.Set(_flagId);
+
         OnBroken?.Invoke();
 
         foreach (var col in GetComponentsInChildren<Collider2D>())

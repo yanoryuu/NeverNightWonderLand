@@ -25,7 +25,7 @@ public class PlayerProgression : MonoBehaviour
         if (!_upgrades.Add(upgrade))
             return;
 
-        Notifier.Notify($"{upgrade.DisplayName()}を手に入れた!");
+        Notifier.Notify(WithControls($"{upgrade.DisplayName()}を手に入れた!", ControlHint(upgrade)));
         OnUpgradeGranted?.Invoke(upgrade);
     }
 
@@ -39,8 +39,46 @@ public class PlayerProgression : MonoBehaviour
         if (!_skills.Add(skill))
             return;
 
-        Notifier.Notify($"スキル「{skill.DisplayName()}」を手に入れた!");
+        Notifier.Notify(WithControls($"スキル「{skill.DisplayName()}」を手に入れた!", ControlHint(skill)));
     }
+
+    #region 入手通知の操作説明 (Docs/UI/UIAssignment.md「3回目の決定」12)
+
+    // 入手通知に添える操作 1 行。キー割り当ては PlayerInputSource.ReadDevice、操作の条件は各ステート
+    // (AirborneState / GroundedState / *ChargeState / PlayerController の滑空) と同じ。
+    // 表記はチュートリアルの案内文 (キーボード [Space] [J] [Shift]、パッド × □ R2) に合わせる。
+    // 対象は二段ジャンプ・滑空 (赤) / 大ジャンプ / 落下攻撃 / 横突進 だけ。
+
+    private static bool UseGamepadText => InputDeviceTracker.Current == InputDeviceKind.Gamepad;
+
+    /// <summary>強化の操作説明 (無ければ null)。</summary>
+    public static string ControlHint(ScissorUpgrade upgrade) => upgrade switch
+    {
+        ScissorUpgrade.Red => UseGamepadText
+            ? "空中で × で二段ジャンプ、落下中に × 長押しで滑空"
+            : "空中で [Space] で二段ジャンプ、落下中に [Space] 長押しで滑空",
+        _ => null,
+    };
+
+    /// <summary>スキルの操作説明 (無ければ null)。</summary>
+    public static string ControlHint(PlayerSkill skill) => skill switch
+    {
+        PlayerSkill.GroundSlam => UseGamepadText
+            ? "空中で ↓+□ で落下攻撃"
+            : "空中で [↓]+[J] で落下攻撃",
+        PlayerSkill.SuperJump => UseGamepadText
+            ? "地上で ↑+× を長押しで溜め、離して大ジャンプ"
+            : "地上で [↑]+[Space] を長押しで溜め、離して大ジャンプ",
+        PlayerSkill.ChargeRush => UseGamepadText
+            ? "地上で ↓+R2 を長押しで溜め、離して横突進"
+            : "地上で [↓]+[Shift] を長押しで溜め、離して横突進",
+        _ => null,
+    };
+
+    private static string WithControls(string message, string controls) =>
+        string.IsNullOrEmpty(controls) ? message : $"{message}\n{controls}";
+
+    #endregion
 
     /// <summary>スキルを取り消す (デバッグ用)。</summary>
     public void RevokeSkill(PlayerSkill skill) => _skills.Remove(skill);

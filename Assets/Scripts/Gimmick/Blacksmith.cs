@@ -10,6 +10,9 @@ public class Blacksmith : MonoBehaviour, IInteractable
     [Tooltip("授けるハサミ強化の色")]
     [SerializeField] private ScissorUpgrade _upgrade = ScissorUpgrade.Yellow;
 
+    [Tooltip("false にするとハサミ強化を授けない (鍛冶強化と会話だけの鍛冶師)。既定 true = 従来どおり")]
+    [SerializeField] private bool _grantsUpgrade = true;
+
     [Tooltip("鍛冶師の名前 (会話表示用)")]
     [SerializeField] private string _smithName = "カブトムシの鍛冶師";
 
@@ -40,6 +43,15 @@ public class Blacksmith : MonoBehaviour, IInteractable
         var progression = interactor.GetComponent<PlayerProgression>();
         if (progression == null)
             return;
+
+        // 鍛冶強化だけの鍛冶師: 能力の授与と進行条件を飛ばす
+        if (!_grantsUpgrade)
+        {
+            if (TryForge(interactor, progression))
+                return;
+            Notifier.Notify($"{_smithName}「刃こぼれしたら、いつでも来な」");
+            return;
+        }
 
         // 進行条件 (中ボス全撃破など) を全て満たすまでは渡さない
         if (!progression.Has(_upgrade) && _requiredFlags != null)
