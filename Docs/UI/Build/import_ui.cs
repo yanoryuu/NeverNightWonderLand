@@ -52,7 +52,14 @@ public static class ImportUI
             settings.spriteGenerateFallbackPhysicsShape = false;
             importer.SetTextureSettings(settings);
             // 手続きで作った角丸 (資料のスクロールのつまみ・溝) は縦に伸ばすので 9 スライス
-            importer.spriteBorder = file == "pill.png" ? new Vector4(0, 6, 0, 6) : Vector4.zero;
+            // 仮素材 (_temp/) の選び直しの一覧の板は横に伸ばすので 9 スライス (枠の幅は _temp/manifest.json の nineSlice)
+            importer.spriteBorder = file switch
+            {
+                "pill.png" => new Vector4(0, 6, 0, 6),
+                "picker_row.png" or "picker_row_selected.png" or "picker_row_disabled.png" => new Vector4(28, 28, 28, 28),
+                "picker_header.png" => new Vector4(40, 30, 40, 30), // (左, 下, 右, 上)
+                _ => Vector4.zero,
+            };
 
             importer.SaveAndReimport();
             log.AppendLine($"sprite {path} {w}x{h} max={maxSize}");

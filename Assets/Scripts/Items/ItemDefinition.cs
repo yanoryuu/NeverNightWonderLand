@@ -31,6 +31,12 @@ public abstract class ItemDefinition : ScriptableObject
     [Tooltip("アイコンの色 (仮素材)")]
     [SerializeField] private Color _iconColor = Color.white;
 
+    [Tooltip("アイコン (アイテム画面の選び直しの一覧。仮素材 = Assets/LocalData/UI/_temp/icon_<id>.png)")]
+    [SerializeField] private Sprite _icon;
+
+    [Tooltip("灰色のアイコン (所持数 0 の時。仮素材 = icon_<id>_gray.png)")]
+    [SerializeField] private Sprite _iconEmpty;
+
     [Header("使用モーション")]
     [Tooltip("使用モーションの継続時間 (sec)")]
     [SerializeField] private float _useDuration = 0.25f;
@@ -42,6 +48,8 @@ public abstract class ItemDefinition : ScriptableObject
     public string Description => _description;
     public int MaxCount => _maxCount;
     public Color IconColor => _iconColor;
+    public Sprite Icon => _icon;
+    public Sprite IconEmpty => _iconEmpty != null ? _iconEmpty : _icon;
     public float UseDuration => _useDuration;
     public float UseDelay => _useDelay;
 

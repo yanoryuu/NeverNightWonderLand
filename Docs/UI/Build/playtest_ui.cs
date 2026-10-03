@@ -355,3 +355,72 @@ public static class PlayUIr3
         return "shot " + name;
     }
 }
+
+/// <summary>4回目の決定の確認 (選び直しの一覧の仮素材・0 個の灰色・入れ替え・入手通知の 2 行)。</summary>
+public static class PlayUIr4
+{
+    const BindingFlags F = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
+
+    static PlayerController P => Object.FindAnyObjectByType<PlayerController>();
+
+    /// <summary>カタログの先頭 n 種を 1 つずつ持たせ、残りは 0 個、スロットは全部空にする。</summary>
+    public static string Setup(string n = "3")
+    {
+        var inv = P.Inventory;
+        var k = int.Parse(n);
+        for (var i = 0; i < inv.Catalog.Count; i++)
+        {
+            var item = inv.Catalog[i];
+            while (inv.TryConsume(item)) { }
+            if (i < k) inv.TryAddItem(item);
+        }
+        foreach (ItemSlot s in System.Enum.GetValues(typeof(ItemSlot)))
+            inv.SetSlot(s, null);
+        return string.Join(" ", inv.Catalog.Select(c => $"{c.DisplayName}x{inv.GetCount(c)}"));
+    }
+
+    /// <summary>選び直しの一覧の各行 (板・アイコン・文字・透明度)。</summary>
+    public static string Picker()
+    {
+        var tab = Object.FindAnyObjectByType<ItemEquipTab>();
+        var rows = (ItemMenuTab.Cell[])typeof(ItemEquipTab).GetField("_pickerRows", F).GetValue(tab);
+        var heading = (TMP_Text)typeof(ItemEquipTab).GetField("_pickerHeading", F).GetValue(tab);
+        var sb = new StringBuilder($"heading='{heading.text}' picking={typeof(ItemEquipTab).GetField("_picking", F).GetValue(tab)}");
+        foreach (var r in rows)
+        {
+            if (!r.Root.gameObject.activeInHierarchy) { sb.Append("\n  (hidden)"); continue; }
+            var plate = r.Root.GetComponent<Image>();
+            sb.Append($"\n  plate={plate.sprite.name} scale={r.Root.localScale.x:F2} icon={(r.Icon.gameObject.activeSelf ? r.Icon.sprite.name : "-")} label='{r.Label.text}' a={r.Label.color.a:F2}");
+        }
+        return sb + "\n" + PlayUIr3.Slots();
+    }
+
+    /// <summary>通知を出して、表示されていた実時間を PlayerPrefs "noticeTime" に残す (NoticeResult で読む)。</summary>
+    public static string Notice(string twoLines)
+    {
+        var msg = twoLines == "1" ? "赤いハサミを手に入れた!\n空中で [Space] (×) で二段ジャンプ" : "糸を 10 手に入れた (所持: 10)";
+        var v = Object.FindAnyObjectByType<NotificationView>();
+        var showing = typeof(NotificationView).GetField("_showing", F);
+        PlayerPrefs.DeleteKey("noticeTime");
+        double start = -1;
+        UnityEditor.EditorApplication.CallbackFunction tick = null;
+        tick = () =>
+        {
+            if (v == null) { UnityEditor.EditorApplication.update -= tick; return; }
+            var on = (bool)showing.GetValue(v);
+            var now = UnityEditor.EditorApplication.timeSinceStartup;
+            if (on && start < 0) start = now;
+            if (!on && start >= 0)
+            {
+                var label = (TMP_Text)typeof(NotificationView).GetField("_label", F).GetValue(v);
+                PlayerPrefs.SetString("noticeTime", $"shown {now - start:F2}s lines={label.textInfo.lineCount} band={((RectTransform)v.transform).sizeDelta}");
+                UnityEditor.EditorApplication.update -= tick;
+            }
+        };
+        UnityEditor.EditorApplication.update += tick;
+        Notifier.Notify(msg);
+        return "notify: " + msg.Replace("\n", " / ");
+    }
+
+    public static string NoticeResult() => PlayerPrefs.GetString("noticeTime", "pending");
+}

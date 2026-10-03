@@ -83,13 +83,27 @@ public sealed class PlayerItemInventoryModel : IDisposable
     /// <summary>スロットにセットされたアイテム。空なら null。</summary>
     public ItemDefinition GetSlotItem(ItemSlot slot) => _slots[(int)slot].Value;
 
-    /// <summary>スロットにアイテムをセットする (null で外す)。</summary>
+    /// <summary>
+    /// スロットにアイテムをセットする (null で外す)。
+    /// 同じアイテムは 2 つのスロットに入れない: 別のスロットに入っているアイテムをセットした時は、
+    /// 2 つのスロットの中身を入れ替える (UIAssignment.md「4回目の決定」7)。
+    /// </summary>
     public void SetSlot(ItemSlot slot, ItemDefinition item)
     {
         if (item != null && !_counts.ContainsKey(item))
             return;
 
-        _slots[(int)slot].Value = item;
+        var target = _slots[(int)slot];
+        if (item != null)
+        {
+            for (var i = 0; i < _slots.Length; i++)
+            {
+                if (i != (int)slot && _slots[i].Value == item)
+                    _slots[i].Value = target.Value; // 入れ替え (対象が空なら相手は空になる)
+            }
+        }
+
+        target.Value = item;
         _changed.OnNext(Unit.Default);
     }
 
@@ -234,7 +248,17 @@ public sealed class PlayerItemInventoryModel : IDisposable
         if (data.slotItemIds != null)
         {
             for (var i = 0; i < _slots.Length && i < data.slotItemIds.Length; i++)
-                _slots[i].Value = FindByName(data.slotItemIds[i]);
+            {
+                var item = FindByName(data.slotItemIds[i]);
+                // 同じアイテムは 2 つのスロットに入れない (入れ替え導入前のセーブ: 先のスロットを残して後は空に)
+                for (var j = 0; j < i && item != null; j++)
+                {
+                    if (_slots[j].Value == item)
+                        item = null;
+                }
+
+                _slots[i].Value = item;
+            }
         }
 
         _thread.Value = Mathf.Max(0, data.thread);

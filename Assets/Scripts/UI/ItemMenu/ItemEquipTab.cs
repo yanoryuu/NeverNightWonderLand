@@ -13,6 +13,9 @@ using UnityEngine.UI;
 /// アイテムスロット (↓ / ← →) の枠で決定 → 中央の縦長の枠がアイテムの選び直し (所持アイテム + はずす) に替わる
 /// (旧ポーズの「スロットにセットする」の流用。UIAssignment.md「3回目の決定」4)。左右スロットの枠では ← → で対象のスロットを切り替える。
 /// 選び直し中は左の大枠・帯にカーソルの物の説明・名前を出す。決定でセット、戻るで取り消し。
+/// 一覧の行 = 板 (仮素材 picker_row / _selected / _disabled) + アイコン + 「名前 x所持数」。所持数 0 の物も出し、
+/// 灰色の板・灰色のアイコン・薄い文字にする。別スロットに入っている物を選ぶと 2 つのスロットの中身を入れ替える
+/// (入れ替えは PlayerItemInventoryModel.SetSlot。UIAssignment.md「4回目の決定」2・3・7)。
 /// </summary>
 public class ItemEquipTab : ItemMenuTab
 {
@@ -71,8 +74,13 @@ public class ItemEquipTab : ItemMenuTab
     [Tooltip("選び直しの見出し (対象のスロット)")]
     [SerializeField] private TMP_Text _pickerHeading;
 
-    [Tooltip("選び直しの行 (上から。入りきらない時は送る)")]
+    [Tooltip("選び直しの行 (上から。入りきらない時は送る)。Root = 行の板 (Image)、Icon = アイテムのアイコン、Label = 名前 x所持数")]
     [SerializeField] private Cell[] _pickerRows = new Cell[7];
+
+    [Tooltip("行の板 (通常 / 選択中 / 所持数 0)。仮素材 Assets/LocalData/UI/_temp/picker_row*.png")]
+    [SerializeField] private Sprite _pickerRowSprite;
+    [SerializeField] private Sprite _pickerRowSelectedSprite;
+    [SerializeField] private Sprite _pickerRowEmptySprite;
 
     [Header("文言")]
     [SerializeField] private string _noneLabel = "なし";
@@ -90,6 +98,7 @@ public class ItemEquipTab : ItemMenuTab
     private readonly List<ItemDefinition> _pickItems = new(); // null = はずす
     private int _pickIndex;
     private int _pickScroll;
+    private Color[] _pickerRowColors;
 
     protected override void OnShow()
     {
@@ -190,14 +199,13 @@ public class ItemEquipTab : ItemMenuTab
         if (_pickerGroup != null) _pickerGroup.SetActive(false);
     }
 
-    /// <summary>所持アイテム (所持数 1 以上、または今このスロットにある物) + はずす。</summary>
+    /// <summary>全アイテム (所持数 0 の物も灰色で出す。UIAssignment.md「4回目の決定」3) + はずす。</summary>
     private void BuildPickItems(PlayerItemInventory inventory)
     {
         _pickItems.Clear();
-        var current = inventory.GetSlotItem(_pickSlot);
         foreach (var item in inventory.Catalog)
         {
-            if (item != null && (inventory.GetCount(item) > 0 || item == current))
+            if (item != null)
                 _pickItems.Add(item);
         }
 
@@ -246,7 +254,8 @@ public class ItemEquipTab : ItemMenuTab
 
         if (input.Submit)
         {
-            inventory.SetSlot(_pickSlot, _pickItems[_pickIndex]); // null = はずす
+            // null = はずす。別スロットに入っている物なら Model が 2 つのスロットの中身を入れ替える
+            inventory.SetSlot(_pickSlot, _pickItems[_pickIndex]);
             ClosePicker();
             Refresh();
         }
@@ -265,6 +274,13 @@ public class ItemEquipTab : ItemMenuTab
         if (_pickIndex > _pickScroll + visible - 1) _pickScroll = _pickIndex - visible + 1;
         _pickScroll = Mathf.Clamp(_pickScroll, 0, Mathf.Max(0, _pickItems.Count - visible));
 
+        if (_pickerRowColors == null)
+        {
+            _pickerRowColors = new Color[_pickerRows.Length];
+            for (var i = 0; i < _pickerRows.Length; i++)
+                _pickerRowColors[i] = _pickerRows[i]?.Label != null ? _pickerRows[i].Label.color : Color.white;
+        }
+
         var current = inventory != null ? inventory.GetSlotItem(_pickSlot) : null;
         for (var i = 0; i < _pickerRows.Length; i++)
         {
@@ -279,13 +295,31 @@ public class ItemEquipTab : ItemMenuTab
                 continue;
 
             var item = _pickItems[n];
-            var label = item == null
-                ? _unequipLabel
-                : $"{item.DisplayName} x{(inventory != null ? inventory.GetCount(item) : 0)}";
+            var count = item != null && inventory != null ? inventory.GetCount(item) : 0;
+            var empty = item != null && count <= 0; // 使い切った (0 個) = 灰色
+            var selected = n == _pickIndex;
+            var label = item == null ? _unequipLabel : $"{item.DisplayName} x{count}";
             if (item != null && item == current)
                 label = "○ " + label; // 今セットされている物
             SetText(row.Label, label);
-            SetSelected(row, n == _pickIndex);
+            if (row.Label != null)
+            {
+                var color = _pickerRowColors[i];
+                if (empty)
+                    color.a *= _notOwnedAlpha;
+                row.Label.color = color;
+            }
+
+            SetIcon(row.Icon, item == null ? null : empty ? item.IconEmpty : item.Icon);
+            var plate = row.Root.GetComponent<Image>();
+            if (plate != null)
+            {
+                var sprite = selected ? _pickerRowSelectedSprite : empty ? _pickerRowEmptySprite : _pickerRowSprite;
+                if (sprite != null)
+                    plate.sprite = sprite;
+            }
+
+            SetSelected(row, selected);
         }
 
         // 左の大枠・帯: カーソルの物

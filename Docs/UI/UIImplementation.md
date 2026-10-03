@@ -212,3 +212,29 @@ A1_AB の撃破後の二段ジャンプの案内 (と FlagActivator の表示対
 - 通知: 赤ハサミ・落下攻撃・大ジャンプ・横突進を TestPlayActions で付与 → 2 行の通知 (パッド / キーボード両方。キーボードは CLI から仮想キーが届かなかったので `ForceDevice` で切替)。
 - スクリーンショット: `Assets/Screenshots/UI/r3_equip_picker.png` / `r3_equip_assigned.png` / `r3_collection_icons.png` / `r3_collection_detail.png` / `r3_journal_scroll.png` / `r3_overlay_r3.png` / `r3_notice_superjump_kb.png` / `r3_notice_red_pad.png`。
 
+
+## 11. 4回目の決定の反映 (2026-10-03 夜, UIAssignment.md「4回目の決定」)
+
+4・5 は変更なし (今のまま)。
+
+| 決定 | 対応 |
+|---|---|
+| 2 選び直しの一覧の仮素材 | image-gen の仮素材 `Assets/LocalData/UI/_temp/` を装備品タブの選び直し (`ItemMenuUI/…/UpgradeFrame/ItemPicker`) に置いた: 見出しの板 `picker_header` (236x56) + 行の板 `picker_row` (236x54, 7 行, 間隔 70)。行 = 板 + アイコン (40x40) + 「名前 x所持数」(左揃え, 自動縮小 28→14)。カーソルの行は板を `picker_row_selected` に差し替え (+ 今まで通り 1.04 倍)。板は 9 スライス (Border: 行 28 / 見出し 左右 40・上下 30 = `_temp/manifest.json`、`import_ui.cs` が設定) で、縁は半分の太さで描く (`Image.pixelsPerUnitMultiplier` 2 = `BuildUI.PickerPlateScale`)。見出しの板は橙なので見出しの文字は枠の中の文字色 #490000。中央の縦長の枠の縫い目 (x = ±126) の内側に収まる幅。専用の絵が来たら `BuildUI` の `_temp/picker_*` を差し替える |
+| 3 0 個も灰色で表示 | 一覧は **カタログの全アイテム** (所持数 0 も) + はずす。0 個の行 = 板 `picker_row_disabled` + 灰色のアイコン + 文字のアルファ 0.45 (無効の見た目と同じ)。カーソルが乗った時は選択中の板 (アイコン・文字は灰色のまま)。0 個の物もスロットにセットできる (今まで通り。所持数 0 で今スロットにある物は元から選べた)。アイコンは `ItemDefinition` に `Icon` / `IconEmpty` (Sprite) を追加し、6 種のアセット (`Assets/Items/*.asset`) に `_temp/icon_<id>.png` / `icon_<id>_gray.png` を入れた (`BuildUI.ItemIcons`。`*_proc.png` は使っていない)。アイコンを出しているのは一覧の行だけ (左の大枠・右の小枠・HUD は今まで通り文字) |
+| 6 入手通知の帯 | `HUD.prefab` の `Notification` の高さ 52 → 88 (2 行 = 69.2px + 1 行の時と同じ上下の余白。下端の位置は同じで上に伸びる)。`NotificationView`: 表示する時の行数 (改行と帯の幅での折り返し) が 2 行以上なら 3.5 秒、1 行は今まで通り 2.4 秒 |
+| 7 同じアイテムは 2 スロットに入れない | `PlayerItemInventoryModel.SetSlot`: 別のスロットに入っているアイテムをセットすると 2 つのスロットの中身を入れ替える (相手のスロットには対象のスロットに入っていた物が入る。空だったら空になる)。ルールを Model に置いたので、どこからセットしても同じ。旧セーブで同じ物が 2 スロットにある場合は `LoadFrom` で先のスロット (↓・←・→ の順) を残して後を空にする |
+
+### 作り直し
+```bash
+unity command run_script --caller plugin --skill unity-cli --file Docs/UI/Build/import_ui.cs --entry ImportUI.Run --timeout_ms 600000 --timeout 620
+unity command run_script --caller plugin --skill unity-cli --file Docs/UI/Build/build_ui.cs --entry BuildUI.ItemIcons
+unity command run_script --caller plugin --skill unity-cli --file Docs/UI/Build/build_ui.cs --entry BuildUI.ItemMenu --timeout_ms 600000 --timeout 620
+```
+(HUD の通知の帯はレシピが無いのでプレハブを直接直した。)
+
+### 確認したこと (エディタ再生, A1_T1, `Docs/UI/Build/playtest_ui.cs` の `PlayUIr4`)
+- コンパイル: エラーなし (警告は既存の PlayerSpineVisual の CS0414 のみ)。再生中のエラーなし。
+- 一覧: ボビン爆弾・布カッター・まち針を 1 個、ミシン針・針山・糸玉を 0 個で ↓ の選び直し → 6 種 + はずす。0 個の 3 行は灰色の板・灰色のアイコン・文字 0.45、カーソルの行は選択中の板 (`r4_picker_list.png` / `r4_picker_empty_cursor.png`)。
+- 入れ替え: ↓ = ボビン爆弾、← = 布カッター の状態で ← にボビン爆弾を選ぶ → ↓ = 布カッター / ← = ボビン爆弾、HUD も同じ (`r4_swap_before.png` / `r4_swap_after.png`)。← のボビン爆弾を (空の) → に選ぶ → ← は空 / → = ボビン爆弾。
+- 通知: 1 行「糸を 10 手に入れた」= 2.40 秒、2 行 (赤ハサミ + 操作) = 3.50 秒、帯 900x88 に 2 行が収まる (`r4_notice_2lines.png`)。
+- スクリーンショット: `Assets/Screenshots/UI/r4_*.png`。

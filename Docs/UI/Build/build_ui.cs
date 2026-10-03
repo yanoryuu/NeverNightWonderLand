@@ -15,6 +15,7 @@ using UnityEngine.UI;
 //   unity command run_script --file Docs/UI/Build/build_ui.cs --entry BuildUI.Pause
 //   unity command run_script --file Docs/UI/Build/build_ui.cs --entry BuildUI.Title
 //   unity command run_script --file Docs/UI/Build/build_ui.cs --entry BuildUI.Catalog    (収集品・資料の一覧データ)
+//   unity command run_script --file Docs/UI/Build/build_ui.cs --entry BuildUI.ItemIcons  (消耗品アイテムのアイコン = _temp/ の仮素材)
 //   unity command run_script --file Docs/UI/Build/build_ui.cs --entry BuildUI.ItemMenu   (アイテム画面。Catalog の後)
 //   unity command run_script --file Docs/UI/Build/build_ui.cs --entry BuildUI.StageNames (旧セーブ表示用の場所・章の対応表)
 public static class BuildUI
@@ -433,6 +434,12 @@ public static class BuildUI
     public static float ItemPickerFont = 28f;     // 装備品: アイテムの選び直しの行
     public static int PickerRows = 7;             // 装備品: 選び直しの行数 (アイテム 6 種 + はずす。超えたら送る)
     public static float PickerRowPitch = 70f;     // 装備品: 選び直しの行の間隔
+    // 選び直しの一覧の板 (仮素材 _temp/picker_*.png, 9 スライス)。中央の縦長の枠 (幅 312、両端の縫い目は x = ±126) の内側に収める
+    public static float PickerWidth = 236f;       // 板の幅 (見出し・行とも)
+    public static float PickerRowHeight = 54f;    // 行の板の高さ
+    public static float PickerHeaderHeight = 56f; // 見出しの板の高さ
+    public static float PickerPlateScale = 2f;    // 板の縁の縮め (Image.pixelsPerUnitMultiplier。素材 560 幅の縁を半分の太さで描く)
+    public static float PickerIconSize = 40f;     // 行のアイコン
     public static float CollectionCellFont = 26f; // 収集品: 枠の名前
     public static float CollectionNameFont = 44f; // 収集品詳細: 名前
     public static float CollectionTextFont = 30f; // 収集品詳細: 説明
@@ -477,6 +484,45 @@ public static class BuildUI
         e.FindPropertyRelative("Root").objectReferenceValue = root;
         e.FindPropertyRelative("Icon").objectReferenceValue = icon;
         e.FindPropertyRelative("Label").objectReferenceValue = label;
+    }
+
+    /// <summary>9 スライスの板 (素材に Border が要る = import_ui.cs)。縁は PickerPlateScale 分の 1 の太さで描く。</summary>
+    static Image Sliced(string name, Transform parent, string sprite, Vector2 pos, Vector2 size)
+    {
+        var s = S(sprite);
+        if (s.border == Vector4.zero) throw new Exception("sprite has no 9-slice border (run import_ui.cs): " + sprite);
+        var img = AddImage(Rect(name, parent, pos, size).gameObject, s);
+        img.type = Image.Type.Sliced;
+        img.fillCenter = true;
+        img.pixelsPerUnitMultiplier = PickerPlateScale;
+        return img;
+    }
+
+    /// <summary>
+    /// 消耗品アイテム (Assets/Items/*.asset の ItemDefinition) のアイコン。専用の絵が来るまで image-gen の仮素材
+    /// (_temp/icon_&lt;id&gt;.png = 通常、icon_&lt;id&gt;_gray.png = 所持数 0) を入れる (UIAssignment.md「4回目の決定」3)。
+    /// </summary>
+    public static string ItemIcons()
+    {
+        var map = new (string asset, string id)[]
+        {
+            ("MachiNeedle", "machi_needle"), ("MishinNeedle", "mishin_needle"), ("ClothCutter", "cloth_cutter"),
+            ("ThreadBall", "thread_ball"), ("BobbinBomb", "bobbin_bomb"), ("PinCushion", "pin_cushion"),
+        };
+        var log = "";
+        foreach (var (asset, id) in map)
+        {
+            var def = AssetDatabase.LoadAssetAtPath<ItemDefinition>($"Assets/Items/{asset}.asset") ?? throw new Exception("item missing: " + asset);
+            var so = new SerializedObject(def);
+            so.FindProperty("_icon").objectReferenceValue = S($"_temp/icon_{id}.png");
+            so.FindProperty("_iconEmpty").objectReferenceValue = S($"_temp/icon_{id}_gray.png");
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(def);
+            log += $"{asset} ({def.DisplayName}) <- icon_{id}\n";
+        }
+
+        AssetDatabase.SaveAssets();
+        return log;
     }
 
     /// <summary>絵の置き場 (Icon)。素材が無い間は非表示 (ItemMenuTab.SetIcon が切り替える)。</summary>
@@ -713,22 +759,32 @@ public static class BuildUI
         }
 
         // 同じ枠の中: アイテムスロットの選び直し (スロットの枠で決定した時だけ、ハサミ強化と入れ替えて出す)。
-        // 選び直し用の絵は無いので、中央の縦長の枠とハサミ強化と同じ文字の組み方で作った (仮)
+        // 一覧の絵は後で来るので、それまで image-gen の仮素材 (_temp/picker_header / picker_row*) を置く (UIAssignment.md「4回目の決定」2)。
+        // 行 = 板 + アイコン (ItemDefinition.Icon / IconEmpty) + 「名前 x所持数」。選択中・所持数 0 の板は ItemEquipTab が差し替える
         var pickerGroup = Stretch("ItemPicker", mid.transform);
-        var pickerHeading = Txt("Heading", pickerGroup, "", new Vector2(0f, 250f), new Vector2(260f, 50f), ItemHeadingFont, Orange,
-            TextAlignmentOptions.Midline, HeadingSpacing);
+        var headingPlate = Sliced("HeadingPlate", pickerGroup, "_temp/picker_header.png", new Vector2(0f, 250f),
+            new Vector2(PickerWidth, PickerHeaderHeight));
+        // 見出しの板は橙なので文字は枠の中の文字色 (#490000)
+        var pickerHeading = Txt("Heading", headingPlate.transform, "", new Vector2(0f, 2f), new Vector2(PickerWidth - 56f, 48f),
+            ItemHeadingFont, Maroon, TextAlignmentOptions.Midline, HeadingSpacing);
         pickerHeading.enableAutoSizing = true;
         pickerHeading.fontSizeMin = 18f;
         pickerHeading.fontSizeMax = ItemHeadingFont;
-        var pickerRows = new List<TMP_Text>();
+        var pickerRows = new List<(RectTransform, Image, TMP_Text)>();
+        var iconX = -PickerWidth / 2f + 42f;              // 選択中の板の左の ▶ (縁から 10〜25) を避ける
+        var labelLeft = iconX + PickerIconSize / 2f + 8f;
+        var labelRight = PickerWidth / 2f - 12f;
         for (var i = 0; i < PickerRows; i++)
         {
-            var t = Txt($"Row{i}", pickerGroup, "", new Vector2(0f, 175f - i * PickerRowPitch), new Vector2(250f, 56f), ItemPickerFont,
-                Orange, TextAlignmentOptions.Midline);
+            var plate = Sliced($"Row{i}", pickerGroup, "_temp/picker_row.png", new Vector2(0f, 175f - i * PickerRowPitch),
+                new Vector2(PickerWidth, PickerRowHeight));
+            var ic = IconSlot(plate.transform, new Vector2(iconX, 0f), new Vector2(PickerIconSize, PickerIconSize));
+            var t = Txt("Label", plate.transform, "", new Vector2((labelLeft + labelRight) / 2f, 2f),
+                new Vector2(labelRight - labelLeft, PickerRowHeight - 8f), ItemPickerFont, Orange, TextAlignmentOptions.MidlineLeft);
             t.enableAutoSizing = true;
-            t.fontSizeMin = 16f;
+            t.fontSizeMin = 14f;
             t.fontSizeMax = ItemPickerFont;
-            pickerRows.Add(t);
+            pickerRows.Add((plate.rectTransform, ic, t));
         }
 
         pickerGroup.gameObject.SetActive(false);
@@ -764,7 +820,10 @@ public static class BuildUI
         var pr = so.FindProperty("_pickerRows");
         pr.arraySize = pickerRows.Count;
         for (var i = 0; i < pickerRows.Count; i++)
-            SetCell(pr.GetArrayElementAtIndex(i), pickerRows[i].rectTransform, null, pickerRows[i]);
+            SetCell(pr.GetArrayElementAtIndex(i), pickerRows[i].Item1, pickerRows[i].Item2, pickerRows[i].Item3);
+        so.FindProperty("_pickerRowSprite").objectReferenceValue = S("_temp/picker_row.png");
+        so.FindProperty("_pickerRowSelectedSprite").objectReferenceValue = S("_temp/picker_row_selected.png");
+        so.FindProperty("_pickerRowEmptySprite").objectReferenceValue = S("_temp/picker_row_disabled.png");
         var sc = so.FindProperty("_slotCells");
         sc.arraySize = cells.Count;
         for (var i = 0; i < cells.Count; i++)
