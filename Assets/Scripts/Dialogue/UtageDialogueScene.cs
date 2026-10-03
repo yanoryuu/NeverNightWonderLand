@@ -10,7 +10,10 @@ using Utage;
 /// DialogueScene (Additive) 内で AdvEngine を制御するコントローラ。
 /// 再生中は GamePause で時間を止め、宴のカメラをメインカメラのスタックに
 /// Overlay として載せる (URP)。呼び出しは <see cref="DialogueService"/> 経由を想定。
+/// 実行順を最優先にしているのは、DialogueScene が二重にロードされた時に、同じシーンの EventSystem・宴のエンジンが
+/// 有効になる (OnEnable / Awake) より先に止めるため (Docs/DialogueSystem.md §7)。
 /// </summary>
+[DefaultExecutionOrder(-10000)]
 public class UtageDialogueScene : MonoBehaviour
 {
     [Tooltip("制御対象の AdvEngine (初期状態は非アクティブ)")]
@@ -53,15 +56,28 @@ public class UtageDialogueScene : MonoBehaviour
             {
                 Debug.LogWarning($"[{nameof(UtageDialogueScene)}] DialogueScene が二重にロードされたため、後から来た方をアンロードします。", this);
                 _isDuplicate = true; // ロード中 (Awake) はアンロードできないので Start で
+                // アンロードまでの数フレームも、2 つ目の EventSystem (「There are 2 event systems」の警告が毎フレーム出る)・
+                // 宴のエンジンを動かさない。自分 (Start でアンロードする) 以外のルートを止める
+                foreach (var root in gameObject.scene.GetRootGameObjects())
+                {
+                    if (root != gameObject)
+                        root.SetActive(false);
+                }
                 return;
             }
         }
 
-        // EventSystem はシーン全体で1つが原則。ゲーム側に既にあればこちらを無効化する。
-        if (_eventSystem != null &&
-            FindObjectsByType<EventSystem>(FindObjectsSortMode.None).Length > 1)
+        // EventSystem はシーン全体で1つが原則。ゲーム側 (このシーン以外) に既にあればこちらを無効化する。
+        if (_eventSystem != null)
         {
-            _eventSystem.gameObject.SetActive(false);
+            foreach (var other in FindObjectsByType<EventSystem>(FindObjectsSortMode.None))
+            {
+                if (other.gameObject.scene != gameObject.scene)
+                {
+                    _eventSystem.gameObject.SetActive(false);
+                    break;
+                }
+            }
         }
 
         StripUtageLayersFromGameCameras();

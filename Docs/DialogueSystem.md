@@ -227,3 +227,40 @@ E を 2 フレームに 1 回連打 → 閉じてから 0.35 秒は開き直さ�
 **黒背景について (未決定・変更していない)**: DialogueScene の `Canvas-BackGround` (ClearCamera の Screen Space - Camera, 全画面の不透明な黒) が
 会話中はステージを完全に隠す。描画順のバグとは別 (修正後も黒背景の上に会話が出る)。残すか・半透明にするか・消すかはユーザーの判断待ち。
 
+
+### 2026-10-03 追補: 「DialogueScene が二重にロード」「There are 2 event systems」の警告
+
+シーン遷移を繰り返した後にコンソールにこの 2 つの警告が出ていた件を調査した。
+
+**調査結果**
+
+- PlayerScene 方式の通常プレイ (はじめから A1_T1 → T2 → T1 → T2 → T1 → T2 → T3 → T4 → B1 → A1_H、人形と会話 → B1 へ出て戻る → もう一度会話、
+  セーブ復帰・リトライ (PlayerScene ごと読み直し)、話しかけた同じフレームでの遷移) では **DialogueScene は常に 1 つ**、EventSystem も 1 つ
+  (ゲーム側のシーンには EventSystem が無く、DialogueScene の 1 つだけ)。警告は出ない。`DialogueService` の静的状態も遷移では失われない
+  (遷移は Additive の入れ替えで、DialogueScene は降ろされない)
+- エディタログ (Editor.log) に残っていた警告は 2 回とも、上の修正の確認で **DialogueScene を意図的に二重ロードしたテスト** の直後のもの。
+  1 回目は保険 (後の方のアンロード) を入れる前のコードで、2 つ目の EventSystem が残ったまま「There are 2 event systems」が毎フレーム 5000 回以上出ていた
+  (コンソールを消していなかったので遷移後に見えていた)
+- ただし、実際に二重ロードになる経路が 2 つあった:
+  1. **テストプレイのワープ一覧に DialogueScene が出ていた**。「ステージ = PlayerScene でも、名前が UI で終わるシーンでもないもの」という規約で判定していたが、
+     DialogueScene は名前が UI で終わらない。オーバーレイの「その他のシーン」→ DialogueScene → デフォルト入口で
+     `StageLoader.TransitionTo("DialogueScene")` が走り、**2 つ目の DialogueScene がステージとして Additive ロード**され (両方の警告が出る)、
+     元のステージも降ろされて足場の無い状態になっていた
+  2. `StageLoader.FindLoadedStage` (エディタでステージを直接開いて再生した時) も同じ判定で、DialogueScene をエディタで一緒に開いていると
+     それを現在のステージと見なしうる (次の遷移で DialogueScene が「旧ステージ」として降ろされる)
+- 保険が動いた時も、2 つ目の EventSystem はアンロードまでの数フレーム有効だった (`There can be only one active Event System` + `There are 2 event systems` が出る)
+
+**修正**
+
+- `StageLoader.IsStageSceneName(name)` を追加 (PlayerScene・名前が UI で終わるシーン・`DialogueService.SceneName` を除く)。
+  `FindLoadedStage` と `TestPlayActions.StageScenes` (デバッグパネル・テストプレイのワープ一覧) はこれで判定し、`TransitionTo` はステージ以外を警告して拒否する
+- `UtageDialogueScene` を `[DefaultExecutionOrder(-10000)]` にし、二重ロードの 2 つ目は Awake で自分以外のルート (EventSystem・AdvEngine など) を
+  すぐ非アクティブにする (同じシーンの EventSystem の OnEnable より先に止まるので EventSystem の警告は出ない)。アンロードは従来どおり Start で。
+  EventSystem の重複判定も「このシーン以外に EventSystem があるか」に直した
+
+**確認 (プレイモード)**: 上の通常プレイの手順を通しでコンソールの警告 0 件、各段階のシーン一覧は PlayerScene + UI 9 つ + ステージ (+ 会話後は DialogueScene 1 つ)、
+会話は表示 → 送り → 閉じる (糸の受け渡し・2 回目の短い会話も従来どおり)。`TestPlayActions.Warp("DialogueScene")` は拒否 (遷移せず警告 1 件)、
+ワープ一覧に DialogueScene が出ない。DialogueScene を手動で二重ロード → 「二重にロード」の警告 1 件だけで EventSystem の警告は出ず、後の方が消えて会話も正常。
+
+(付記・未修正) 会話中に遷移すると、遷移先のステージ (StageInfo / SceneTransitionZone) が `GamePause.Reset` するため会話中なのにポーズが外れる。
+通常は会話中に遷移できない (時間が止まっている) ので実害は小さいが、テスト用の強制遷移では起きる。

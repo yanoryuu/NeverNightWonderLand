@@ -10,7 +10,7 @@ using UnityEngine.SceneManagement;
 /// (タイトルからの開始・死亡リトライ)。
 /// 起動時のステージは GameSession.PendingStage → ロード済みステージ
 /// (エディタでステージシーンを直接開いて再生した場合) → 既定ステージ の順で決まる。
-/// UI シーンは「名前が UI で終わる」規約でステージと見分ける。
+/// UI シーンは「名前が UI で終わる」規約でステージと見分ける (会話の DialogueScene も除く, <see cref="IsStageSceneName"/>)。
 /// </summary>
 public class StageLoader : MonoBehaviour
 {
@@ -83,6 +83,13 @@ public class StageLoader : MonoBehaviour
     {
         if (_isLoading || string.IsNullOrEmpty(stageName) || stageName == CurrentStageName)
             return false;
+
+        if (!IsStageSceneName(stageName))
+        {
+            // DialogueScene などをステージとして読むと、二重ロード (EventSystem 2 つ) になり元のステージも降ろされる
+            Debug.LogWarning($"[{nameof(StageLoader)}] '{stageName}' はステージではないため遷移しません。", this);
+            return false;
+        }
 
         _pendingEntranceId = entranceId;
 
@@ -173,13 +180,24 @@ public class StageLoader : MonoBehaviour
         }
     }
 
-    /// <summary>ロード済みシーンからステージ (PlayerScene でも UI シーンでもないもの) を探す。</summary>
+    /// <summary>
+    /// ステージのシーン名か (PlayerScene・UI シーン (名前が UI で終わる)・会話の DialogueScene 以外)。
+    /// DialogueScene は名前が UI で終わらないが、DialogueService が常駐させる UI 側のシーン。
+    /// ステージとして扱うと遷移で二重にロードされる (Docs/DialogueSystem.md §7)。
+    /// </summary>
+    public static bool IsStageSceneName(string sceneName) =>
+        !string.IsNullOrEmpty(sceneName)
+        && sceneName != PlayerSceneName
+        && sceneName != DialogueService.SceneName
+        && !sceneName.EndsWith("UI");
+
+    /// <summary>ロード済みシーンからステージ (<see cref="IsStageSceneName"/>) を探す。</summary>
     private static Scene FindLoadedStage()
     {
         for (var i = 0; i < SceneManager.sceneCount; i++)
         {
             var scene = SceneManager.GetSceneAt(i);
-            if (!scene.isLoaded || scene.name == PlayerSceneName || scene.name.EndsWith("UI"))
+            if (!scene.isLoaded || !IsStageSceneName(scene.name))
                 continue;
 
             return scene;

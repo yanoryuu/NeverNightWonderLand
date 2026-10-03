@@ -144,7 +144,7 @@ public static class TestPlayActions
 
     // ---------------------------------------------------------------- ワープ
 
-    /// <summary>Build Settings のステージシーン名 (PlayerScene・タイトル・UI シーンを除く)。folderFilter で絞る (例 "/Area1/")。</summary>
+    /// <summary>Build Settings のステージシーン名 (PlayerScene・タイトル・UI シーン・DialogueScene を除く)。folderFilter で絞る (例 "/Area1/")。</summary>
     public static List<string> StageScenes(string folderFilter = null)
     {
         var list = new List<string>();
@@ -152,7 +152,7 @@ public static class TestPlayActions
         {
             var path = SceneUtility.GetScenePathByBuildIndex(i);
             var name = Path.GetFileNameWithoutExtension(path);
-            if (name == StageLoader.PlayerSceneName || name.EndsWith("UI") || name.StartsWith("Title"))
+            if (!StageLoader.IsStageSceneName(name) || name.StartsWith("Title"))
                 continue;
             if (!string.IsNullOrEmpty(folderFilter) && !path.Contains(folderFilter))
                 continue;
