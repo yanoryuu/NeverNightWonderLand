@@ -28,6 +28,10 @@ public class DialogueInputStrategy : InputSystemStrategy
         if (!DialogueService.IsPlaying)
             return false;
 
+        // 会話を開いたインタラクト (E / 上入力) と同じフレームでは送らない (1 ページ目が飛ばないように)
+        if (UnityEngine.Time.frameCount <= DialogueService.StartedFrame)
+            return false;
+
         return IsAdvancePressed();
     }
 

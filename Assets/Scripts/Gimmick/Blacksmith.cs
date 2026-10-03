@@ -78,7 +78,8 @@ public class Blacksmith : MonoBehaviour, IInteractable
     private Transform _listener;
 
     public string PromptText => _talking != null ? "次へ" : "話す";
-    public bool CanInteract => !DialogueService.IsPlaying;
+    // 会話の再生中・ロード中・閉じた直後 (連打で再び開くのを防ぐ) は話しかけられない
+    public bool CanInteract => DialogueService.CanStartFromInteract;
     public Vector3 PromptAnchor => transform.position + _promptOffset;
 
     private string ForgeFlag => $"Forge_{_forgeId}";

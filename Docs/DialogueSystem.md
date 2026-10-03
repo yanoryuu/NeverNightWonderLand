@@ -90,10 +90,19 @@ xls を保存 → メニュー **NeverNight > 会話シナリオを再インポ�
 DialogueService.Play("Shop_Greeting");                    // 再生するだけ
 DialogueService.Play("Shop_Greeting", () => { /*終了時*/ }); // 終了コールバック付き
 bool playing = DialogueService.IsPlaying;                  // 再生中か
+bool busy = DialogueService.IsBusy;                        // 再生中 or DialogueScene のロード中
+bool canTalk = DialogueService.CanStartFromInteract;       // NPC の CanInteract 用 (busy でなく、閉じてから 0.35 秒経った)
 ```
+
+- 会話は同時に 1 つだけ。再生中・ロード中の `Play` は警告ログを出して無視する (2026-10-03, §7)
+- 会話で話す IInteractable (`NpcTalkPoint` / `Blacksmith` など) の `CanInteract` は `DialogueService.CanStartFromInteract` にする
+  (`IsPlaying` だと、最初の会話のシーンのロード中や閉じた直後にもう一度話しかけられてしまう)
+- 会話の終わりのコールバックから続けて `Play` するのは可 (鍛冶師の 解禁前の会話 → 鍛冶強化の申し出)。クールダウンはインタラクトだけに掛かる
+- 会話中はゲーム側の Screen Space - Overlay の UI (HUD・StageUI など、sortingOrder 100 未満) を隠し、終わったら戻す (§7)
 
 - DialogueScene が未ロードでも自動で Additive ロードされる (Build Settings 登録済みが前提)
 - 再生中は GamePause で時間停止、終了で自動解除
+- 会話を開いたフレームには、ゲームのボタンでは文字送りしない (開いたインタラクトの E / 上入力で 1 ページ目が飛ばないように)
 - 文字送り・改ページは **マウスクリック** に加えて、キーボード **Enter / テンキー Enter / Space / J / E**、パッド **South (×/A) / West (□/X) / 上入力** (= ゲームの決定・ジャンプ・攻撃・インタラクト) (2026-10-03)。
   宴の公式の入力の差し替え口 `Utage.InputUtil.SetInputStrategy` に `Assets/Scripts/Dialogue/DialogueInputStrategy.cs` (宴の `InputSystemStrategy` を継承し `IsInputNextButton` を広げる) を入れている。
   `UtageDialogueScene` が会話のたびに `DialogueInputStrategy.Install()` する (宴の初期化 (BeforeSceneLoad) と順番が決まらないため)。会話中 (`DialogueService.IsPlaying`) 以外は宴の既定のまま。
@@ -178,3 +187,43 @@ DialogueScene に適用済みの調整 (参考):
 - **会話が表示されない** → コンソールの赤エラーを確認して Claude Code に相談 (DialogueScene の調整が壊れている場合は MCP 経由で再調整する)
 - **ラベルが見つからないという警告** → 再インポート忘れ。「NeverNight > 会話シナリオを再インポート」を実行
 - **インポートで例外** → `Dialogue.xls` の破損を疑う。テンプレートからコピーで復元 (上記 §1 注意欄)
+
+### 2026-10-03 のバグ修正: 会話が表示されない / 会話を 2 つ開ける
+
+ユーザー報告「描画順の問題で会話シーンが表示されないのと、2 枚会話シーンを開くことができます」。A1_H (PlayerScene 常駐 + UI シーン群) の人形・鍛冶師で再現して確認した。
+
+**原因**
+
+1. **DialogueScene の二重ロード** (2 枚開ける): 最初の会話では DialogueScene を Additive でロードするが、ロード中 (数フレーム) は
+   `DialogueService.IsPlaying` が false のままだったので、NPC の `CanInteract` も true のまま。その間にもう一度インタラクトすると
+   (E の連打・2 つの NPC など) `LoadSceneAsync` がもう一度走り、DialogueScene が 2 つ並んだ
+2. **会話が見えない** (1 の結果): `UtageDialogueScene` はゲーム側カメラの cullingMask から Utage / UtageUI レイヤーを外すが、
+   「自分の `_overlayCameras` 以外の全カメラ」を対象にしていたため、DialogueScene が 2 つあると **互いの宴カメラの cullingMask を 0 にし合い**、
+   メインカメラのスタックに載った宴カメラが何も描かなくなった (ゲームは会話中のポーズで止まったまま、画面には何も出ない)。
+   ユーザーのエディタに残っていた状態 (DialogueScene ×2、宴カメラ全部 mask=0) と、修正前の再現 (人形に 2 回続けて話す) で同じ
+3. **描画順** (1 枚でも起きる): HUD・StageUI などゲーム側の UI は Screen Space - Overlay キャンバスで、URP では
+   **カメラスタック (宴の会話 UI) より必ず手前に描かれる** (sortingOrder では下に回せない)。HUD の左下の枠・ミニマップ・体力などが
+   会話の黒背景とメッセージウィンドウの上に重なっていた
+4. (付随) 会話を連打で閉じた直後に、同じ NPC の会話がすぐ開き直せた
+
+**修正**
+
+- `DialogueService`: ロード中を `IsLoading` で持ち、ロード中の要求は完了後にまとめて実行 (2 回目の `LoadSceneAsync` はしない)。
+  再生中・開始待ちの `Play` は無視。`IsBusy` / `CanStartFromInteract` (閉じてから `ReopenCooldown` = 0.35 秒) を追加。静的状態はプレイ開始時にリセット
+- `UtageDialogueScene`:
+  - Utage レイヤーを外す対象から DialogueScene のカメラを除外 (自分以外の DialogueScene のカメラも消さない)
+  - それでも二重にロードされた時は、後から来た方が Start で自分のシーンをアンロードする (保険)
+  - 会話中はゲーム側の Screen Space - Overlay キャンバス (sortingOrder 100 未満。FadeCanvas 500 は残す) を `Canvas.enabled = false` で隠し、終わりに戻す
+  - 会話の終わりの後始末 (カメラスタック・UI・ポーズ) を 1 か所にまとめ、会話中にシーンが破棄されても後始末する
+- `NpcTalkPoint` / `Blacksmith`: `CanInteract` を `DialogueService.CanStartFromInteract` に
+- `DialogueInputStrategy`: 会話を開いたフレームにはゲームのボタンで送らない
+- Debug Panel / DialogueTestDriver: `IsBusy` で無効化
+
+**確認 (プレイモード, A1_H)**: 人形に 2 回続けてインタラクト → 修正前は DialogueScene ×2・画面に何も出ない
+(`Assets/Screenshots/Dialogue/before_double_open.png`)、修正後は 1 つだけで会話が表示され HUD は隠れる (`after_double_open.png`)。
+E を 2 フレームに 1 回連打 → 閉じてから 0.35 秒は開き直さない、糸 50 は一度だけ、HUD は戻る。鍛冶師も同様 (`after_smith.png`)、
+解禁前の会話 → 鍛冶強化の申し出の連続再生は従来どおり。DialogueScene を手動で二重ロードしても後の方が消え、会話は表示される。
+
+**黒背景について (未決定・変更していない)**: DialogueScene の `Canvas-BackGround` (ClearCamera の Screen Space - Camera, 全画面の不透明な黒) が
+会話中はステージを完全に隠す。描画順のバグとは別 (修正後も黒背景の上に会話が出る)。残すか・半透明にするか・消すかはユーザーの判断待ち。
+

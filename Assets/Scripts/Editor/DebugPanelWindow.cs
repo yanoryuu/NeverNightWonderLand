@@ -305,10 +305,10 @@ public class DebugPanelWindow : EditorWindow
                 MessageType.Warning);
         }
 
-        if (DialogueService.IsPlaying)
+        if (DialogueService.IsBusy)
             EditorGUILayout.HelpBox("会話を再生中です。", MessageType.Info);
 
-        using (new EditorGUI.DisabledScope(DialogueService.IsPlaying))
+        using (new EditorGUI.DisabledScope(DialogueService.IsBusy))
         {
             foreach (var label in labels)
             {

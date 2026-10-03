@@ -30,7 +30,8 @@ public class NpcTalkPoint : MonoBehaviour, IInteractable
     private bool _rewardGiven; // _talkedFlag なしの時の、このシーン内での一度きり判定
 
     public string PromptText => _promptText;
-    public bool CanInteract => !DialogueService.IsPlaying && !string.IsNullOrEmpty(_scenarioLabel);
+    // 会話の再生中・ロード中・閉じた直後 (連打で再び開くのを防ぐ) は話しかけられない
+    public bool CanInteract => DialogueService.CanStartFromInteract && !string.IsNullOrEmpty(_scenarioLabel);
     public Vector3 PromptAnchor => transform.position + _promptOffset;
 
     public void Interact(GameObject interactor)

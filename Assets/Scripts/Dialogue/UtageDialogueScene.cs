@@ -25,10 +25,38 @@ public class UtageDialogueScene : MonoBehaviour
     /// <summary>会話を再生中か。</summary>
     public bool IsPlaying { get; private set; }
 
+    /// <summary>
+    /// 会話中に隠すゲーム側 UI の Screen Space - Overlay キャンバスの sortingOrder の上限 (これ未満を隠す)。
+    /// Overlay キャンバスは全カメラ (宴のカメラスタックを含む) の後に描かれるため、
+    /// HUD などが会話のメッセージウィンドウの上に重なる。フェード (FadeCanvas, 500) は隠さない。
+    /// </summary>
+    private const int HideOverlaySortingOrderBelow = 100;
+
     private Camera _stackedBaseCamera;
+    private readonly List<Canvas> _hiddenCanvases = new();
+    private bool _pausePushed;
+    private bool _isDuplicate;
+
+    private void Start()
+    {
+        if (_isDuplicate)
+            UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync(gameObject.scene);
+    }
 
     private void Awake()
     {
+        // DialogueScene が二重にロードされた時の保険 (DialogueService が防ぐが、念のため)。
+        // 2 つ目は自分の宴カメラを含めて何もせずに消える (カメラの cullingMask を相互に消し合うと会話が見えなくなる)
+        foreach (var other in FindObjectsByType<UtageDialogueScene>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (other != this && other.gameObject.scene != gameObject.scene)
+            {
+                Debug.LogWarning($"[{nameof(UtageDialogueScene)}] DialogueScene が二重にロードされたため、後から来た方をアンロードします。", this);
+                _isDuplicate = true; // ロード中 (Awake) はアンロードできないので Start で
+                return;
+            }
+        }
+
         // EventSystem はシーン全体で1つが原則。ゲーム側に既にあればこちらを無効化する。
         if (_eventSystem != null &&
             FindObjectsByType<EventSystem>(FindObjectsSortMode.None).Length > 1)
@@ -51,14 +79,22 @@ public class UtageDialogueScene : MonoBehaviour
 
         foreach (var cam in FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
-            if (System.Array.IndexOf(_overlayCameras, cam) < 0)
-                cam.cullingMask &= ~mask;
+            // 宴のシーン (DialogueScene) のカメラは除外しない。自分の _overlayCameras だけを見て判定すると、
+            // DialogueScene が 2 つある時に互いの宴カメラの cullingMask を 0 にして会話が見えなくなる (2026-10-03 のバグ)
+            if (cam.gameObject.scene == gameObject.scene || System.Array.IndexOf(_overlayCameras, cam) >= 0)
+                continue;
+            if (cam.gameObject.scene.name == DialogueService.SceneName)
+                continue;
+            cam.cullingMask &= ~mask;
         }
     }
 
     /// <summary>指定ラベルのシナリオを再生する。終了時に onComplete が呼ばれる。</summary>
     public void Play(string scenarioLabel, Action onComplete = null)
     {
+        if (_isDuplicate)
+            return;
+
         if (IsPlaying)
         {
             Debug.LogWarning($"[{nameof(UtageDialogueScene)}] 会話再生中のため '{scenarioLabel}' を無視しました。", this);
@@ -114,10 +150,13 @@ public class UtageDialogueScene : MonoBehaviour
     private IEnumerator PlayAsync(string scenarioLabel, Action onComplete)
     {
         IsPlaying = true;
+        DialogueService.NotifyStarted();
         // キーボード/パッドでも文字送りできるよう宴の入力を差し替える (宴の初期化で戻されることがあるので再生ごとに)
         DialogueInputStrategy.Install();
         GamePause.Push();
+        _pausePushed = true;
         AttachCamerasToMain();
+        HideGameOverlayCanvases();
 
         // AddToCurrentScene 構成ではエンジンは非アクティブで置かれているため、初回に起動する
         if (!_advEngine.gameObject.activeSelf)
@@ -151,10 +190,57 @@ public class UtageDialogueScene : MonoBehaviour
                 yield return null;
         }
 
-        DetachCamerasFromMain();
-        GamePause.Pop();
-        IsPlaying = false;
+        EndPlaying();
         onComplete?.Invoke();
+    }
+
+    /// <summary>会話の後始末 (カメラ・隠した UI・ポーズを戻す)。onComplete より前に呼ぶ。</summary>
+    private void EndPlaying()
+    {
+        DetachCamerasFromMain();
+        RestoreGameOverlayCanvases();
+        if (_pausePushed)
+        {
+            _pausePushed = false;
+            GamePause.Pop();
+        }
+        IsPlaying = false;
+        DialogueService.NotifyEnded();
+    }
+
+    private void OnDestroy()
+    {
+        // 会話中に DialogueScene がアンロードされてもポーズ・カメラスタック・UI を残さない
+        if (IsPlaying)
+            EndPlaying();
+    }
+
+    /// <summary>
+    /// ゲーム側の Screen Space - Overlay キャンバス (HUD・StageUI など、名前が UI で終わるシーンの UI) を会話中だけ隠す。
+    /// URP では Overlay キャンバスはカメラスタック (宴の会話 UI) より必ず手前に描かれ、sortingOrder でも下に回せないため。
+    /// </summary>
+    private void HideGameOverlayCanvases()
+    {
+        _hiddenCanvases.Clear();
+        foreach (var canvas in FindObjectsByType<Canvas>(FindObjectsSortMode.None))
+        {
+            if (!canvas.isRootCanvas || !canvas.enabled || canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+                continue;
+            if (canvas.gameObject.scene == gameObject.scene || canvas.sortingOrder >= HideOverlaySortingOrderBelow)
+                continue;
+            canvas.enabled = false;
+            _hiddenCanvases.Add(canvas);
+        }
+    }
+
+    private void RestoreGameOverlayCanvases()
+    {
+        foreach (var canvas in _hiddenCanvases)
+        {
+            if (canvas != null)
+                canvas.enabled = true;
+        }
+        _hiddenCanvases.Clear();
     }
 
     /// <summary>宴のカメラをゲーム側メインカメラのスタックに Overlay として追加する。</summary>
