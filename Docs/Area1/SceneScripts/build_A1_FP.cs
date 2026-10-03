@@ -161,6 +161,10 @@ public static class BuildFP
         // ================= ヒント
         // 案内文はチュートリアルの操作説明 (キーの説明) だけ残す。呼びかけ・攻略助言・場所の説明は削除 (2026-10-03 ユーザー決定, Docs/UI/UIAssignment.md「案内文」)
 
+        // 敵を少し増やす (2026-10-03 PendingChanges 8: 部屋の意図に合わせる。位置は enemy_probe.cs の候補から)
+        Enemy(328f, 3.6f, name: "PlazaWalker");          // 噴水広場の床 (x319..336)
+        Enemy(410f, 18f, true, name: "AvenueFlyer");      // 並木道の上空 (正門のアーチの上 = 二段ジャンプの所は避ける)
+
         return log + Finish();
     }
 }

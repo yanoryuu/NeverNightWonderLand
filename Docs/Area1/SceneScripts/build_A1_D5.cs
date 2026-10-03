@@ -76,18 +76,9 @@ public static class BuildD5
             GuideLamp(lamps[i].x, lamps[i].y, -i * 0.11f, Guide, true, 1.5f, "GuideLamp" + i);
 
         // ---- 地図売り (到着の小部屋、西の縦穴の縁)
-        NpcAt(189.6f, -132f, "npc/npc_map_seller.png", "地図売り", new[]
-        {
-            "おや、地上からのお客さんかい。こんな蒸気の中まで、ご苦労さん。",
-            "蒸気は決まった間隔で噴く。シューッと鳴って口が赤く光ったら、すぐに噴き出す合図だ。止んだ隙に走り抜けな。",
-            "道は三つ。上は来た道、西の縦穴の先は水に沈んだ排水溝。東の、灯りが点滅してる方が本道だよ。",
-            "本道の先は「歯車の胃袋」。回る歯車を足場にして、うんと深くまで降りていく縦穴さ。踏み外しても、下へ下へ行くだけだがね。",
-            "その底の奥に居座ってる重たいやつを片付けりゃ、搬出用のエレベーターが動き出す。あれは地上の大扉の回廊のすぐそばまで上がっていくから、帰りはそいつを使いな。",
-            "地図? ……この迷路のは、わたしの頭の中にしかないのさ。",
-        }, new[]
-        {
-            "東の点滅する灯りが本道。歯車の縦穴の底で重たいやつを片付けりゃ、エレベーターで大扉の回廊のそばへ戻れるよ。",
-        }, "A1_Npc_MapSellerD5", 0, flipX: true);
+        // セリフは Utage (Dialogue.xls の A1_MapSellerD5_First / _Repeat。拠点の鍛冶屋の話を含む = PendingChanges 11b)
+        NpcDialogueAt(189.6f, -132f, "npc/npc_map_seller.png", "地図売り", "A1_MapSellerD5_First", "A1_MapSellerD5_Repeat",
+            "A1_Npc_MapSellerD5", 0, flipX: true);
 
         // ================= D6 水没した排水溝 (水面 y-148)
         Solid(172, -153, 177, -147);     // 入口の岸 (D5 の縦穴の底と同じ高さ、水面より上)
@@ -157,6 +148,9 @@ public static class BuildD5
 
         // ================= ヒント
         // 案内文はチュートリアルの操作説明 (キーの説明) だけ残す。呼びかけ・攻略助言・場所の説明は削除 (2026-10-03 ユーザー決定, Docs/UI/UIAssignment.md「案内文」)
+
+        // 敵を少し増やす (2026-10-03 PendingChanges 8: 部屋の意図に合わせる。位置は enemy_probe.cs の候補から)
+        Enemy(228f, -129f, true, name: "MazeFlyer");     // 本道 (東) の上の空中。水没した排水溝 (D6) は敵を少なくのまま
 
         return log + Finish();
     }

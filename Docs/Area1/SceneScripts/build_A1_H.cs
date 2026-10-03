@@ -80,16 +80,13 @@ public static class BuildH
         AddSprite(smith, Art("props/anvil_smith.png"), OrderProp);
         Box(smith, new Vector2(2.4f, 2.4f), true, new Vector2(0, 1.2f));
         // 最初のハサミ = 赤 (二段ジャンプ・滑空)。中ボス 2 体 (観覧車のてっぺん / 地下の歯車の重馬) のどちらかを倒すと渡す。
-        // それまでは案内のセリフ。渡した後は従来どおり有償の鍛冶強化 (A1_Hub, 糸 30) と会話 (2026-10-03 ユーザー決定)
+        // セリフは Utage (Dialogue.xls の A1_Smith_*, 2026-10-03 PendingChanges 9/11)。解禁前は案内 (2 回目以降は短い版) に続けて
+        // 有償の鍛冶強化 (A1_Hub, 糸 30) の申し出 = ボス1後から研げる (11a)。渡す時は A1_Smith_Grant の後に取得通知。
         AddComp<Blacksmith>(smith, ("_grantsUpgrade", true), ("_upgrade", ScissorUpgrade.Red), ("_smithName", "木馬の鍛冶師"),
             ("_requiredAnyFlags", new[] { "A1_MidBossUpper", "A1_MidBossLower" }),
-            ("_lockedLines", new[]
-            {
-                "改札の番人を抜けてきたか。……そのハサミ、まだ目を覚ましちゃいねえな。",
-                "地上の観覧車のてっぺんか、地下の歯車の奥。どっちかに居座ってるデカブツを倒してこい。",
-                "どっちか片方でいい。倒して戻ってきたら、お前のハサミを鍛えてやる。",
-            }),
-            ("_grantMessage", "「よく戻った。約束どおり、ハサミを鍛えてやろう」"),
+            ("_lockedLabel", "A1_Smith_Locked"), ("_lockedRepeatLabel", "A1_Smith_LockedRepeat"), ("_talkedFlag", "A1_Npc_Smith"),
+            ("_grantLabel", "A1_Smith_Grant"), ("_forgeLabel", "A1_Smith_Forge"), ("_afterLabel", "A1_Smith_After"),
+            ("_forgeBeforeUpgrade", true),
             ("_forgeId", "A1_Hub"), ("_forgeCost", 30), ("_promptOffset", new Vector3(0, 2.6f, 0)));
 
         // 灯り (飾り)
@@ -98,17 +95,8 @@ public static class BuildH
             Prop("props/boss_door_lamp_on.png", x, -53.7f, 0.6f, OrderProp, false, warm);
 
         // ================= H2 (x210..237, y-21..-6): 迷子センター。床 y-21
-        NpcAt(221f, -21f, "npc/npc_lost_doll.png", "迷子の人形", new[]
-        {
-            "……あ、おきゃくさん? ここは迷子センター。わたしも、ずっとお迎えを待ってるの。",
-            "上の吹き抜けをのぼると、夜の遊園地に出られるよ。おおきな観覧車のほうで、音楽がいちばんうるさく鳴ってるの。",
-            "床の大穴をおりると、地下の機械室。歯車がぐるぐる回る、そのずっと奥からも音がするんだって。",
-            "迷ったら地図売りさんをさがしてね。観覧車の足元と、地下の蒸気の迷路にいるよ。",
-            "これ、お迎えが来たら渡そうと思ってた糸。あげる。……気をつけてね。",
-        }, new[]
-        {
-            "上は観覧車、下は歯車。地図売りさんは観覧車の足元と、蒸気の迷路にいるよ。",
-        }, "A1_Npc_Doll", 50, flipX: true);
+        // セリフは Utage (Dialogue.xls の A1_Doll_First / A1_Doll_Repeat)。初回を聞き終えると糸 ×50
+        NpcDialogueAt(221f, -21f, "npc/npc_lost_doll.png", "迷子の人形", "A1_Doll_First", "A1_Doll_Repeat", "A1_Npc_Doll", 50, flipX: true);
         KeyItemAt(213.5f, -21f, "日誌「閉園しなかった夜」その2", "A1_Lore_Journal2", "A1_Pickup_H2_1");
         OneWay(214, 219, -17);              // 棚 (飾り兼足場)
         OneWay(226, 231, -14);

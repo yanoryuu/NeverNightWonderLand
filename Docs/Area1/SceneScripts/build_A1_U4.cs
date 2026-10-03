@@ -42,17 +42,9 @@ public static class BuildU4
 
         // セーブ (中ボス前の休憩所) と地図売り
         SavePointAt(73f, 0f);
-        NpcAt(81.5f, 0f, "npc/npc_map_seller.png", "地図売り", new[]
-        {
-            "いらっしゃい。……おや、こんな夜更けに観覧車の見物かい?",
-            "あの観覧車のてっぺんまで行くなら、西の乗り場からゴンドラを乗り継いでいくしかない。ぐるぐる回る足場に置いていかれないようにな。",
-            "てっぺんの機械室には非常用のリフトがある。上でレバーを引いておけば、次からは乗り場から一気に上がれるはずだ。",
-            "地図かい? 生憎ここらの分は売り切れでね。地下の蒸気の迷路にも同業者がいるから、あっちで聞いてみな。",
-            "それと、足元の橙色の点検口。上から思いきり踏みつければ、楽屋裏まで真っ逆さまの近道さ。",
-        }, new[]
-        {
-            "観覧車はゴンドラを乗り継いで、てっぺんの機械室へ。非常用リフトのレバーを忘れずにな。地図なら地下の蒸気の迷路の同業者に聞きな。",
-        }, "A1_Npc_MapSellerU4", 0, flipX: true);
+        // セリフは Utage (Dialogue.xls の A1_MapSellerU4_First / _Repeat。拠点の鍛冶屋の話を含む = PendingChanges 11b)
+        NpcDialogueAt(81.5f, 0f, "npc/npc_map_seller.png", "地図売り", "A1_MapSellerU4_First", "A1_MapSellerU4_Repeat",
+            "A1_Npc_MapSellerU4", 0, flipX: true);
 
         // 飾り: 街灯・旗・行列の柵 (観覧車の待ち列)
         LampPost(66f, 0f, 5f); LampPost(78f, 0f, 5f); LampPost(88f, 3f, 4f);

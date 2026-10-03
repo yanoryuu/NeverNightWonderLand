@@ -181,6 +181,9 @@ public static class BuildW5
         // ================= ヒント
         // 案内文はチュートリアルの操作説明 (キーの説明) だけ残す。呼びかけ・攻略助言・場所の説明は削除 (2026-10-03 ユーザー決定, Docs/UI/UIAssignment.md「案内文」)
 
+        // 敵を少し増やす (2026-10-03 PendingChanges 8: 部屋の意図に合わせる。位置は enemy_probe.cs の候補から)
+        Enemy(35f, 180.6f, name: "FloorWalker");         // いちばん下の床 (x29..41)。回る足場の上には置かない (読みの部屋)
+
         return log + Finish();
     }
 }

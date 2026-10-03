@@ -220,6 +220,8 @@ public class TestPlayBot : MonoBehaviour
             Report.JevCalls = Jev.Calls;
             Report.JevFailures = Jev.Failures;
             Report.JevRetries = Jev.Retries;
+            Report.JevRequests = Jev.Requests;
+            Report.JevRequestCap = Jev.MaxRequestsPerRun;
             Report.InputTokens = Jev.InputTokens;
             Report.OutputTokens = Jev.OutputTokens;
             Report.JevLatency = Jev.TotalLatency;
@@ -410,6 +412,7 @@ public class TestPlayBot : MonoBehaviour
 
         if (!Running) return;
         Jev.Tick();
+        if (TickDialogue()) return;
 
         var player = TestPlayActions.Player;
         ApplySpeed();
@@ -423,6 +426,46 @@ public class TestPlayBot : MonoBehaviour
             case Phase.Thinking: TickThinking(player); break;
             case Phase.Dead: TickDead(player); break;
         }
+    }
+
+    private float _dialogueSince = -1f;
+    private float _dialogueNextTap;
+
+    /// <summary>
+    /// 会話 (Utage) の再生中は 0.3 秒ごとに攻撃ボタンをタップして読み進める (DialogueInputStrategy が会話送りとして拾う)。
+    /// 会話中は true を返し、区間の処理 (ポーズからの強制脱出を含む) を止める。60 秒抜けなければ記録して停止する。
+    /// </summary>
+    private bool TickDialogue()
+    {
+        if (!DialogueService.IsPlaying)
+        {
+            _dialogueSince = -1f;
+            return false;
+        }
+
+        var now = Time.realtimeSinceStartup;
+        if (_dialogueSince < 0f)
+        {
+            _dialogueSince = now;
+            _dialogueNextTap = now + 0.5f;
+            Status = "会話を読み進め中";
+        }
+
+        if (now >= _dialogueNextTap)
+        {
+            _input.Tap(PlayerButton.Attack);
+            _dialogueNextTap = now + 0.3f;
+        }
+
+        if (now - _dialogueSince > 60f)
+        {
+            Incident("error", "60 秒以上会話から抜けられないので停止", TestPlayActions.Player, true);
+            _dialogueSince = -1f;
+            Stop("dialogue_stuck");
+            return true;
+        }
+
+        return true;
     }
 
     /// <summary>速度: 利用者の倍率 / 思考中 / 精密な操作中 (高速時はフレームあたりの物理ステップを 2 回までに)。</summary>
@@ -1010,6 +1053,12 @@ public class TestPlayBot : MonoBehaviour
         EndThinking();
         if (_phase != Phase.Thinking || _pending == null)
             return;
+        if (answer.Error == JevClient.CapError)
+        {
+            Debug.LogWarning($"[TestPlayBot] Jev のリクエストが上限 {Jev.MaxRequestsPerRun} 回に達したので停止します (費用の歯止め)。");
+            Stop("jev_cap");
+            return;
+        }
         _phase = Phase.Act;
         var player = TestPlayActions.Player;
         if (player == null) return;

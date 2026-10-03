@@ -39,11 +39,14 @@ public class JevClient
     public string Model = "jev-latest";
     public float TimeoutSeconds = 10f;
     public int MaxRetries = 4;
+    /// <summary>1回の実行で送るリクエスト数の上限 (再試行を含む、費用の歯止め)。0 以下で無制限。</summary>
+    public int MaxRequestsPerRun = 2000;
 
     // 集計 (レポート用)
     public int Calls;          // 成功した呼び出し
     public int Failures;       // 最終的に失敗した呼び出し
     public int Retries;
+    public int Requests;       // 実際に送ったリクエスト数 (再試行を含む)
     public long InputTokens;
     public long OutputTokens;
     public float TotalLatency;
@@ -62,6 +65,11 @@ public class JevClient
     private int _attempt;
 
     public bool Busy => _callback != null;
+
+    /// <summary>上限に達して、もう送らない状態か。</summary>
+    public bool CapReached => MaxRequestsPerRun > 0 && Requests >= MaxRequestsPerRun;
+
+    public const string CapError = "call_cap";
 
     /// <summary>キーの在りか (表示用。値は出さない)。</summary>
     public string KeySource
@@ -96,7 +104,7 @@ public class JevClient
 
     public void ResetStats()
     {
-        Calls = Failures = Retries = 0;
+        Calls = Failures = Retries = Requests = 0;
         InputTokens = OutputTokens = 0;
         TotalLatency = 0f;
         LastError = null;
@@ -177,6 +185,11 @@ public class JevClient
             callback?.Invoke(new JevAnswer { Ok = false, Error = "no_api_key" });
             return true;
         }
+        if (CapReached)
+        {
+            callback?.Invoke(new JevAnswer { Ok = false, Error = CapError });
+            return true;
+        }
 
         var payload = new Dictionary<string, object>
         {
@@ -198,6 +211,7 @@ public class JevClient
     private void Send()
     {
         _attempt++;
+        Requests++;
         _retryAt = -1f;
         _request = new UnityWebRequest(Endpoint, UnityWebRequest.kHttpVerbPOST)
         {
@@ -243,7 +257,7 @@ public class JevClient
         if (code == 401) reason = "HTTP 401 (キーが無効)";
         else if (code == 422) reason = "HTTP 422 (リクエストの形式が不正)";
 
-        if (retryable && _attempt <= MaxRetries)
+        if (retryable && _attempt <= MaxRetries && !CapReached)
         {
             Retries++;
             _retryAt = Time.realtimeSinceStartup + 0.5f * Mathf.Pow(2f, _attempt - 1);

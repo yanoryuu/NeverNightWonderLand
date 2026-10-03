@@ -113,7 +113,9 @@ public static class BuildMB2
         // ---- 中ボス (地上型: Enemy ×2 + Heavy)。入ると西の口が閉じる
         var arena = BossRoom(new RectInt(382, -198, 52, 22), "A1_MidBossLower", new Vector2(408f, -194f), false,
             new[] { new RectInt(376, -198, 2, 9) },
-            "歯車の重馬を倒した! 奥の扉が開いた……");
+            "歯車の重馬を倒した! 奥の扉が開いた……",
+            // 赤ハサミを未入手なら拠点の鍛冶屋への誘導の一文 (PendingChanges 11b, 呼びかけ調にしない)
+            "ハサミがかすかに震えた。……拠点の鍛冶屋なら、何か分かるかもしれない", followUpUnlessRed: true);
         var boss = GameObject.Find("Boss_A1_MidBossLower");
         if (boss != null)
         {

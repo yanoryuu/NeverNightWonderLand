@@ -6,6 +6,9 @@ using UnityEngine;
 /// 渡す条件: _requiredFlags が全て立ち (AND)、かつ _requiredAnyFlags が空でなければそのどれか 1 つが立っている (OR)。
 /// 条件を満たす前は _lockedLines (あれば、NpcTalk と同じく 1 回のインタラクトで 1 行ずつ画面上部の案内枠に出す) か
 /// _lockedMessage (トースト) を話す。強化を渡した後は有償の鍛冶強化 / 通常の会話。
+/// Utage 会話 (任意): _lockedLabel / _grantLabel / _afterLabel などのシナリオラベルを設定すると、その場面のセリフを
+/// DialogueService.Play(ラベル) で再生する (ラベルが空の場面は従来のトースト・案内枠)。
+/// _forgeBeforeUpgrade = true なら強化を渡す前 (解禁前) でも、解禁前の会話に続けて有償の鍛冶強化を受けられる。
 /// </summary>
 [RequireComponent(typeof(SpriteRenderer))]
 public class Blacksmith : MonoBehaviour, IInteractable
@@ -44,6 +47,28 @@ public class Blacksmith : MonoBehaviour, IInteractable
     [Tooltip("鍛冶強化に必要な糸の数")]
     [SerializeField] private int _forgeCost = 30;
 
+    [Tooltip("true なら強化を渡す前 (解禁前の会話の後) でも有償の鍛冶強化を受けられる。既定 false = 従来どおり渡した後だけ")]
+    [SerializeField] private bool _forgeBeforeUpgrade;
+
+    [Header("Utage 会話 (任意。空の場面は従来の表示)")]
+    [Tooltip("解禁前に話した時のシナリオラベル (_lockedLines / _lockedMessage の代わり)")]
+    [SerializeField] private string _lockedLabel = "";
+
+    [Tooltip("解禁前の 2 回目以降のシナリオラベル (任意, _talkedFlag が必要)。空なら毎回 _lockedLabel")]
+    [SerializeField] private string _lockedRepeatLabel = "";
+
+    [Tooltip("解禁前の会話を聞いたことの永続化フラグ (GameProgress, 任意)。例: A1_Npc_Smith")]
+    [SerializeField] private string _talkedFlag = "";
+
+    [Tooltip("強化を渡す時のシナリオラベル (_grantMessage の代わり)。会話の終わりに強化を渡し、取得通知が出る")]
+    [SerializeField] private string _grantLabel = "";
+
+    [Tooltip("有償の鍛冶強化の申し出のシナリオラベル。会話の終わりに糸を払って強化する (足りなければ通知)")]
+    [SerializeField] private string _forgeLabel = "";
+
+    [Tooltip("強化も鍛冶強化も済んだ後のシナリオラベル (「調子はどうだ?」の代わり)")]
+    [SerializeField] private string _afterLabel = "";
+
     [Tooltip("会話を閉じる距離 (_lockedLines の表示中)")]
     [SerializeField] private float _hideDistance = 3f;
 
@@ -53,7 +78,7 @@ public class Blacksmith : MonoBehaviour, IInteractable
     private Transform _listener;
 
     public string PromptText => _talking != null ? "次へ" : "話す";
-    public bool CanInteract => true;
+    public bool CanInteract => !DialogueService.IsPlaying;
     public Vector3 PromptAnchor => transform.position + _promptOffset;
 
     private string ForgeFlag => $"Forge_{_forgeId}";
@@ -110,6 +135,23 @@ public class Blacksmith : MonoBehaviour, IInteractable
         // 進行条件を満たすまでは渡さない
         if (!progression.Has(_upgrade) && !IsUnlocked)
         {
+            if (!string.IsNullOrEmpty(_lockedLabel))
+            {
+                var talked = !string.IsNullOrEmpty(_talkedFlag) && GameProgress.Has(_talkedFlag);
+                var label = talked && !string.IsNullOrEmpty(_lockedRepeatLabel) ? _lockedRepeatLabel : _lockedLabel;
+                DialogueService.Play(label, () =>
+                {
+                    if (!string.IsNullOrEmpty(_talkedFlag))
+                        GameProgress.Set(_talkedFlag);
+                    if (_forgeBeforeUpgrade && IsForgeAvailable)
+                        OfferForge(interactor, progression);
+                });
+                return;
+            }
+
+            if (_forgeBeforeUpgrade && TryOfferForge(interactor, progression))
+                return;
+
             if (_lockedLines != null && _lockedLines.Length > 0)
                 BeginTalk(interactor, _lockedLines);
             else
@@ -120,16 +162,51 @@ public class Blacksmith : MonoBehaviour, IInteractable
         // 1回目の会話: 能力の強化 (ハサミの色)。取得通知 (操作説明つき) は Grant が出す
         if (!progression.Has(_upgrade))
         {
+            if (!string.IsNullOrEmpty(_grantLabel))
+            {
+                DialogueService.Play(_grantLabel, () => progression.Grant(_upgrade));
+                return;
+            }
             Notifier.Notify($"{_smithName}{_grantMessage}");
             progression.Grant(_upgrade);
             return;
         }
 
         // 2回目以降: 鍛冶強化 (糸を払って攻撃力+コンボ数、1人1回)
-        if (TryForge(interactor, progression))
+        if (TryOfferForge(interactor, progression))
             return;
 
+        if (!string.IsNullOrEmpty(_afterLabel))
+        {
+            DialogueService.Play(_afterLabel);
+            return;
+        }
         Notifier.Notify($"{_smithName}「{_upgrade.DisplayName()}の調子はどうだ?」");
+    }
+
+    /// <summary>この鍛冶師の有償の鍛冶強化がまだ受けられるか。</summary>
+    private bool IsForgeAvailable => !string.IsNullOrEmpty(_forgeId) && !GameProgress.Has(ForgeFlag);
+
+    /// <summary>鍛冶強化を申し出る (_forgeLabel があれば会話の後に強化)。強化済み / 無しなら false。</summary>
+    private bool TryOfferForge(GameObject interactor, PlayerProgression progression)
+    {
+        if (!IsForgeAvailable)
+            return false;
+        if (string.IsNullOrEmpty(_forgeLabel))
+            return TryForge(interactor, progression);
+        OfferForge(interactor, progression);
+        return true;
+    }
+
+    /// <summary>申し出の会話 (_forgeLabel) の後に鍛冶強化する。ラベルが無ければすぐ強化を試す。</summary>
+    private void OfferForge(GameObject interactor, PlayerProgression progression)
+    {
+        if (string.IsNullOrEmpty(_forgeLabel))
+        {
+            TryForge(interactor, progression);
+            return;
+        }
+        DialogueService.Play(_forgeLabel, () => TryForge(interactor, progression));
     }
 
     private void Update()
@@ -193,7 +270,10 @@ public class Blacksmith : MonoBehaviour, IInteractable
 
         if (!inventory.TrySpendThread(_forgeCost))
         {
-            Notifier.Notify($"{_smithName}「刃を研ぎ直してやれるが、糸が{_forgeCost}いる」");
+            // 申し出の会話 (_forgeLabel) で値段は話しているので、その後は短い通知だけ
+            Notifier.Notify(string.IsNullOrEmpty(_forgeLabel)
+                ? $"{_smithName}「刃を研ぎ直してやれるが、糸が{_forgeCost}いる」"
+                : $"糸が足りない (鍛冶強化: 糸 {_forgeCost})");
             return true;
         }
 

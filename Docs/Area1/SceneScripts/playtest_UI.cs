@@ -91,11 +91,12 @@ public static class PlayUI
 
     public static string Npc()
     {
-        var n = Object.FindAnyObjectByType<NpcTalk>();
-        if (n == null) return "no NpcTalk";
+        // エリア1 の NPC は Utage 会話 (NpcTalkPoint)。旧シーンの NpcTalk も探す
+        var n = (MonoBehaviour)Object.FindAnyObjectByType<NpcTalkPoint>() ?? Object.FindAnyObjectByType<NpcTalk>();
+        if (n == null) return "no NpcTalkPoint / NpcTalk";
         Player.Teleport(n.transform.position + Vector3.up * 0.6f);
-        n.Interact(Player.gameObject);
-        return $"npc {n.name} interact\n" + State();
+        ((IInteractable)n).Interact(Player.gameObject);
+        return $"npc {n.name} interact dialogue={DialogueService.IsPlaying}\n" + State();
     }
 
     public static string Pause(bool open)

@@ -26,7 +26,7 @@
 - `PlayerSceneBootstrap` (UISceneBootstrap, `_uiSceneNames = ["PlayerScene"]`)
 - `SpawnDefault` (PlayerSpawnPoint, Id 空) + 入口ごとの `SpawnFrom<元シーンID>` (Id = `From<元シーンID>`、例 `FromA1_T1`)
 - `Exit To<先シーンID>` (SceneTransitionZone, BoxCollider2D trigger, `_sceneName = 先シーン名`, `_entranceId = "From" + 自シーン名`)。スポーンは出口ゾーンの少し内側に置く (アーミング仕様あり)。**出口ゾーンの全幅の下に床を通す** (落ちて届かない事故の再発防止)。
-- `StageInfo` (`_areaName`=部屋名、シーン開始のリセット)。UI はステージに置かず、UI シーン `StageUI` (AreaTitle + TutorialMessage) / `ShopUI` (ShopView+ShopPanel) が表示する (SceneBuildGuide §11)。
+- `StageInfo` (`_areaName`=部屋名 (セーブ画面の「場所」)、シーン開始のリセット)。入室時のタイトルは部屋名ではなく、エリア名「鳴りやまぬ遊園地」をエリアに初めて入った時だけ出す (フラグ `AreaTitleShown_A1`、SceneBuildGuide §11)。UI はステージに置かず、UI シーン `StageUI` (AreaTitle + TutorialMessage) / `ShopUI` (ShopView+ShopPanel) が表示する (SceneBuildGuide §11)。
 - `DamageFloaterSpawner` (`_floaterPrefab = Assets/Prefabs/DamageFloater.prefab`)
 - `CameraLimit` (地下や y<2 を含むシーンは必須、`_minY` = 部屋の yMin + 2 程度)。※上限/左右の制限がないため、カメラが部屋外を映すのは許容 (岩で埋めておく)。
 
@@ -53,7 +53,7 @@
 - 複数フラグで開く扉 (スピーカー3つ) + フラグで点灯する表示 (大扉のランプ) / フラグで出現する物 (FlagActivator)。
 - WaveArena (入ると出口が閉じ、敵の波を順に出し、全滅でフラグ+ご褒美出現)。
 - 隠し壁の永続化 (BreakableBox に任意の flagId) 。
-- 二段ジャンプ(赤ハサミ)を渡す鍛冶師 (2026-10-03〜: 拠点 A1_H の鍛冶師が中ボスどちらかの撃破後に渡す。Blacksmith `_requiredAnyFlags` + 案内のセリフ `_lockedLines`。エリアボス撃破後は糸の大束 ×200)。
+- 二段ジャンプ(赤ハサミ)を渡す鍛冶師 (2026-10-03〜: 拠点 A1_H の鍛冶師が中ボスどちらかの撃破後に渡す。Blacksmith `_requiredAnyFlags` + Utage 会話 `A1_Smith_*`、有償の鍛冶強化はボス1後から。エリアボス撃破後は糸の大束 ×200)。
 - NPC の会話 (迷子の人形・地図売り。短いセリフ表示)。
 
 ## 6. フラグ・ID 命名

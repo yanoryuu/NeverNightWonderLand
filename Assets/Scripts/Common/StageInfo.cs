@@ -11,7 +11,7 @@ using UnityEngine;
 /// </summary>
 public class StageInfo : MonoBehaviour
 {
-    [Tooltip("エリア (部屋) 名。ステージに入った時のタイトル表示とセーブ画面の「場所」に使う")]
+    [Tooltip("部屋名。セーブ画面の「場所」に使う。エリアのシーン (A{n}_) では入室時のタイトルには出さない (エリア名を初回だけ出す)")]
     [SerializeField] private string _areaName = "";
 
     [Tooltip("章の表示名 (セーブ画面に出る)。空ならシーン名の接頭辞 A{n}_ から「第n章 (エリア名)」を作る")]
@@ -41,14 +41,59 @@ public class StageInfo : MonoBehaviour
     /// <summary>シーン名の接頭辞 "A{n}_" から「第n章 エリア名」を作る。A{n}_ で始まらなければ空。</summary>
     public static string ChapterFromSceneName(string sceneName)
     {
+        var number = AreaNumberFromSceneName(sceneName);
+        return number < 0 ? "" : ChapterTitle(number);
+    }
+
+    /// <summary>エリア名の表示済みフラグ (GameProgress) の接頭辞。例 "AreaTitleShown_A1"。</summary>
+    public const string AreaTitleFlagPrefix = "AreaTitleShown_A";
+
+    /// <summary>シーン名の接頭辞 "A{n}_" のエリア番号。A{n}_ で始まらなければ -1。</summary>
+    public static int AreaNumberFromSceneName(string sceneName)
+    {
         if (string.IsNullOrEmpty(sceneName) || sceneName.Length < 3 || sceneName[0] != 'A')
-            return "";
+            return -1;
 
         var underscore = sceneName.IndexOf('_');
         if (underscore < 2 || !int.TryParse(sceneName.Substring(1, underscore - 1), out var number))
+            return -1;
+
+        return number;
+    }
+
+    /// <summary>
+    /// ステージに入った時に出すタイトルを決めて返す (表示しないなら空)。AreaTitleView が入室ごとに 1 回呼ぶ。
+    /// エリアのシーン (A{n}_ でエリア名が決まっている) では部屋名は出さず、エリア名をそのエリアに初めて入った時だけ返す
+    /// (2026-10-03 ユーザー決定。表示済みは GameProgress のフラグ <see cref="AreaTitleFlagPrefix"/>{n} でセーブに残る)。
+    /// それ以外のステージは従来どおり毎回 _areaName (部屋名) を返す。
+    /// </summary>
+    public string ConsumeEntryTitle()
+    {
+        var number = AreaNumberFromSceneName(gameObject.scene.name);
+        var areaTitle = number >= 0 && number < AreaTitles.Length ? AreaTitles[number] : "";
+        if (string.IsNullOrEmpty(areaTitle))
+            return _areaName;
+
+        var flag = AreaTitleFlagPrefix + number;
+        var pending = GameSession.PendingLoad;
+        // セーブ復帰・リトライではフラグの復元 (PlayerSaveBridge.TryApplyPendingLoad) がステージ有効化より後なので、復帰データも見る
+        var pendingHas = pending?.progressFlags != null && System.Array.IndexOf(pending.progressFlags, flag) >= 0;
+        var shown = GameProgress.Has(flag) || pendingHas;
+
+        GameProgress.Set(flag);
+        // 復帰データで GameProgress が上書きされても消えないよう、復帰データ側にも足しておく
+        if (pending != null && !pendingHas)
+        {
+            var flags = pending.progressFlags ?? System.Array.Empty<string>();
+            System.Array.Resize(ref flags, flags.Length + 1);
+            flags[^1] = flag;
+            pending.progressFlags = flags;
+        }
+
+        if (shown)
             return "";
 
-        return ChapterTitle(number);
+        return areaTitle;
     }
 
     private void Awake()

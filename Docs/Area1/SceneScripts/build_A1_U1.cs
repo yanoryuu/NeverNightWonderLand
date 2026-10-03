@@ -89,6 +89,10 @@ public static class BuildU1
         // ================= ヒント
         // 案内文はチュートリアルの操作説明 (キーの説明) だけ残す。呼びかけ・攻略助言・場所の説明は削除 (2026-10-03 ユーザー決定, Docs/UI/UIAssignment.md「案内文」)
 
+        // 敵を少し増やす (2026-10-03 PendingChanges 8: 部屋の意図に合わせる。位置は enemy_probe.cs の候補から)
+        Enemy(265f, -9f, true, name: "ShaftFlyer");      // 吹き抜けの途中 (支柱を登る間の空中戦)
+        Enemy(285f, 3.6f, name: "FenceWalker");          // 閉園の柵の前の床 (x281..290)
+
         return log + Finish();
     }
 }

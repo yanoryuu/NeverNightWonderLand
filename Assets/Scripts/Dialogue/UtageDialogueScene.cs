@@ -114,6 +114,8 @@ public class UtageDialogueScene : MonoBehaviour
     private IEnumerator PlayAsync(string scenarioLabel, Action onComplete)
     {
         IsPlaying = true;
+        // キーボード/パッドでも文字送りできるよう宴の入力を差し替える (宴の初期化で戻されることがあるので再生ごとに)
+        DialogueInputStrategy.Install();
         GamePause.Push();
         AttachCamerasToMain();
 

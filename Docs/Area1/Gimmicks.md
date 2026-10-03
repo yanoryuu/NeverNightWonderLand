@@ -238,7 +238,7 @@ BossArena の複数ウェーブ版。入るとゲートを閉じ、ウェーブ�
 
 ### NpcTalk (`Assets/Scripts/Gimmick/NpcTalk.cs`)
 数行のセリフを順に出す NPC (迷子の人形・地図売り)。インタラクトのたびに次の行を **TutorialMessageView** (UI シーン StageUI の `TutorialMessage`) に表示、最後の次で閉じる。`_hideDistance` 以上離れると途中で閉じる。TutorialMessageView が無いシーンでは Notifier に全行を流す。
-※ Utage のシナリオで会話させたい場合は既存の `NpcTalkPoint` (下記) を使う (シナリオ Excel はユーザーが編集する)。
+※ Utage のシナリオで会話させたい場合は既存の `NpcTalkPoint` (下記) を使う。**エリア1 の NPC (迷子の人形・地図売り 2 人) は 2026-10-03 に NpcTalkPoint (Utage) へ移行済み** — NpcTalk は旧ステージ用に残している。
 - 必須: **layer 11** + トリガー Collider2D。見た目の SpriteRenderer は任意。同じ場所に TutorialHintZone を重ねない (同じ表示枠を取り合う)。
 
 | フィールド | 型 | 既定 | 意味 |
@@ -311,7 +311,8 @@ BossArena の複数ウェーブ版。入るとゲートを閉じ、ウェーブ�
 
 ### BossArena (`Gimmick/BossArena.cs`)
 入るとゲートを閉じ、ボス (`EnemyController`) の撃破でフラグ+開放+通知。撃破済みならボスを消しゲート開放。必須: トリガー Collider2D (isTrigger 自動)。
-フィールド: `_flagId` (string, 例 `A1_Boss1`), `_boss` (EnemyController, シーンに置いた敵), `_gates` (GameObject[], 非アクティブで配置), `_defeatMessage` (string)。
+フィールド: `_flagId` (string, 例 `A1_Boss1`), `_boss` (EnemyController, シーンに置いた敵), `_gates` (GameObject[], 非アクティブで配置), `_defeatMessage` (string), `_followUpMessage` (string, 2026-10-03 追加, 既定 "" = 出さない。撃破通知に続けて出す世界観の一文), `_followUpUnlessUpgrade` (bool, 既定 false。true ならプレイヤーが `_followUpUpgrade` (ScissorUpgrade, 既定 Red) を持っている時は出さない)。
+エリア1 の中ボス 2 体 (A1_MB1 / A1_MB2): 赤ハサミ未入手なら撃破通知の後に「ハサミがかすかに震えた。……拠点の鍛冶屋なら、何か分かるかもしれない」(鍛冶屋に寄らない人への誘導。呼びかけ調にしない)。ビルダー `BossRoom(..., followUpMessage, followUpUnlessRed)`。
 配置: 部屋内側を覆う `Arena` トリガー + BossArena。ボスは Enemy/FlyingEnemy.prefab を localScale 2 倍, `_consts=EnemyConsts_Heavy`。ご褒美は FlagActivator で `_flagId` に連動。
 
 ### BreakableSpeaker (`Gimmick/BreakableSpeaker.cs`)
@@ -341,7 +342,8 @@ BossArena の複数ウェーブ版。入るとゲートを閉じ、ウェーブ�
 鍛冶師 NPC (ハサミ強化を授ける+有償の鍛冶強化)。必須: SpriteRenderer, **layer 11** + トリガー Collider2D。
 フィールド: `_upgrade` (ScissorUpgrade), `_grantsUpgrade` (bool, 既定 true。false = ハサミ強化を授けず鍛冶強化と会話だけ), `_smithName`, `_promptOffset`, `_requiredFlags` (string[], **全て**立つまで渡さない = AND), `_requiredAnyFlags` (string[], 2026-10-03 追加。空でなければ**どれか 1 つ**が立つまで渡さない = OR。`_requiredFlags` と両方あれば両方を満たす), `_lockedMessage` (解禁前のトースト), `_lockedLines` (string[], 追加。設定すると解禁前は話しかけるたびに 1 行ずつ画面上部の案内枠 (StageUI の TutorialMessageView) に「名前「行」」で出し、最後の行の次で閉じる・離れると (`_hideDistance` 3) 閉じる。空なら従来どおり `_lockedMessage`), `_grantMessage` (追加, 既定「いいハサミだ。強化してやろう」= 従来の台詞。渡す時のトースト。続けて PlayerProgression.Grant が取得通知 (操作説明の 2 行目つき) を出す), `_forgeId` (空=有償強化なし), `_forgeCost` (30)。新しいフィールドの既定値は従来の動きと同じ (旧ステージの鍛冶師はそのまま)。
 流れ (`_grantsUpgrade` true): 未取得かつ未解禁 → 案内 / 未取得かつ解禁 → `_grantMessage` + Grant / 取得済み → 有償の鍛冶強化 (1 回) → 「〜の調子はどうだ?」。
-**拠点 A1_H の鍛冶師** (2026-10-03〜): `_grantsUpgrade=true`, `_upgrade=Red`, `_requiredAnyFlags=["A1_MidBossUpper","A1_MidBossLower"]`, `_lockedLines` 3 行 (「地上の観覧車のてっぺんか、地下の歯車の奥のどちらかのデカブツを倒して戻ってこい、ハサミを鍛えてやる」), `_forgeId=A1_Hub` 糸 30。**最初のハサミ = 赤 (二段ジャンプ・滑空) はここで受け取る**。有償の鍛冶強化は赤ハサミを渡した後から。
+**Utage 会話 (2026-10-03 追加, 全て任意・既定は空 = 従来の表示)**: `_lockedLabel` (解禁前), `_lockedRepeatLabel` + `_talkedFlag` (解禁前の 2 回目以降の短い版), `_grantLabel` (渡す時。会話の**終わりに** Grant → 取得通知), `_forgeLabel` (有償の鍛冶強化の申し出。会話の終わりに糸を払って強化、足りなければ「糸が足りない (鍛冶強化: 糸 30)」の通知), `_afterLabel` (強化も鍛冶強化も済んだ後), `_forgeBeforeUpgrade` (bool, 既定 false。true なら解禁前でも解禁前の会話に続けて鍛冶強化を受けられる)。会話中は `CanInteract=false`。
+**拠点 A1_H の鍛冶師** (2026-10-03〜): `_grantsUpgrade=true`, `_upgrade=Red`, `_requiredAnyFlags=["A1_MidBossUpper","A1_MidBossLower"]`, `_forgeId=A1_Hub` 糸 30。**最初のハサミ = 赤 (二段ジャンプ・滑空) はここで受け取る**。セリフは Utage (Dialogue.xls): `_lockedLabel=A1_Smith_Locked` / `_lockedRepeatLabel=A1_Smith_LockedRepeat` (`_talkedFlag=A1_Npc_Smith`) / `_grantLabel=A1_Smith_Grant` / `_forgeLabel=A1_Smith_Forge` / `_afterLabel=A1_Smith_After`。`_forgeBeforeUpgrade=true` = **有償の鍛冶強化は赤ハサミより前 (ボス1後に拠点へ来た時) から受けられる** (PendingChanges 11a): 解禁前は 案内 → 鍛冶強化の申し出 → (糸 30 あれば) 強化。
 
 ### ShopKeeper (`Gimmick/ShopKeeper.cs`)
 インタラクトで ShopView を開く。必須: SpriteRenderer, **layer 11** + トリガー Collider2D。ShopView+ShopPanel は UI シーン ShopUI にある (旧ステージは自前の SceneUI)。フィールド: `_shop` (ShopView, null=同じシーン → UI シーンの順で検索), `_promptOffset`。
@@ -355,7 +357,8 @@ BossArena の複数ウェーブ版。入るとゲートを閉じ、ウェーブ�
 - `UpgradePickup` (新規, 上記)。
 
 ### NpcTalkPoint (`Dialogue/NpcTalkPoint.cs`)
-Utage シナリオを再生する会話 (`DialogueService.Play`)。必須: layer 11 + トリガー Collider2D。フィールド: `_scenarioLabel` (先頭の * 不要), `_promptText` (話す), `_promptOffset`。シナリオ (Dialogue.xls) はユーザーが編集する。
+Utage シナリオを再生する会話 (`DialogueService.Play`)。必須: layer 11 + トリガー Collider2D。フィールド: `_scenarioLabel` (先頭の * 不要), `_repeatLabel` (2026-10-03 追加, 任意。2 回目以降のラベル, `_talkedFlag` 必須), `_talkedFlag` (追加, 任意。初回の会話の終わりに立つ), `_rewardThread` (追加, int 0。初回の会話の終わりに渡す糸, `_talkedFlag` があれば一度きり), `_promptText` (話す), `_promptOffset`。新しいフィールドの既定値は従来どおり (毎回 `_scenarioLabel`)。シナリオは `Assets/Dialogue/Scenarios/Dialogue.xls` (Docs/DialogueSystem.md)。
+エリア1: 迷子の人形 (A1_H, `A1_Doll_First`/`A1_Doll_Repeat`, `A1_Npc_Doll`, 糸 50)、地図売り (A1_U4 `A1_MapSellerU4_First`/`_Repeat`, A1_D5 `A1_MapSellerD5_First`/`_Repeat`。どちらも拠点の鍛冶屋の話を含む = 11b)。ビルダー `NpcDialogueAt`。
 
 ### TutorialHintZone (`Tutorial/TutorialHintZone.cs`)
 入ると操作ヒントを TutorialMessageView に表示。必須: トリガー Collider2D (自動)。フィールド: `_keyboardText`, `_gamepadText` (空=キーボードと同じ), `_message` (null=使う時に 同じシーン → UI シーン StageUI の順で検索), `_hideOnExit` (true)。
@@ -385,7 +388,7 @@ PlayerScene 常駐。`StageLoader.Instance.TransitionTo(stageName, entranceId)` 
 各ステージに1つ。フィールド: `_floaterPrefab` (`Assets/Prefabs/DamageFloater.prefab`), `_scatterRadius` (0.3)。
 
 ### AreaTitleView / TutorialMessageView (`UI/`)
-UI シーン StageUI (プレハブ `StageUI.prefab`) の子 (旧ステージは自前の SceneUI の子)。AreaTitleView: CanvasGroup 必須, `_areaName` (旧方式のみ。StageUI では空で StageInfo の名前を出す), `_label` (TMP_Text)。TutorialMessageView: CanvasGroup 必須, `_label` (TMP_Text), `_fadeDuration` (0.25)。NpcTalk / TutorialHintZone の表示先。
+UI シーン StageUI (プレハブ `StageUI.prefab`) の子 (旧ステージは自前の SceneUI の子)。AreaTitleView: CanvasGroup 必須, `_areaName` (旧方式のみ。StageUI では空で `StageInfo.ConsumeEntryTitle()` の文字を出す = エリアのシーンはエリア名を初回だけ、フラグ `AreaTitleShown_A{n}`), `_label` (TMP_Text)。TutorialMessageView: CanvasGroup 必須, `_label` (TMP_Text), `_fadeDuration` (0.25)。NpcTalk / TutorialHintZone の表示先。
 
 ### Notifier (`Common/Notifier.cs`)
 静的: `Notifier.Notify(string)`。全ギミックのメッセージはこれを通る。

@@ -133,6 +133,7 @@ TestPlayRecorder.StartReplay(path); TestPlayRecorder.ReplayFinished += report =>
 
 注意:
 - `PlayerController` は GamePause 中 (ポーズメニュー・会話・ショップ・テストの一時停止) は入力を読まない。プレイヤー操作の Tap はポーズが明けてから行う。
+- 会話 (Utage) は仮想入力の Attack / Interact / Jump のタップで読み進められる (`DialogueInputStrategy`, 2026-10-03)。ボットは `DialogueService.IsPlaying` の間 0.3 秒ごとに攻撃をタップし、区間の処理を止める (60 秒抜けなければ incident を記録して `Stop("dialogue_stuck")`)。
 - `PlayerInputSource.ConsumedByPlayer` イベントで「プレイヤーがそのフレームの入力を読んだ」ことが分かる (1 フレーム単位で動くボットの拍に使える)。
 - ステージ遷移は暗転 → 読み込み (数フレーム〜数秒、実時間)。`TestPlayActions.IsLoading` が false になるまで待つ。
 - 闘技場などで倒されると HP 0 で止まる (ゲームオーバー画面)。無敵にするか、`StageLoader.LoadWithPlayerScene` で読み直す。
@@ -159,7 +160,7 @@ TestPlayRecorder.StartReplay(path); TestPlayRecorder.ReplayFinished += report =>
 | `BotWorld.cs` | 「目」: Ground レイヤーを 0.5 単位の格子で走査 → 立てる床のセグメント (`P12`、動く足場 `M3`)・解析的な移動グラフ・ゴールからの逆 Dijkstra。敵・危険・出口・移動装置・闘技場の一覧 |
 | `BotPhysics.cs` | `PlayerController` と同じ式の空中シミュレーション (当たりは本物の CapsuleCast、崖登り判定も同じ式) と跳躍計画 (離陸点・ダッシュ・長押し時間・二段ジャンプ・空中ダッシュ)。空中の舵取り `Steer` は計画と実行で共用。`BotPlatformPredictor` = MovingPlatform の内部状態から先の位置を正確に予測 |
 | `BotExecutor.cs` | 行動 → フレーム入力 (歩く・跳ぶ・すり抜ける・動く足場を待って乗る・斬る・裁断・回避・回復・調べる・大ジャンプ)。高速時は離陸直前と空中だけフレームあたりの物理ステップを 2 回までに抑える |
-| `JevClient.cs` | API 呼び出し (UnityWebRequest、メインスレッドで見張る)。401/422 は即失敗、429/529/5xx/通信エラーは 0.5→1→2→4 秒で再試行。呼び出し数・トークンを集計 |
+| `JevClient.cs` | API 呼び出し (UnityWebRequest、メインスレッドで見張る)。401/422 は即失敗、429/529/5xx/通信エラーは 0.5→1→2→4 秒で再試行。呼び出し数・トークンを集計。**費用の歯止め: 1 回の実行で送るリクエストは 2,000 回まで** (`MaxRequestsPerRun`、再試行を含む)。達するとボットは止まり、レポートに「送信 n/2000」を残す |
 | `BotRoutes.cs` | エリア1 のクリティカルパス 29 区間 (目的: ボス/スピーカー/ピックアップ)、途中開始時のフラグ・能力、「全入口×全出口」 |
 | `BotReport.cs` / `BotJson.cs` | レポート (Markdown + 判断の全記録 JSONL + スクリーンショット) / 最小の JSON |
 | `Assets/Scripts/Editor/TestPlayBotWindow.cs` | `NeverNight/Test Play Bot` ウィンドウ |

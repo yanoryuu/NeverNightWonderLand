@@ -46,6 +46,7 @@ xls を保存 → メニュー **NeverNight > 会話シナリオを再インポ�
   `Command | Arg1 | Arg2 | ... | Text(I列) | ...`。セリフ本文は必ず **I列 (Text)** に書くこと。
   外部からコピペするときに3列目 (Arg2) にセリフが入ると、エラーは出ないのに
   「テキストなしのキャラ表示コマンド」扱いになり、会話が一瞬で終わって何も表示されなくなる
+- Claude が xls に書き込む時は、必ず バックアップ → NPOI で書き込み → 読み戻し検証 (Text=I列、Arg2 に入れない、既存行が変わっていない) → 再インポート の順で行う
 - xls が壊れた場合はテンプレートの
   `Assets/Utage/Templates/Template/Template/Scenarios/Template.xls` をコピーして復元する
   (プロジェクトルートに `Dialogue_backup.xls` のバックアップもある)
@@ -63,6 +64,26 @@ xls を保存 → メニュー **NeverNight > 会話シナリオを再インポ�
 
 プレイヤーが近づくと「話す」プロンプトが出て、E キーで会話が始まる。
 
+任意 (2026-10-03 追加、未設定なら従来どおり毎回 `Scenario Label`):
+- `Repeat Label` + `Talked Flag`: 初回の会話の終わりに Talked Flag (GameProgress) が立ち、2 回目以降は Repeat Label を再生する
+- `Reward Thread`: 初回の会話の終わりに糸を渡す (Talked Flag があれば一度きり)
+
+鍛冶師 (`Blacksmith`) も場面ごとのラベル (`_lockedLabel` / `_lockedRepeatLabel` / `_grantLabel` / `_forgeLabel` / `_afterLabel`) で Utage 会話を再生できる (Docs/Area1/Gimmicks.md)。
+
+### エリア1 のラベル (2026-10-03, Start シートの末尾)
+
+| ラベル | 話者 | 使う所 |
+|---|---|---|
+| `A1_Doll_First` / `A1_Doll_Repeat` | 迷子の人形 | A1_H 迷子センター (初回の終わりに糸 50) |
+| `A1_MapSellerU4_First` / `A1_MapSellerU4_Repeat` | 地図売り | A1_U4 観覧車の足元 |
+| `A1_MapSellerD5_First` / `A1_MapSellerD5_Repeat` | 地図売り | A1_D5 蒸気管の迷路 |
+| `A1_Smith_Locked` / `A1_Smith_LockedRepeat` | 木馬の鍛冶師 | A1_H 鍛冶師: 中ボス撃破前 (初回 / 2 回目以降) |
+| `A1_Smith_Forge` | 木馬の鍛冶師 | 有償の鍛冶強化 (糸 30) の申し出。会話の後に糸を払って強化 |
+| `A1_Smith_Grant` | 木馬の鍛冶師 | 赤ハサミを渡す時。会話の後に取得通知 |
+| `A1_Smith_After` | 木馬の鍛冶師 | 赤ハサミも鍛冶強化も済んだ後 |
+
+ラベル名はシーン (ビルダーのレシピ `Docs/Area1/SceneScripts/build_A1_*.cs`) が参照しているので、名前を変える時はレシピも直してシーンを作り直す。
+
 ### スクリプトから呼ぶ場合
 
 ```csharp
@@ -73,7 +94,10 @@ bool playing = DialogueService.IsPlaying;                  // 再生中か
 
 - DialogueScene が未ロードでも自動で Additive ロードされる (Build Settings 登録済みが前提)
 - 再生中は GamePause で時間停止、終了で自動解除
-- 文字送り・改ページは **マウスクリック** (キー送りは未実装)
+- 文字送り・改ページは **マウスクリック** に加えて、キーボード **Enter / テンキー Enter / Space / J / E**、パッド **South (×/A) / West (□/X) / 上入力** (= ゲームの決定・ジャンプ・攻撃・インタラクト) (2026-10-03)。
+  宴の公式の入力の差し替え口 `Utage.InputUtil.SetInputStrategy` に `Assets/Scripts/Dialogue/DialogueInputStrategy.cs` (宴の `InputSystemStrategy` を継承し `IsInputNextButton` を広げる) を入れている。
+  `UtageDialogueScene` が会話のたびに `DialogueInputStrategy.Install()` する (宴の初期化 (BeforeSceneLoad) と順番が決まらないため)。会話中 (`DialogueService.IsPlaying`) 以外は宴の既定のまま。
+  テストプレイの仮想入力 (`PlayerInputSource.Override` の Attack / Interact / Jump のタップ) でも送れる (ボットは会話中これで読み進める)。
 
 ---
 

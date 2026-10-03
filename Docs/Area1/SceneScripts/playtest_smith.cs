@@ -1,5 +1,5 @@
 // 拠点 A1_H の鍛冶師 (赤ハサミ = 中ボスどちらかの撃破後) と、出口・ご褒美の確認用 (2026-10-03)。
-// 例: --entry Smith.LogOn → --entry Smith.Talk (案内の 1 行目) → Smith.Talk ... → Smith.Log
+// 例: --entry Smith.LogOn → --entry Smith.Talk (Utage 会話 A1_Smith_Locked が始まる) → Smith.Dialogue → Smith.Log
 //     --entry Smith.Flag --args '["A1_MidBossLower"]' → Smith.Talk → Smith.HasRed
 // 通知 (Notifier) は run_script ごとに別アセンブリになるので PlayerPrefs に貯める (LogOff で止めて消す)。
 using System.Linq;
@@ -68,7 +68,24 @@ public static class Smith
         if (Vector2.Distance(p.transform.position, smith.transform.position) > 2f)
             p.Teleport((Vector2)smith.transform.position + new Vector2(1.2f, 1f));
         smith.Interact(p.gameObject);
-        return $"talk unlocked={smith.IsUnlocked} prompt={smith.PromptText} red={HasRedBool()} | " + Message();
+        return $"talk unlocked={smith.IsUnlocked} prompt={smith.PromptText} red={HasRedBool()} | " + Message() + " | " + Dialogue();
+    }
+
+    /// <summary>Utage 会話を 1 回送る (クリックの代わり。文字送り中なら全文表示、表示済みなら次のページへ)。</summary>
+    public static string Advance()
+    {
+        var engine = Object.FindAnyObjectByType<Utage.AdvEngine>();
+        if (engine == null) return "no AdvEngine";
+        engine.Page.InputSendMessage();
+        return "advance | " + Dialogue();
+    }
+
+    /// <summary>Utage 会話 (DialogueService) の再生状態と、表示中のメッセージ (宴のメッセージウィンドウの TMP / Text)。</summary>
+    public static string Dialogue()
+    {
+        var engine = Object.FindAnyObjectByType<Utage.AdvEngine>();
+        var page = engine != null && engine.Page != null ? engine.Page.TextData?.OriginalText : null;
+        return $"dialogue playing={DialogueService.IsPlaying} name={(engine != null && engine.Page != null ? engine.Page.NameText : "-")} text={page ?? "-"}";
     }
 
     static bool HasRedBool() => P.GetComponent<PlayerProgression>().Has(ScissorUpgrade.Red);

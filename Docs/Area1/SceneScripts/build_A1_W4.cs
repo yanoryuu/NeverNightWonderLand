@@ -123,6 +123,9 @@ public static class BuildW4
         // ================= ヒント
 
         _ = net;
+        // 敵を少し増やす (2026-10-03 PendingChanges 8: 部屋の意図に合わせる。位置は enemy_probe.cs の候補から)
+        Enemy(75f, 163f, true, name: "WindFlyer");       // 外周の踊り場の間の空中 (風の中の空中戦)
+
         return log + Finish();
     }
 }

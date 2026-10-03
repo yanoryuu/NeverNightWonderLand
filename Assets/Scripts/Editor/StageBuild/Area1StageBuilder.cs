@@ -1039,7 +1039,8 @@ namespace NeverNight.StageBuild
         /// ボス部屋: arena = [x0,x1)×[y0,y1) のトリガー + BossArena、ボス (仮ボス: 2 倍 + Heavy)、
         /// gates = 閉じる壁の矩形 (layer 10, 非アクティブ, fence_gate の絵)。
         /// </summary>
-        public static GameObject BossRoom(RectInt arena, string flagId, Vector2 bossPos, bool flying, RectInt[] gates, string defeatMessage)
+        public static GameObject BossRoom(RectInt arena, string flagId, Vector2 bossPos, bool flying, RectInt[] gates, string defeatMessage,
+            string followUpMessage = "", bool followUpUnlessRed = false)
         {
             var go = NewObject("BossArena_" + flagId, arena.center, LayerIgnoreRaycast, "Gimmicks");
             Box(go, arena.size, true);
@@ -1052,7 +1053,9 @@ namespace NeverNight.StageBuild
                 gateObjs.Add(gate);
             }
             AddComp<BossArena>(go, ("_flagId", flagId), ("_boss", boss.GetComponent<EnemyController>()),
-                ("_gates", gateObjs.ToArray()), ("_defeatMessage", defeatMessage));
+                ("_gates", gateObjs.ToArray()), ("_defeatMessage", defeatMessage),
+                ("_followUpMessage", followUpMessage ?? ""), ("_followUpUnlessUpgrade", followUpUnlessRed),
+                ("_followUpUpgrade", ScissorUpgrade.Red));
             return go;
         }
 
@@ -1085,6 +1088,24 @@ namespace NeverNight.StageBuild
             var h = sr.sprite.bounds.size.y;
             Box(go, new Vector2(1.6f, Mathf.Max(2f, h)), true, new Vector2(0, Mathf.Max(2f, h) * 0.5f));
             AddComp<NpcTalk>(go, ("_speakerName", speakerName), ("_lines", lines), ("_repeatLines", repeatLines ?? new string[0]),
+                ("_talkedFlag", talkedFlag), ("_rewardThread", rewardThread), ("_promptOffset", new Vector3(0, h + 0.4f, 0)));
+            return go;
+        }
+
+        /// <summary>
+        /// Utage の会話 NPC (NpcTalkPoint, layer 11 + トリガー)。y = 床面 (npc/ の絵は pivot bottom)。
+        /// セリフは Assets/Dialogue/Scenarios/Dialogue.xls のラベル (label = 初回, repeatLabel = 2回目以降)。
+        /// talkedFlag + rewardThread で一度きりの糸のご褒美。name は GameObject 名 (Npc_<name>)。
+        /// </summary>
+        public static GameObject NpcDialogueAt(float x, float y, string sprite, string name, string label,
+            string repeatLabel = "", string talkedFlag = "", int rewardThread = 0, bool flipX = false)
+        {
+            var go = NewObject("Npc_" + name, new Vector2(x, y), LayerInteractable, "Gimmicks");
+            var sr = AddSprite(go, Art(sprite), OrderGimmick);
+            sr.flipX = flipX;
+            var h = sr.sprite.bounds.size.y;
+            Box(go, new Vector2(1.6f, Mathf.Max(2f, h)), true, new Vector2(0, Mathf.Max(2f, h) * 0.5f));
+            AddComp<NpcTalkPoint>(go, ("_scenarioLabel", label), ("_repeatLabel", repeatLabel ?? ""),
                 ("_talkedFlag", talkedFlag), ("_rewardThread", rewardThread), ("_promptOffset", new Vector3(0, h + 0.4f, 0)));
             return go;
         }

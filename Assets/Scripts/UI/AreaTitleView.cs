@@ -5,7 +5,7 @@ using UnityEngine;
 /// エリア進入時のエリア名タイトル表示。フェードイン→ホールド→フェードアウトする。
 /// 置き方は 2 通りあり、置かれたシーンで自動的に切り替わる:
 /// - UI シーン (StageUI) に置いた場合 (現行): ステージ側の <see cref="StageInfo"/> がステージに入るたびに
-///   その名前を表示する。StageInfo を持たないステージ (GameField_old) では何も表示しない
+///   <see cref="StageInfo.ConsumeEntryTitle"/> の名前を表示する (エリアのシーンはエリア名を初回だけ、それ以外は部屋名)。StageInfo を持たないステージ (GameField_old) では何も表示しない
 ///   (旧ステージは自前の SceneUI がタイトルを出すので二重表示にならない)。
 /// - ステージに直接置いた場合 (旧方式: GameField_old の SceneUI): シーン開始時に _areaName を表示し、
 ///   シーン開始処理 (ポーズ解除・リザルト集計リセット) も兼ねる。
@@ -45,7 +45,7 @@ public class AreaTitleView : MonoBehaviour
             // ステージが UI シーンより先にロードされていた場合 (ステージを直接開いて再生) は、ここで表示する
             // (無効のままだと Start が呼ばれないので Awake で行う)
             if (StageInfo.Current != null)
-                Play(StageInfo.Current.AreaName);
+                Play(StageInfo.Current.ConsumeEntryTitle());
             return;
         }
 
@@ -71,7 +71,7 @@ public class AreaTitleView : MonoBehaviour
 
     private void OnStageEntered(StageInfo stage)
     {
-        Play(stage != null ? stage.AreaName : "");
+        Play(stage != null ? stage.ConsumeEntryTitle() : "");
     }
 
     /// <summary>エリア名を表示する (表示中なら最初からやり直す)。名前が空なら何もしない。</summary>

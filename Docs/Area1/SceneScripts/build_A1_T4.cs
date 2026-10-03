@@ -56,6 +56,9 @@ public static class BuildT4
         BgGear(131f, -42.5f, 1.8f, 12f); BgGear(160.5f, -44f, 1.4f);
         HangLamp(123f, -42f); HangLamp(141f, -44f); HangLamp(158f, -42f);
 
+        // 敵を少し増やす (2026-10-03 PendingChanges 8: 部屋の意図に合わせる。位置は enemy_probe.cs の候補から)
+        Enemy(151.5f, -48f, true, name: "CorridorFlyer");   // 重装甲の敵の先・ベンチの手前の空中 (ブレイク練習の後の総ざらい)
+
         return log + Finish();
     }
 }

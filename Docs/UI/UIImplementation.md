@@ -60,7 +60,7 @@ UI 座標 = Canvas 中心原点・上が +y (anchor/pivot 中央, anchoredPositi
 | `Scripts/Common/GameSession.cs` / `StageLoader.cs` | 累計プレイ時間 `PlayTimeSeconds` (StageLoader.Update で実時間を加算、ポーズ中も数える)。はじめから = 0、つづきから = セーブの値 |
 | `Scripts/Common/StageInfo.cs` | `ChapterName` (未設定ならシーン名 `A{n}_` から「第n章」) |
 | `Scripts/Player/PlayerInteractor.cs` | `FindInRange<T>()` (インタラクト範囲の T を探す) |
-| `Scripts/UI/AreaTitleView.cs` | `AreaName` (旧ステージの場所名の代用) |
+| `Scripts/UI/AreaTitleView.cs` | `AreaName` (旧ステージの場所名の代用)。StageUI では `StageInfo.ConsumeEntryTitle()` を表示 (2026-10-03: 部屋名は出さず、エリア名をエリアに初めて入った時だけ。Docs/Area1/SceneBuildGuide.md §11) |
 | `Scripts/Common/UISceneBootstrap.cs` | 既定リストに `SaveSlotUI` |
 
 ### プレハブ / シーン

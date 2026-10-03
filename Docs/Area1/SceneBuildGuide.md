@@ -111,12 +111,13 @@ unity command capture_scene_view --caller plugin --skill unity-cli --width 1600 
 | `ConveyorBelt(x0, x1, top, speed, reverseFlag)` | Conveyor (layer 10) |
 | `Lift(pos, offsets[], speed, wait, requiredFlag)` | 往復リフト (MovingPlatform) |
 | `Enemy(x, y, flying, scale, heavy, name)` | Enemy/FlyingEnemy プレハブ。y = 床+1 |
-| `BossRoom(arenaRect, flag, bossPos, flying, gateRects[], msg)` | BossArena + 仮ボス (2倍+Heavy) + 非アクティブのゲート |
+| `BossRoom(arenaRect, flag, bossPos, flying, gateRects[], msg, followUpMessage="", followUpUnlessRed=false)` | BossArena + 仮ボス (2倍+Heavy) + 非アクティブのゲート。followUp = 撃破通知の後の一文 (赤ハサミ未入手時だけ等) |
 | `SpeakerAt(x, floorY, flag)` / `SavePointAt(x, floorY)` | スピーカー / セーブ (ベンチの絵) |
 | `ThreadPickupAt(x, y, amount, pickupId)` / `KeyItemAt(x, floorY, name, flag, pickupId)` / `ConsumablePickupAt(...)` | ピックアップ。Id は `A1_Pickup_<部屋>_<n>` |
 | `Hint(x0,y0,x1,y1, keyboard, gamepad, name)` | TutorialHintZone (layer 2) |
 | `Prop(relPath, x, y, scale, order, flipX)` | Area1Gen の飾り (当たり無し) |
-| `NpcAt(x, floorY, sprite, speakerName, lines[], repeatLines[], talkedFlag, rewardThread, flipX)` | NpcTalk (layer 11 + トリガー)。一度きりの糸は talkedFlag + rewardThread |
+| `NpcDialogueAt(x, floorY, sprite, name, label, repeatLabel, talkedFlag, rewardThread, flipX)` | **Utage 会話の NPC** (NpcTalkPoint, layer 11 + トリガー)。セリフは Dialogue.xls のラベル。一度きりの糸は talkedFlag + rewardThread。エリア1 の NPC はこちら (2026-10-03〜) |
+| `NpcAt(x, floorY, sprite, speakerName, lines[], repeatLines[], talkedFlag, rewardThread, flipX)` | 旧: NpcTalk (案内枠に数行)。今のエリア1 では使っていない |
 | `TransportAt(pos, size, scene, entranceId, requiredFlags[], prompt, lockedMessage, activateFlag, activateMessage, name)` | TransportInteractable (layer 11 + トリガー)。E1 搬出エレベーター / WL 非常用リフトの両端に置く |
 | `GateObject(name, rect, order)` | fence_gate の絵で矩形を塞ぐ layer 10 の実体 (絵は子で、画像上部の余白を見込んで矩形いっぱいに伸ばす)。BossRoom のゲートや FlagDoor の扉に使う |
 | `PlaceFerrisWheel(decorGondolas, baseStation, tint)` | 大観覧車プレハブをワールド (54,252) に置く (W*/U4 シーン)。`tint` (省略可) は全部品の色に乗算 = 奥に沈める (W2/W3 の支柱の中は (0.5,0.46,0.6)、W4 は (0.82,0.8,0.9))。明るいままだと本物の脚の筋交い (y37.8 等) が足場に見える |
@@ -266,12 +267,12 @@ public static class PlayT {
 | A1_T3 縦の衣装ラック | T3: 床 y-96 から交互の足場 (すり抜け棚+壁の出っ張り、段差 3) で y-54 の出口 (→T4) へ、中段の踊り場に敵 1。天井 x96..102 に橙の点検口 (SkillBlock 落下, flag `A1_Slam_Uh_1` — A1_U4 側も同じフラグにすること)、上からの到着点の棚 y-45。T3b: トゲの溝 3 本 (深さ 1)+段、棚の上にまち針×3 (`A1_Pickup_T3b_1`)、回復/道具のヒント。T3c: 床の跳ね上げ戸 (FlagActivator `A1_LadderBackstage` で開いた見た目に)、到着 SpawnFromA1_D2、開かない勝手口 | 0 error |
 | A1_T4 チケット売り場の廊下 | 床 y-54→y-57。幅 6 の溝 (ダッシュ越え、底から両側へ戻れる)、閉まった窓口の屋根の棚、重装甲の敵 (×1.3, Heavy) とブレイク→裁断のヒント、ボス前のベンチ | 0 error |
 | A1_B1 改札の番人 | B1: 床 y-57 の平らな部屋、BossArena `A1_Boss1` (Enemy×2+Heavy)、入ると左のゲートが閉まる、S1 への扉 = FlagDoor(`A1_Boss1`)。S1: 渡り廊下 y-45 の上にスピーカー① (`A1_Speaker1`、壊すと speaker_broken を表示)、下は通り抜けられる | 0 error |
-| A1_H 回転木馬の待合所 | ショップ画面は UI シーン ShopUI (§11)。床 y-54、ベンチ/店/鍛冶師 (2026-10-03〜: `_grantsUpgrade=true` `_upgrade=Red` `_requiredAnyFlags=[A1_MidBossUpper, A1_MidBossLower]` = **中ボスどちらかの撃破後に赤ハサミ (最初のハサミ = 二段ジャンプ) を渡す**、それまでは案内の 3 行 `_lockedLines`、渡した後は forge `A1_Hub` 糸30)。大きな回転木馬の飾りは 2026-10-03 に撤去 (空いた床に荷物の木箱 3 と床置きの灯、奥の壁は自動の壁飾り)。左の登り → 迷子センター H2 (迷子の人形 NpcTalk `A1_Npc_Doll` 糸50、日誌その2 `A1_Pickup_H2_1`)、渡り廊下 y-33 → 吹き抜け (A1_U1)、床の格子 (すり抜け) → A1_D1。空色の天井 (`A1_Super_Hs1`) → Hs1 (糸の大束 ×150 `A1_Pickup_Hs1_1`、2026-10-03 に新技の秘伝書から変更)、橙の床 (`A1_Slam_Hs2_1`) → Hs2 金庫 (ハートピン③の仮アイテム `A1_Pickup_Hs2_1`、棚で拠点へ戻れる) | 0 error, 2 warn (U1/D1 未作成) |
+| A1_H 回転木馬の待合所 | ショップ画面は UI シーン ShopUI (§11)。床 y-54、ベンチ/店/鍛冶師 (2026-10-03〜: `_grantsUpgrade=true` `_upgrade=Red` `_requiredAnyFlags=[A1_MidBossUpper, A1_MidBossLower]` = **中ボスどちらかの撃破後に赤ハサミ (最初のハサミ = 二段ジャンプ) を渡す**、セリフは Utage `A1_Smith_*` (2026-10-03〜)、forge `A1_Hub` 糸30 は赤ハサミより前 (ボス1後) から受けられる)。大きな回転木馬の飾りは 2026-10-03 に撤去 (空いた床に荷物の木箱 3 と床置きの灯、奥の壁は自動の壁飾り)。左の登り → 迷子センター H2 (迷子の人形 NpcTalkPoint (Utage `A1_Doll_First`/`_Repeat`) `A1_Npc_Doll` 糸50、日誌その2 `A1_Pickup_H2_1`)、渡り廊下 y-33 → 吹き抜け (A1_U1)、床の格子 (すり抜け) → A1_D1。空色の天井 (`A1_Super_Hs1`) → Hs1 (糸の大束 ×150 `A1_Pickup_Hs1_1`、2026-10-03 に新技の秘伝書から変更)、橙の床 (`A1_Slam_Hs2_1`) → Hs2 金庫 (ハートピン③の仮アイテム `A1_Pickup_Hs2_1`、棚で拠点へ戻れる) | 0 error, 2 warn (U1/D1 未作成) |
 | A1_C1 灯の大扉の回廊 | 床 y-54。大扉 = FlagDoor(`A1_Speaker1`+`A1_Speaker2`,`A1_Speaker3`)、扉の 3 つの丸穴の灯を FlagActivator で点灯、ベンチ、床下の搬出エレベーター (TransportAt → A1_MB2 / FromA1_C1、要 `A1_ElevatorDeep`)、到着 SpawnFromA1_MB2 | 0 error, 2 warn (AB/MB2 未作成) |
 | A1_U1 メリーの吹き抜け | U1: 縦穴 (屋内)。床 y-21 の中央が拠点への穴、回転木馬の支柱 (飾り) に沿って左右交互のすり抜け足場 7 段 → 上端の乗り場 y3 (左は岩、中〜右はすり抜け)。左上にジップラインの到着点 (乗り場の絵+ケーブル, `SpawnFromA1_MB1`)。屋根 (y12..18) の上は空にして回転木馬を載せた (A1_U2 側も同じ)。U2e: 屋外、床 y3、街灯と旗。柵 = FlagDoor(`A1_FenceOpen`, 当たりは高さ 24 で跳び越え不可)、柵の奥に `ExitToA1_FP` (開いた後の戻り道)。柵の向こうは空を開けて噴水 (prop/fountain.png) を見せる予告 | 0 error, 1 warn (FP 未作成) |
 | A1_U2 月明かりの遊歩道 | U2: 屋外、床 y0 (西端 y6・東端 y3 へ段)。浮遊する敵×3、跳び上がって叩くための低い台 4 つ、街灯・旗・閉まった屋台、西の空に遠景の観覧車 (ParallaxProp)。床の格子 (x159..165) → U2r。U2r: 床 y-12、棚 3 段で格子へ戻れる、奥に紫の板壁 (`A1_Rush_U2r`)。U2r2: 糸の大束×80 (`A1_Pickup_U2r2_1`)。大きな売店 (×2.5) の屋根 → 棚 → 荷揚げリフト (y15→33) → 看板塔の骨組みに架かった足場 7 段 → U2a 頂上にボビン爆弾×3 (`A1_Pickup_U2a_1`, ConsumableItemPickup)、浮遊敵×1 | 0 error |
 | A1_U3 コーヒーカップ広場 | U3: 屋外の闘技場、床 y0 (左右の出口 y6 へ 2 段)。回るカップ (MovingPlatform: 円軌道 2 客 + 上下往復 2 客、すり抜け)、固定の受け皿 3。WaveArena `A1_ArenaCups` (トリガー x111..141、ゲート = 両出口の通路内) 3 波: 地上×3 / 浮遊×2+地上×2 / 重装甲 (×1.4 Heavy)+浮遊×2。クリアで左の壁に梯子 (FlagActivator) → 高床の売店 (空に浮かぶ外壁 = TintRock で砂糖菓子色、支柱 3 本) の踊り場 → ひび壁 (`A1_Hidden_U3s`) → U3s にハートピン① (`A1_HeartPin1`, `A1_Pickup_U3s_1`)。壁を壊すまで中は岩肌の幕で隠れる (FlagActivator)。観覧車の東の脚が奥に見える | 0 error |
-| A1_U4 観覧車の足元 | U4: 屋外、床 y0。西 (A1_W1) は乗り場の建物の前のすり抜け段 y3/y6、東 (A1_U3) は渡り板 y6。セーブ (ベンチ)、地図売り (NpcTalk `A1_Npc_MapSellerU4`: 観覧車はゴンドラを乗り継ぐ/てっぺんの非常用リフトのレバー/地下の蒸気の迷路にも地図売り/点検口の近道)、観覧車プレハブ (乗り場が西端に掛かる) + 頭上の外周の帯 (ParallaxProp)、待ち列の柵・街灯・旗。渡り板の下の床に橙の点検口 (SkillBlock GroundSlam `A1_Slam_Uh_1`)。Uh: 縦穴、途中のすり抜け棚に糸×40 (`A1_Pickup_Uh_1`)、下端 → A1_T3 (一方通行) | 0 error (W1 作成後) |
+| A1_U4 観覧車の足元 | U4: 屋外、床 y0。西 (A1_W1) は乗り場の建物の前のすり抜け段 y3/y6、東 (A1_U3) は渡り板 y6。セーブ (ベンチ)、地図売り (NpcTalkPoint, Utage `A1_MapSellerU4_First`/`_Repeat`, `A1_Npc_MapSellerU4`: 拠点の鍛冶屋の噂/ 観覧車はゴンドラを乗り継ぐ/てっぺんの非常用リフトのレバー/地下の蒸気の迷路にも地図売り/点検口の近道)、観覧車プレハブ (乗り場が西端に掛かる) + 頭上の外周の帯 (ParallaxProp)、待ち列の柵・街灯・旗。渡り板の下の床に橙の点検口 (SkillBlock GroundSlam `A1_Slam_Uh_1`)。Uh: 縦穴、途中のすり抜け棚に糸×40 (`A1_Pickup_Uh_1`)、下端 → A1_T3 (一方通行) | 0 error (W1 作成後) |
 | A1_W1 観覧車の乗り場 | 屋外、床 y0。東 = 乗り場の建物 (プレハブの BaseStation) の踊り場 y3 / 日除けの屋根 y6 → A1_U4 (境の壁は U4 と同じく x54..57 の y6 以下と y18..27 だけ)。壊れて止まった乗り場のリフト (傾いた台 = 当たりは水平, y12) とそのレールの骨組みに架かった鉄骨の足場 (Girder) を y6→27 までジグザグ。上 = 支柱の付け根 (鉄板の塔 x6..36 y30..46、穴 x15..24) → A1_W2。穴の真下の足場 y27 に `SpawnFromA1_W2` (W2 の床の穴から落ちるとここに戻る)。西 = 非常用リフトの縦坑 (レール + 止まったかご) と TransportInteractable `EmergencyLift` (→ A1_W6 / `FromA1_W1`, 要 `A1_LiftWheel`、ロック時「てっぺんの機械室で動かせるらしい」)、到着 `SpawnFromA1_W6` (10.5,1.5)。頭上の外周の帯 (U4 と同じ)。待ち列の柵・街灯・旗 | 0 error |
 | A1_W2 支柱の足場 | 屋内 (SkyBackdrop + PlateWallsAll + 観覧車を暗く)。床 y33 の中央 x15..24 が乗り場への穴 (落ちると W1 の y27 の足場)。広めの鉄骨の足場と壁の鉄板の棚を左右交互に 3 ずつ 18 段 → y90 の床 → A1_W3。浮遊する敵 1 (y58)。背景に支柱の骨組み (両側の柱 + 12 ごとの梁 + X の筋交い、暗色)。y63 の右の足場の先にひびの継ぎ目 (`A1_Hidden_W2s`, HP3) → W2s (床 y63) にハートピン② (`A1_HeartPin2`, `A1_Pickup_W2s_1`)。W2s は壊すまで鉄板の幕 (HiddenRoomCover) で隠れる | 0 error |
 | A1_W3 整備用リフト | 屋内 (SkyBackdrop + PlateWallsAll)。坑 x36..54。右の坑のリフト A (y90→111) → 中の踊り場 L1 (y111) → 左の坑のリフト B (y111→132) → L2 (y132) → 右の坑のリフト C (y132→153) → 坑の上を渡るすり抜けの鉄骨 (y156) → A1_W4。リフトは MovingPlatform 往復 (速さ 3、停止 1.2、開始を 0/4/8 秒ずらす)、絵の天板を当たりの上面に合わせて子に移した。各坑にレール・ケーブル・巻き上げ機の歯車。浮遊する敵 2 (y122/146)。外周の下端 (y≈162) が坑の上端を横切って見える | 0 error |
@@ -311,7 +312,7 @@ public static class PlayT {
 |---|---|---|
 | A1_D1 配管の縦穴 | 縦穴 x237..255 y-96..-63。拠点の格子の真下の配管 y-66 (到着 `FromA1_H`) から、錆びた配管 (PipePlatform) と壁の岩棚を左右交互に 3 ずつ底 y-96 まで。底の穴 x240..249 → A1_D2、右の床に `FromA1_D2` (252,-94.5)。上ほど暖かい壁灯が多く、下ほど岩肌が暗く沈み (TintRockGradient + Shade)、底の穴の縁に赤い警告灯 (点滅)。壁を這う縦管・横管。ヒント「ここから地下の機械室……」 | 0 error |
 | A1_D2 搬送ベルトの通路 | D2: 床 y-117。埋め込みベルト 3 本 (Belt, 既定 -3.5 = 西へ、`A1_BeltReversed` で東へ) の間に固定の島・格子 (Girder x186..195 → A1_D5、↓+ジャンプ)。ベルトの上に配管の足場 y-114 (流れを避ける道) と島の上 y-111。敵 3 (島・ベルトの上・浮遊)。東端は縦穴の真下の着地塔 (配管 y-102〜-114, `FromA1_D1` 244.5,-100.5)。天井に半分埋めた管・吊り灯・奥でゆっくり回る暗い歯車・置き去りの荷物。D2w 錆びた配電室 (床 y-123, PlateWalls を錆色に): 配電盤 (Cabinet: 鉄板 + ちらつく表示灯 + 電線) の前にレバー① `BeltLever` (盤の上に流れる向きの表示ベルト + 赤→緑のランプ)、跳ね上げ戸の下にレバー② `LadderLever` → 梯子が出て A1_T3 へ (一方通行)。棚 (配管 2 段) に糸玉×3 (`A1_Pickup_D2w_1`) と日誌その3 (`A1_Lore_Journal3`, `A1_Pickup_D2w_2`)。西の床の紫の鉄扉 (`A1_Rush_D2w`) の奥に地下水路 (準備中) のヒント。ちらつく裸電球 | 0 error |
-| A1_D5 蒸気管の迷路 | D5: 部屋を岩で埋めて通路を掘る。到着の小部屋 (床 y-132, 天井の口の下の棚 y-126 → `FromA1_D2`) に地図売り (`A1_Npc_MapSellerD5`: 蒸気の予兆 / 3 方向 / 歯車の縦穴 / ボスの後のエレベーターが大扉の回廊のそばへ)。3 方向 = 上 (来た道) / 西の縦穴 (配管の棚 4 段) → D6 / 東の本道 (天井の蒸気 3 本、止む順番が 0.7 秒ずつ東へずれる → 段 y-135/-138 (床の蒸気 1) → 床 y-141 → A1_D3)。本道だけに点滅する緑の案内灯 9 個 (東へ流れる)。縦穴の底から下の通路 (床 y-150, 蒸気 4、窪みに糸×15 `A1_Pickup_D5_1`) → 東の縦穴を登って本道の床のすり抜けの蓋へ戻る輪。通路の間の岩の塊は太い配管の束に見せた。D6 水没した排水溝: 水面 y-148 (WaterBody x136..172)。底 y-153、入口の岸 y-147 から 2 ずつの段で入り、西の段を上がった岸 y-145 に糸巻き② (`A1_Spool2`, `A1_Pickup_D6_1`)。天井から下がった蒸気管 5 本 (口 y-138、柱は水面で止まる) = 沈んで歩けば当たらない / 水面の上の配管の近道 (y-144) と岸へ上がる段は蒸気にさらされる。浮遊する敵 1。鎖・光る苔 | 0 error, 1 warn (A1_D3 未作成) |
+| A1_D5 蒸気管の迷路 | D5: 部屋を岩で埋めて通路を掘る。到着の小部屋 (床 y-132, 天井の口の下の棚 y-126 → `FromA1_D2`) に地図売り (NpcTalkPoint, Utage `A1_MapSellerD5_First`/`_Repeat`, `A1_Npc_MapSellerD5`: 蒸気の予兆 / 3 方向 / 歯車の縦穴 / ボスの後のエレベーターが大扉の回廊のそばへ / 拠点の鍛冶屋の噂)。3 方向 = 上 (来た道) / 西の縦穴 (配管の棚 4 段) → D6 / 東の本道 (天井の蒸気 3 本、止む順番が 0.7 秒ずつ東へずれる → 段 y-135/-138 (床の蒸気 1) → 床 y-141 → A1_D3)。本道だけに点滅する緑の案内灯 9 個 (東へ流れる)。縦穴の底から下の通路 (床 y-150, 蒸気 4、窪みに糸×15 `A1_Pickup_D5_1`) → 東の縦穴を登って本道の床のすり抜けの蓋へ戻る輪。通路の間の岩の塊は太い配管の束に見せた。D6 水没した排水溝: 水面 y-148 (WaterBody x136..172)。底 y-153、入口の岸 y-147 から 2 ずつの段で入り、西の段を上がった岸 y-145 に糸巻き② (`A1_Spool2`, `A1_Pickup_D6_1`)。天井から下がった蒸気管 5 本 (口 y-138、柱は水面で止まる) = 沈んで歩けば当たらない / 水面の上の配管の近道 (y-144) と岸へ上がる段は蒸気にさらされる。浮遊する敵 1。鎖・光る苔 | 0 error, 1 warn (A1_D3 未作成) |
 
 プレイテスト済み (2026-10-03, D 区画): A1_H の格子から落下 → D1 の `FromA1_H` (配管 y-66 に接地) → D1 の上の口 → H の `FromA1_D1` (251.5,-53.1 接地) → D1 → 底の穴 → D2 `FromA1_D1` (着地塔 y-102 に接地) → D2 の天井の口 → D1 `FromA1_D2` (252,-95.1 接地)、D2 の格子 → D5 `FromA1_D2` (棚 y-126 に接地) → D5 の天井の口 → D2 `FromA1_D5` (接地)、D2w の梯子の最上段 → A1_T3 `FromA1_D2` (155.5,-95.1 接地、T3 の戸も開いた見た目)。ベルト: 既定 -3.5 で立っているだけで西へ流される (BeltMid 上 vx=-3.50) → `BeltLever` で 4 本とも +3.5 → 東へ流されベルトの東端 (238.3) で止まる。`LadderLever` で梯子が出現・戸が消える。蒸気 (SteamC1, on 1.3/off 2.1): ON の瞬間に被弾、ON が続くと無敵明け (1.0 秒) ごとに再被弾、周期 3.4 秒。D6: 水中の歩き vx=-4.78 (乾いた床 -7.99 の 0.6 倍)、ジャンプの上昇 2.88 (乾いた床 3.33)。水中 (y-152) で SteamW2 の真下に 6 秒立っても被弾 0、真上の配管 (y-143) では 6 秒で 4 回被弾。地図売りと会話。コンソールにエラーなし。手順は `SceneScripts/playtest_D.cs` (Status / Tp / Go / Use / Flag / Unflag / Has / Active / Belts / Steam / SteamAll / KillAll) と `playtest_D_probes.cs` (SteamTest / WaterTest / Freeze)。ゲーム倍率のスクショ: `game_D1_*` / `game_D2_*` / `game_D2w*` / `game_T3c_fromD2` / `game_D5_*` / `game_D6_*`。
 未検証 (D 区画): 実入力での蒸気の波に乗った走り抜け・水中の段の上り (水中ジャンプ 3.15 に対して段は 2)、ベルトの上での実戦の難度、A1_D3 側の到着 (未作成)。
@@ -429,14 +430,18 @@ UI ごとに専用プレハブ + 専用 UI シーン (`Assets/Scenes/UI/`, 名�
 
 | UI シーン | プレハブ | 中身 (事前配置、実行時生成なし) | Canvas sortingOrder |
 |---|---|---|---|
-| `StageUI` | `Assets/Prefabs/StageUI.prefab` | `AreaTitle` (AreaTitleView: 部屋名 フェード 0.5 / 表示 1.8 / 消える 0.8) + `TutorialMessage` (TutorialMessageView: TutorialHintZone のヒント・NpcTalk のセリフ) | 1 (HUD 0 の上) |
+| `StageUI` | `Assets/Prefabs/StageUI.prefab` | `AreaTitle` (AreaTitleView: エリア名を初回だけ (下記) フェード 0.5 / 表示 1.8 / 消える 0.8) + `TutorialMessage` (TutorialMessageView: TutorialHintZone のヒント・NpcTalk のセリフ) | 1 (HUD 0 の上) |
 | `ShopUI` | `Assets/Prefabs/ShopUI.prefab` | ルートに ShopView (品揃え 6 種) + `ShopPanel` (MenuPanelView, Title/Body/Row0..9) | 6 (HomeUI 5 と PauseUI 10 の間) |
 
 - 読み込み: `UISceneBootstrap._uiSceneNames` (既定値と PlayerScene の値) = `PlayerUI, StageUI, PauseUI, HomeUI, ShopUI, GameOverUI, ResultUI`。Build Settings 登録済み。
   StageLoader は「名前が UI で終わる」でステージと区別するので、両シーンともステージ扱いされない。
   どちらも Presenter / Model 注入が不要なので LifetimeScope は持たない (GameOverUI / ResultUI と同じ)。
 - **ステージ側はデータだけ**: `BuildBase` が置く `StageInfo` (`_areaName` = `area1_layout.json` の部屋名)。
-  StageInfo は有効化時に `StageInfo.Entered` を発行し `StageInfo.Current` を持つ → StageUI の AreaTitleView が部屋名を表示する
+  StageInfo は有効化時に `StageInfo.Entered` を発行し `StageInfo.Current` を持つ → StageUI の AreaTitleView が `StageInfo.ConsumeEntryTitle()` の文字を表示する
+  (2026-10-03 ユーザー決定「部屋の名前は出さない。エリアに初めて入った時だけ『鳴りやまぬ遊園地』を 1 回」: エリアのシーン (A{n}_ でエリア名が `StageInfo.AreaTitles` にある) は
+  GameProgress のフラグ `AreaTitleShown_A{n}` が無ければエリア名を返してフラグを立て、あれば空 = 何も出さない。フラグはセーブの progressFlags に入る。
+  セーブ復帰・リトライはフラグの復元 (PlayerSaveBridge.TryApplyPendingLoad) がステージ有効化より後なので `GameSession.PendingLoad.progressFlags` も見て、立てた時は PendingLoad 側にも足す。
+  はじめから (TitleScreen が GameProgress.Clear) → A1_T1 で 1 回出る。A1_ 以外のステージの StageInfo は従来どおり毎回部屋名。`_areaName` (部屋名) はセーブ画面の「場所」に使う)
   (ステージを直接開いて再生すると UI シーンが後から来るので、AreaTitleView は Awake で `Current` も見る。無効のままの MonoBehaviour は Start が呼ばれないため)。
   シーン開始のリセット (GamePause.Reset / GameSession.ResetRun) は StageInfo.Awake が行う (旧 AreaTitleView.Awake と同じタイミング)。
   ステージが入れ替わると StageUI の TutorialMessage は即座に消える (前の部屋のヒントを持ち越さない)。
@@ -450,6 +455,8 @@ UI ごとに専用プレハブ + 専用 UI シーン (`Assets/Scenes/UI/`, 名�
 - Validate: `StageInfo` がちょうど 1 個 (名前が空なら WARN) / ステージに画面 UI の Canvas があれば ERR。
 - 旧 `A1_SceneUI.prefab` / `A1_SceneUI_Shop.prefab`・`UseShopSceneUI()`・`Area1AssetPrep.EnsureSceneUIPrefab` / `EnsureShopSceneUIPrefab` は削除した。
 - プレイ確認: `SceneScripts/playtest_UI.cs` (`PlayUI.State` = ロード済みシーン・画面 Canvas と sortingOrder・タイトル/案内/ショップの状態、`Hint(n)` / `Exit(name)` / `Shop` / `ShopClose` / `Npc` / `Pause(bool)` / `Home(bool)`)。2026-10-03: A1_T1 直接再生でタイトル表示、ヒント表示、T1→T2→T3 遷移で部屋名更新・前の部屋のヒントを持ち越さない、A1_H でショップ開閉 (ShopUI)・人形の会話 (StageUI)・ホーム/ポーズ開閉、画面 Canvas の重複なし、コンソールにエラーなし。旧 CarouselHallScene (保存せず) は自前の SceneUI のタイトル/ヒント/ショップが出て StageUI 側は無言。
+
+- プレイ確認 (エリア名): `SceneScripts/playtest_title.cs` (`WatchOn` → `NewGame` / `Go(scene, entry)` / `LoadSave(scene, withFlag)` → `Log` = 部屋ごとに表示されたタイトル、`Talk` / `Dialogue` / `Key(key)` / `KeyUp` / `VirtualTap` = 会話のキー送り)。2026-10-03: はじめから → T1 で表示、T2・T1 に戻っても出ない。フラグ入りのセーブを T2 で復帰 → 出ない。フラグ無し → T2 で 1 回だけ。A1_H の人形の会話を J / Space / 仮想入力の攻撃タップで送れる・最後のページで閉じる、パッド South の押下で `InputUtil.IsInputNextButton` が true。
 
 ## 12. 出口の見通し (2026-10-03, ユーザー指示「出入り口はブロックで埋めずに開けて」)
 
@@ -471,3 +478,34 @@ UI ごとに専用プレハブ + 専用 UI シーン (`Assets/Scenes/UI/`, 名�
 - レシピは何も変えなくてよい。見通しを塞ぎたい時 (演出で行き止まりに見せたい等) はレシピで `Solid` すれば WARN が出る。
 - 点検: `SceneScripts/exit_shots.cs` (`ExitShots.Run(scene, tag)` = 各遷移ゾーン・移動装置の位置をゲームと同じ倍率 (ortho 5.5, 1280x720) で撮る。視差の背景もカメラ位置に合わせて置き直す。横の出口は床が画面の下 1/4 に来る高さ。`RunPath(path, scene, tag)` は git の旧版を一時フォルダに出して撮る用、`At(scene, tag, name, x, y)` は任意の位置)。
   `Assets/Screenshots/Area1/exits_before_*` (作り直す前 = git HEAD のシーン) / `exits_after_*`、シーンごとの左右比較 `sheets/exits_sheet_<scene>.png` (左 = before / 右 = after)。
+
+## 13. 敵の追加 (2026-10-03, PendingChanges 8 「敵が少ないので少し増やす」)
+
+各レシピの末尾 (`Finish` の前) の「敵を少し増やす」ブロック。位置は `SceneScripts/enemy_probe.cs` (`EnemyProbe.Run(scene)` = 部屋ごとの置ける場所の候補、読み取りのみ) から部屋の意図 (layout の `intent`) で選んだ:
+地上の敵 (Enemy.prefab, 巡回 ±3・崖を見ない) は同じ高さの床が中心 ±4 まで続き上 2.5 が空いている所 (動く足場・壊れる壁/床の上は不可)、y = 床 + 0.6。
+浮遊する敵は中心 ±4 × ±2 に地形もすり抜け床も無い所。どちらもスポーン・出口・移動装置から 7、セーブ・NPC・鍛冶師・トゲ/蒸気・ピストンから 6 (ハザードは 3)、既存の敵から 8 以上離す。
+対象外: チュートリアルの T1 (何も起きない部屋)・T2 (弱い敵 1 体で教える)、拠点 H・C1 (エリアボス前のベンチ)・U4 (中ボス前の休憩所)、闘技場 U3 / D7、ボス部屋 B1 / MB1 / MB2 / AB、D4 のピストンの廊下 (タイミングの部屋)、D6 (敵を少なく)、W5 の回るゴンドラの上 (読みの部屋)、二段ジャンプが要る所 (W5g / D3a / ST / 正門のアーチの上)。
+
+| シーン | 前 → 後 | 足した敵 (名前, 位置) |
+|---|---|---|
+| A1_T3 | 1 → 2 | FloorEnemy (108.5,-95.4) 一番下の床 |
+| A1_T4 | 1 → 2 | CorridorFlyer 浮遊 (151.5,-48) 重装甲の先・ベンチの手前 |
+| A1_U1 | 0 → 2 | ShaftFlyer 浮遊 (265,-9) 吹き抜け / FenceWalker (285,3.6) 閉園の柵の前 |
+| A1_U2 | 4 → 6 | WalkWalker (228,0.6) 売店の前 / FlyerHigh 浮遊 (205,19) 遊歩道の上空 |
+| A1_W1 | 0 → 2 | PlatformWalker (32,0.6) 乗り場の床 / BoardingFlyer 浮遊 (16,12) |
+| A1_W2 | 1 → 2 | HiddenRoomWalker (41,63.6) 隠し部屋 W2s (支柱の中の浮遊は 1 体のまま) |
+| A1_W3 | 2 → 3 | ShaftFlyer0 浮遊 (45,105) リフト A の上 |
+| A1_W4 | 0 → 1 | WindFlyer 浮遊 (75,163) 風の中 |
+| A1_W5 | 0 → 1 | FloorWalker (35,180.6) いちばん下の床 |
+| A1_W6 | 0 → 1 | DetourFlyer 浮遊 (77,270) W7 逆さゴンドラの寄り道 |
+| A1_W8 | 2 → 3 | LadderFlyer0 浮遊 (49,285) 梯子の下の区間 |
+| A1_D1 | 0 → 1 | PipeFlyer 浮遊 (248,-75) |
+| A1_D2 | 3 → 4 | BeltFlyerWest 浮遊 (180,-106) 西のベルトの上 |
+| A1_D5 | 1 → 2 | MazeFlyer 浮遊 (228,-129) 本道 (東) |
+| A1_D3 | 2 → 3 | GearFlyer 浮遊 (258,-134) 縦穴の上の方 |
+| A1_D4 | 0 → 1 | OilFlyer 浮遊 (310,-212) 油だまりの底 D4s |
+| A1_FP | 0 → 2 | PlazaWalker (328,3.6) 噴水広場 / AvenueFlyer 浮遊 (410,18) 並木道の上空 |
+
+変えていないシーン (数): T1 0 / T2 1 / B1 ボス / H 0 / C1 0 / U3 闘技場 (波で出る) / U4 0 / MB1・MB2・AB ボス。合計 21 体を追加、17 シーンを作り直し Validate 全 0 error / 0 warning。
+再生で T3 / U1 / U2 / W1 / W2 / W5 / FP / D4 の敵が置いた位置で床に立つ・浮く・巡回することを確認。
+点検: `SceneScripts/enemy_shots.cs` (`EnemyShots.Many(scene, tag, "name:x:y;...")` = 指定位置を ortho 8 で撮る) → `Assets/Screenshots/Area1/enemies_before_*` / `enemies_after_*`、左右比較 `sheets/enemies_sheet_<scene>.png` (右の赤丸 = 足した敵)。

@@ -72,7 +72,9 @@ public static class BuildMB1
 
         // ================= 中ボス (浮遊型の仮ボス = FlyingEnemy ×2 + Heavy)
         var arenaGo = BossRoom(new RectInt(20, 340, 63, 32), "A1_MidBossUpper", new Vector2(54f, 357f), true, new RectInt[0],
-            "ゴンドラの道化を倒した! 東のスピーカー塔の扉が開いた");
+            "ゴンドラの道化を倒した! 東のスピーカー塔の扉が開いた",
+            // 赤ハサミを未入手なら拠点の鍛冶屋への誘導の一文 (PendingChanges 11b, 呼びかけ調にしない)
+            "ハサミがかすかに震えた。……拠点の鍛冶屋なら、何か分かるかもしれない", followUpUnlessRed: true);
         var boss = Group("Enemies").GetComponentsInChildren<EnemyController>(true).First(e => e.name.StartsWith("Boss_"));
         boss.name = "Boss_GondolaClown";
         // ゲート: 戦闘中は格子に錠 (↓+ジャンプで逃げられない。落ちれば W8 へ戻る)

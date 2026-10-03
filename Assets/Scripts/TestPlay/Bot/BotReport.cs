@@ -66,7 +66,7 @@ public class BotReport
     public readonly List<BotDecision> Decisions = new();
     public string Settings;
 
-    public int JevCalls, JevFailures, JevRetries;
+    public int JevCalls, JevFailures, JevRetries, JevRequests, JevRequestCap;
     public long InputTokens, OutputTokens;
     public float JevLatency;
     public string Model;
@@ -158,7 +158,7 @@ public class BotReport
         sb.AppendLine($"- ゲーム時間 {F(GameSeconds)} 秒 / 実時間 {F(RealSeconds)} 秒");
         var ok = Hops.Count(h => h.Result == "ok");
         sb.AppendLine($"- 区間: {ok}/{Hops.Count} 成功");
-        sb.AppendLine($"- Jev: 呼び出し {JevCalls} 回 (失敗 {JevFailures}, 再試行 {JevRetries}), トークン 入力 {InputTokens} / 出力 {OutputTokens} (計 {InputTokens + OutputTokens}), " +
+        sb.AppendLine($"- Jev: 呼び出し {JevCalls} 回 (失敗 {JevFailures}, 再試行 {JevRetries}, 送信 {JevRequests}/{(JevRequestCap > 0 ? JevRequestCap.ToString() : "無制限")}), トークン 入力 {InputTokens} / 出力 {OutputTokens} (計 {InputTokens + OutputTokens}), " +
                       $"平均待ち {(JevCalls > 0 ? JevLatency / JevCalls : 0f):0.00} 秒, モデル {Model ?? "-"}");
         sb.AppendLine($"- 判断: 計 {Decisions.Count} (Jev {Decisions.Count(d => d.Source == "jev")}, 選択肢 1 つで自動 {AutoDecisions}, ローカル方針 {LocalDecisions})");
         sb.AppendLine();

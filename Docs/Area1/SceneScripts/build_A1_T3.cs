@@ -112,6 +112,9 @@ public static class BuildT3
         BgGear(126f, -82f, 1.6f, 15f); BgGear(151f, -86f, 2f, 5f);
         HangLamp(104f, -39f); HangLamp(124.5f, -81f); HangLamp(135.5f, -81f); HangLamp(146f, -84f);
 
+        // 敵を少し増やす (2026-10-03 PendingChanges 8: 部屋の意図に合わせる。位置は enemy_probe.cs の候補から)
+        Enemy(108.5f, -95.4f, name: "FloorEnemy");   // 一番下の床 (x104..113)。チュートリアルなので控えめに 1 体だけ足す
+
         return log + Finish();
     }
 }

@@ -69,6 +69,9 @@ public static class BuildD1
         // ================= ヒント
         // 案内文はチュートリアルの操作説明 (キーの説明) だけ残す。呼びかけ・攻略助言・場所の説明は削除 (2026-10-03 ユーザー決定, Docs/UI/UIAssignment.md「案内文」)
 
+        // 敵を少し増やす (2026-10-03 PendingChanges 8: 部屋の意図に合わせる。位置は enemy_probe.cs の候補から)
+        Enemy(248f, -75f, true, name: "PipeFlyer");      // 縦穴の上の空中 (降りる途中で 1 体)
+
         return log + Finish();
     }
 }
