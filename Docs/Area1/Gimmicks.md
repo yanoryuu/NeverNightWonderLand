@@ -303,7 +303,7 @@ BossArena の複数ウェーブ版。入るとゲートを閉じ、ウェーブ�
 | `_breakFadeTime` | float | 0.3 | 破壊演出時間 |
 
 配置例 (隠し壁): ビルダー `HiddenWall(x0,y0,x1,y1,"A1_Hidden_<部屋>", hp=1)` (セルごとの hp。以前の壁全体 HP3 から変更)。
-配置例 (木箱): ビルダー `Crate(x, floorY, coinId=null)` / `CrateStack(x, floorY, count, coinId, coinIndex)`。絵 = `Area1Gen/props/cargo_crate.png` (色は全部 `CrateColor`。コインの箱も見た目・手応えはふつうの箱と同じ = PendingChanges 20)、hp 1、Rigidbody2D (動的, 横と回転を固定) なので積むと乗り、下を壊すと上が落ちる。箱そのものは永続化しない。
+配置例 (木箱): ビルダー `Crate(x, floorY, coinId=null)` / `CrateStack(x, floorY, count, coinId, coinIndex)`。絵 = `Area1Gen/props/cargo_crate.png` (色は全部 `CrateColor`。コインの箱も見た目・手応えはふつうの箱と同じ = PendingChanges 20)、hp 1、Rigidbody2D (動的, 横と回転を固定) なので積むと乗り、下を壊すと上が落ちる。箱そのものは永続化しない。cargo_crate の絵は壊せる木箱専用で、飾り (`Prop`) には使わない (PendingChanges 28: 同じ絵の飾りが壊せず紛らわしかった)。
 
 ### LootPiece / ThreadPiece / CoinPiece / ThreadDropSpawner (`Gimmick/Pickups/`) — 地面に散らばって拾う物 (2026-10-03 新規)
 - `LootPiece` (基底): Rigidbody2D (動的, 回転固定) + CircleCollider2D + 跳ねる物理マテリアル (`Prefabs/LootBounce`: 弾み 0.35 / 摩擦 0.8)。**layer 2 (Ignore Raycast)** で、`Rigidbody2D.excludeLayers = ~Ground` なので当たるのは layer 10 だけ (プレイヤー・敵・トリガーとは接触しない。すり抜け床は上から落ちれば乗る)。出てから `_pickupDelay` 0.35 秒後、プレイヤー中心から `_magnetRadius` 1.6 以内で吸い寄せ (物理を止めて直接動かす)、`_collectRadius` 0.55 以内で取得 → ふくらんで消える。消えるのは取得とシーン遷移だけ (時間では消えない)。出た位置から `_lostFallDistance` 40 下へ落ちたら (地形の外) その場で取得扱い。`SetBounds(Rect)` (ボスの糸) を受けると、範囲の左右の端で跳ね返り (×−0.5)、上の端で落ち始める (FixedUpdate)。生成位置が地形の中なら上へずらす (`FreeSpawnPoint`)。

@@ -221,9 +221,8 @@ public static class BuildD2
         AddSprite(bg, Art("fx/glow.png"), -7, null, new Color(1f, 0.75f, 0.45f, 0.4f));
         AddComp<BlinkingLight>(bulb, ("_period", 0.37f), ("_minAlpha", 0.45f), ("_onRatio", 0.8f));
         // 置き去りの荷物 (島と配電室)
-        Prop("props/cargo_crate.png", 216f, -116.5f, 1f, -4, false, new Color(0.8f, 0.72f, 0.82f));
-        Prop("props/cargo_crate.png", 239.6f, -116.5f, 1f, -4, false, new Color(0.75f, 0.68f, 0.78f));
-        Prop("props/cargo_crate.png", 240.5f, -115.5f, 0.8f, -4, false, new Color(0.7f, 0.64f, 0.74f));
+        Crate(216f, -117f);  // 2026-10-04 PendingChanges 28: 飾りの木箱は壊せる木箱に (見た目が同じで紛らわしいため)
+        CrateStack(239.6f, -117f, 2);
 
         // ================= 暗さと質感
         TintRock(100, -160, 300, -60, new Color(0.72f, 0.68f, 0.8f));

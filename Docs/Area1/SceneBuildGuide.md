@@ -565,7 +565,9 @@ UI ごとに専用プレハブ + 専用 UI シーン (`Assets/Scenes/UI/`, 名�
 | `A1_Coin_W1_1` | かごの上に横に 2 個 (x42.2 / 43.2)、**左**の箱 |
 | `A1_Coin_FP2_1` | 売店の屋根に横に 2 個 (x426.6 / 427.6)、**右**の箱 |
 
-(T3c / U2r / D5 は元から積んだ木箱の中。) 壊せない飾りの木箱 (`Prop("props/cargo_crate.png", ...)`) はコインの箱のある部屋には無い。
+(T3c / U2r / D5 は元から積んだ木箱の中。)
+
+**飾りの木箱は置かない** (2026-10-04, PendingChanges 28): 以前は背景の飾りに同じ絵の `Prop("props/cargo_crate.png", ...)` (当たり無し) があり、「箱が壊せない」と報告された (叩いていたのは飾り。壊せる木箱は正常)。H / D2 / D3 / D4 / U3 の 16 個を全部 `Crate` / `CrateStack` に置き換えた (H はスポーン SpawnFromA1_D1 を避けて x254.6 の 2 段 + x255.6、D3 のネズミの巣はネズミの出る位置を避けて x273.6 / 286.6)。**cargo_crate の絵は壊せる木箱専用** — 飾りに使わない (例外は W8 の落ちてくる荷物 `FallingObjectSpawner`)。置き場所の下調べは `SceneScripts/crate_probe.cs` (`CrateProbe.Run(scene, "x,床y;...")` = 床面・Ground との重なり・近くのスポーン/出口)。作り直し 5 シーン Validate 全 0 error / 0 warning。再生確認 `SceneScripts/playtest_boxfix.cs` (`boxfix_h_*` / `boxfix_d4_*`)。
 
 **投げる針の絵** (23): `PrepProps.Needles` (prep_props.cs, 何度流してもよい) が MachiNeedle / MishinNeedle の弾を作り直す。ルート (scale 1) = BoxCollider2D (まち針 0.6×0.1 / ミシン針 0.4×0.14, 以前の見た目の矩形と同じ) + Rigidbody2D + Projectile (向き = `transform.right` を速度へ)。絵は子 `Art`: 素材の針先は左下を向いているので、針先が +X を向く角度 (まち針 126.34° / ミシン針 119.72°) に回し、針の軸 (針先〜頭の端) の中点が原点に来る位置。軸の長さはまち針 0.8 / ミシン針 0.85 単位。刺さったまち針は半分が壁に入り、緑の玉の頭が外に出る。
 

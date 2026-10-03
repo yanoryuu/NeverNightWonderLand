@@ -164,7 +164,7 @@ public static class BuildD3
         Solid(270, -131, 288, -129);
         Solid(285, -135, 288, -131);
         ThreadPickupAt(283.2f, -134.2f, 60, "A1_Pickup_D3a_1");
-        Prop("props/cargo_crate.png", 279.5f, -134.5f, 0.9f, -4, false, new Color(0.7f, 0.64f, 0.74f));
+        Crate(279.5f, -135f);  // 2026-10-04 PendingChanges 28: 飾りの木箱は壊せる木箱に (見た目が同じで紛らわしいため)
         Prop("platforms/gear_platform.png", 274.6f, -133.4f, 0.55f, -6, false, new Color(0.4f, 0.36f, 0.48f)).transform.rotation = Quaternion.Euler(0, 0, 18f);
         Prop("rock/decal_moss_glow.png", 281f, -131.8f, 0.7f, -6, false, MossTint);   // polish A: 光る苔は暗く
         Glow(281f, -132f, 1.3f, new Color(0.3f, 1f, 0.85f, 0.12f), -7);
@@ -203,8 +203,9 @@ public static class BuildD3
         // 巣の飾り: 巣穴 (暗いにじみ)・かじられた荷物・藁代わりの糸くず
         foreach (var p in new[] { new Vector2(272.6f, -170.2f), new Vector2(293.2f, -169.6f), new Vector2(283f, -158.9f), new Vector2(277f, -159.1f) })
             Glow(p.x, p.y, 1.1f, new Color(0.02f, 0.01f, 0.03f, 0.85f), -6);
-        Prop("props/cargo_crate.png", 288.4f, -170.5f, 1f, -4, false, new Color(0.62f, 0.55f, 0.6f)).transform.rotation = Quaternion.Euler(0, 0, -8f);
-        Prop("props/cargo_crate.png", 276.5f, -170.6f, 0.8f, -4, false, new Color(0.58f, 0.52f, 0.58f)).transform.rotation = Quaternion.Euler(0, 0, 12f);
+        // かじられた荷物 = 壊せる木箱 (PendingChanges 28)。ネズミの出る位置 (中心 283 から -8,-7,-4,-1,2,5,8,9) を避ける
+        Crate(273.6f, -171f);
+        Crate(286.6f, -171f);
         Prop("rock/decal_chain_hanging.png", 281f, -159.6f, 0.6f, -7, false, new Color(0.4f, 0.38f, 0.48f));
         WallLamp(284.5f, -161.2f, false, 0.6f);
 
@@ -241,7 +242,7 @@ public static class BuildD3
         WallLamp(265.7f, -167.5f, true, 0.6f);
         WallLamp(244.3f, -186f, false, 0.4f);
         // 底: 錆びた瓦礫・こぼれた油・底の灯 (赤)
-        Prop("props/cargo_crate.png", 245.2f, -195.4f, 0.9f, -4, false, new Color(0.6f, 0.55f, 0.62f)).transform.rotation = Quaternion.Euler(0, 0, 14f);
+        Crate(245.2f, -196f);  // 2026-10-04 PendingChanges 28: 飾りの木箱は壊せる木箱に (見た目が同じで紛らわしいため)
         Prop("platforms/gear_platform.png", 259.5f, -197.6f, 0.7f, -7, false, new Color(0.28f, 0.25f, 0.34f)).transform.rotation = Quaternion.Euler(0, 0, 70f);
         GuideLamp(266.2f, -192.5f, 0f, Guide, false, 1.5f, "GuideLampExit");
 

@@ -188,7 +188,7 @@ public static class BuildD4
         Clear(314, -222, 317, -219);
         Prop("rock/decal_chain_hanging.png", 315.5f, -219.2f, 0.5f, -7, false, new Color(0.4f, 0.38f, 0.48f));
         // 油の缶・したたる油
-        Prop("props/cargo_crate.png", 301.4f, -212.5f, 0.9f, -4, false, new Color(0.55f, 0.45f, 0.35f));
+        Crate(301.4f, -213f);  // 2026-10-04 PendingChanges 28: 飾りの木箱は壊せる木箱に (見た目が同じで紛らわしいため)
         foreach (var x in new[] { 305.5f, 311.5f })
             PipeRun(x, -213.8f, x, -207f, 0.12f, -6, new Color(0.3f, 0.22f, 0.12f, 0.8f));   // 天井から垂れる油の筋
                 WallLamp(320.2f, -209.5f, true, 0.7f);
@@ -200,7 +200,7 @@ public static class BuildD4
         Blueprint(366f, -192.6f, 5.2f, 4f);
         Locker(352.2f, 354.6f, -198f, -194.6f, new Color(0.8f, 0.85f, 0.9f));
         Locker(369.6f, 371.8f, -198f, -194.8f, new Color(0.9f, 0.8f, 0.78f));
-        Prop("props/cargo_crate.png", 362.4f, -197.5f, 0.9f, -4, false, new Color(0.75f, 0.68f, 0.72f));   // 机がわりの木箱
+        Crate(362.4f, -198f);   // 机がわりの木箱 (壊せる木箱, PendingChanges 28)
         HangLamp(357.5f, -186f, 0.7f, 1.4f);
         HangLamp(366f, -186f, 0.6f, 1.1f);
         PlateWalls(351, -204, 375, -183);

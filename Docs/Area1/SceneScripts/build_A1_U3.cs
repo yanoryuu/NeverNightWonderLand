@@ -151,10 +151,11 @@ public static class BuildU3
         foreach (var (px, py) in new[] { (118.5f, 49.5f), (129.8f, 50.5f) })
             Prop("rock/decal_poster.png", px, py, 1.1f, OrderWallDecor, false, new Color(1f, 0.85f, 0.95f));
         // 在庫の木箱 (入口の脇と棚の下)
-        Prop("props/cargo_crate.png", 116.1f, 39.55f, 1.1f, -4, false, new Color(1f, 0.8f, 0.9f));
-        Prop("props/cargo_crate.png", 117.3f, 39.55f, 1.1f, -4, false, new Color(0.9f, 0.75f, 0.88f));
-        Prop("props/cargo_crate.png", 116.7f, 40.6f, 1f, -4, false, new Color(0.95f, 0.85f, 0.95f));
-        Prop("props/cargo_crate.png", 127.6f, 39.55f, 1.1f, -4, false, new Color(0.9f, 0.75f, 0.88f));
+        // 壊せる木箱 (PendingChanges 28)。下 2 個の上に 1 個
+        Crate(116.1f, 39f);
+        Crate(117.1f, 39f);
+        Crate(116.6f, 40f);
+        Crate(127.6f, 39f);
         // ハートピン1を照らす舞台照明
         Prop("hall/spotlight.png", 131.5f, 57f, 1.1f, -7, false, new Color(1f, 0.9f, 0.95f));
         Glow(131.5f, 41f, 2.2f, new Color(1f, 0.55f, 0.75f, 0.3f), -7);

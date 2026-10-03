@@ -67,9 +67,10 @@ public static class BuildH
         // ---- 拠点の設備 (床 y-54)
         // 回転木馬の大きな飾りは撤去 (2026-10-03 ユーザー指示)。空いた床の中ほどには拠点の他の所と同じ小物だけ:
         // 荷物の木箱 (W8 の荷物と同じ絵) と床置きの灯。奥の壁はビルダーの壁飾り (ランプ・ポスター・旗) が自動で埋める
-        Prop("props/cargo_crate.png", 250.6f, -53.45f, 1.4f, OrderProp, false, new Color(0.78f, 0.72f, 0.8f));
-        Prop("props/cargo_crate.png", 252.2f, -53.57f, 1.1f, OrderProp, true, new Color(0.7f, 0.65f, 0.74f));
-        Prop("props/cargo_crate.png", 250.9f, -52.27f, 1.0f, OrderProp, false, new Color(0.74f, 0.68f, 0.78f));
+        // 2026-10-04 PendingChanges 28: 壊せる木箱 (Crate) に。飾りと同じ絵で壊せないのは紛らわしいため。
+        // D1 から上がってきた時のスポーン (x251.5) に重ならないよう右へ寄せた
+        CrateStack(254.6f, -54f, 2);
+        Crate(255.6f, -54f);
         Prop("props/boss_door_lamp_on.png", 262.5f, -53.7f, 0.6f, OrderProp, false, new Color(1f, 0.85f, 0.6f));
         SavePointAt(268.3f, -54f);
         var stall = NewObject("ShopKeeper", new Vector2(273.4f, -54f), LayerInteractable, "Gimmicks");
