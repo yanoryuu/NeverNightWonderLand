@@ -19,9 +19,9 @@
 
 ## 2026-10-03 (2) ユーザー指示・決定
 13. ✅ (2026-10-03 修正: DialogueService の読み込み中ガード・閉じた直後0.35秒の再起動防止・会話中は Overlay の UI を隠す。Docs/DialogueSystem.md §7) **Utage の会話のバグ**: 描画順の問題で会話画面が表示されない / 会話を2つ同時に開けてしまう。
-14. **プロップス素材** (Drive https://drive.google.com/drive/folders/1qcP_7bMJXMbj7FqNp-ZsGdYDihQGz_8M): NNW_coin / NNW_thread / needle / dressmaker_pin / rotary_cutter (+ 白ふち無しの「イラスト」3枚は使わない)。
+14. ✅ (2026-10-03 反映済み: 素材 `Assets/LocalData/StageAsset/Props/` + UI 用 `Assets/LocalData/UI/icons/`。ミシン針・まち針・布カッターのアイコン (灰色 = 輝度 ×0.58)、T3b のまち針の拾い物、ステージの糸 (`ThreadPickupAt`, 大束は ×1.25)、散らばる糸の粒、HUD の糸 (絵 + x所持数)、装備品タブの糸の帯。UI は build_ui.cs、16 シーン作り直し Validate 全 0 error。UIImplementation.md §12 / SceneBuildGuide §14) **プロップス素材** (Drive https://drive.google.com/drive/folders/1qcP_7bMJXMbj7FqNp-ZsGdYDihQGz_8M): NNW_coin / NNW_thread / needle / dressmaker_pin / rotary_cutter (+ 白ふち無しの「イラスト」3枚は使わない)。
     - needle = ミシン針、dressmaker_pin = まち針、rotary_cutter = 布カッター → アイテム画面の仮アイコンを差し替え、ステージで拾う時の絵にも使う。
     - NNW_thread (糸巻き) → 散らばる糸のドロップ・HUD の糸の所持数・アイテム画面の糸の帯・ステージの糸の大束。
-15. **敵を倒した時の糸は地面に散らばる** (参考ゲームと同様: 粒が飛び散って地面に落ち、触れる/近づくと拾える)。今の「倒した瞬間に自動加算」をやめる。
-16. **コイン** (ドラクエの「ちいさなメダル」のような物): 決めた箱だけに入っていて、一度取ったら二度と出ない (エリア1 に数枚)。枚数は入手通知とアイテム画面 (収集品) に出し、HUD には出さない。**交換 (相手・景品) は後で決める** — 今回は拾って数えるところまで。
-17. **箱は一つずつ壊れるようにする** (ユーザー報告: マップの箱に攻撃すると、積んだ箱がまとめて壊れてしまう)。
+15. ✅ (2026-10-03 反映済み: `ThreadDropSpawner` (Player.prefab) が `EnemyController.ThreadDropped` を粒 `ThreadPiece` にする。粒 = min(糸, 12)、Ground だけに当たって弾み、近づくと吸い寄せ (1.6) て取得、帯の通知は出さない。消えるのは取得とシーン遷移だけ。Gimmicks.md「LootPiece」) **敵を倒した時の糸は地面に散らばる** (参考ゲームと同様: 粒が飛び散って地面に落ち、触れる/近づくと拾える)。今の「倒した瞬間に自動加算」をやめる。
+16. ✅ (2026-10-03 反映済み: 木箱 `Crate(..., coinId)` = BreakableBox `_coinId` を壊すと `CoinPiece` が飛び出す。取ると `A1_Coin_<部屋>_1` + 枚数 (セーブ `coins`) + 通知「コインを手に入れた (計 n 枚)」、取った後は箱ごと出ない。収集品タブに「コイン x枚数」。6 か所: T3c / H2 / U2r / D5 の下の通路 / W1 の壊れたリフト / FP2 の売店の屋根 = SceneBuildGuide §14) **コイン** (ドラクエの「ちいさなメダル」のような物): 決めた箱だけに入っていて、一度取ったら二度と出ない (エリア1 に数枚)。枚数は入手通知とアイテム画面 (収集品) に出し、HUD には出さない。**交換 (相手・景品) は後で決める** — 今回は拾って数えるところまで。
+17. ✅ (2026-10-03 反映済み: 原因 = 隠し壁とスキルブロックが矩形 1 個の BreakableBox/SkillBreakable + Tiled の絵 (箱を積んだように見える) で、1 回で全部消えていた。1 セル = 1 個に分け (同じフラグ)、通常攻撃は箱・ブロックを 1 回に一番近い 1 つだけ、落下攻撃は積んだ段を順に突き抜ける。隠し壁のセルは hp 1。SceneBuildGuide §14) **箱は一つずつ壊れるようにする** (ユーザー報告: マップの箱に攻撃すると、積んだ箱がまとめて壊れてしまう)。

@@ -7,6 +7,8 @@ using UnityEngine;
 /// ヒント通知だけを返す。破壊はスキルステートが <see cref="TryBreak"/> を直接呼ぶ。
 /// 破壊状態は GameProgress で永続化できる (_flagId 空なら再入場で復活)。
 /// Ground レイヤーに置くと足場・攻撃対象として振る舞う。
+/// Area1 のブロックは 1 セル = 1 個 (同じ _flagId を共有)。スキルは当たったセルだけを砕く = 体の通る穴が開く。
+/// 1 個砕けるとフラグが立ち、再訪では同じフラグのセルが全部消えている。
 /// グレーボックス色: 落下=橙 / 大ジャンプ=空色 / 突進=紫。
 /// </summary>
 [RequireComponent(typeof(SpriteRenderer))]
@@ -22,7 +24,10 @@ public class SkillBreakable : MonoBehaviour, IDamageable
     [SerializeField] private string _lockedMessage = "";
 
     private bool _broken;
-    private float _hintCooldown; // ヒント通知の連発防止
+
+    // ヒント通知の連発防止 (全ブロック共通。1 セル = 1 個に分けたので、隣のセルで出し直さない)。
+    // スキルで砕いた直後 (落下攻撃の着地の範囲攻撃が隣のセルに当たる等) も出さない
+    private static float s_nextHintTime;
 
     /// <summary>破壊に必要なスキル (デバッグ表示用)。</summary>
     public PlayerSkill RequiredSkill => _requiredSkill;
@@ -38,23 +43,17 @@ public class SkillBreakable : MonoBehaviour, IDamageable
         transform.DOKill(); // シーン遷移などで破壊演出の途中に消えても警告を出さない
     }
 
-    private void Update()
-    {
-        if (_hintCooldown > 0f)
-            _hintCooldown -= Time.deltaTime;
-    }
-
     /// <summary>通常攻撃はダメージが通らず、ヒントを返すだけ。</summary>
     public void TakeDamage(in DamageInfo info)
     {
-        if (_broken || _hintCooldown > 0f)
+        if (_broken || Time.time < s_nextHintTime)
             return;
 
         var message = string.IsNullOrEmpty(_lockedMessage)
             ? $"刃は通らない。「{_requiredSkill.DisplayName()}」の衝撃なら砕けそうだ"
             : _lockedMessage;
         Notifier.Notify(message);
-        _hintCooldown = 2f;
+        s_nextHintTime = Time.time + 2f;
     }
 
     /// <summary>
@@ -67,6 +66,7 @@ public class SkillBreakable : MonoBehaviour, IDamageable
             return false;
 
         _broken = true;
+        s_nextHintTime = Mathf.Max(s_nextHintTime, Time.time + 1f);
 
         if (!string.IsNullOrEmpty(_flagId))
             GameProgress.Set(_flagId);

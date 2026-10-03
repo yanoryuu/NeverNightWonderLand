@@ -19,8 +19,11 @@ public class EnemyController : MonoBehaviour, IDamageable
     /// <summary>生存中の全敵。裁断可否判定 (CanFinisher) や HUD のプロンプト表示が参照する。</summary>
     public static readonly List<EnemyController> Active = new();
 
-    /// <summary>撃破時の素材「糸」ドロップ通知 (位置, 数)。PlayerItemInventory が購読する。</summary>
-    public static event Action<Vector2, int> ThreadDropped;
+    /// <summary>
+    /// 撃破時の素材「糸」ドロップ通知 (位置, 数, 敵の大きさ = scale)。ThreadDropSpawner (プレイヤー) が購読し、
+    /// 地面に散らばる粒にする (拾った時に糸が増える)。
+    /// </summary>
+    public static event Action<Vector2, int, float> ThreadDropped;
 
     private enum State
     {
@@ -386,7 +389,7 @@ public class EnemyController : MonoBehaviour, IDamageable
         // リザルト集計と素材「糸」のドロップ
         GameSession.EnemiesDefeated++;
         if (_consts.ThreadDrop > 0)
-            ThreadDropped?.Invoke(transform.position, _consts.ThreadDrop);
+            ThreadDropped?.Invoke(transform.position, _consts.ThreadDrop, Mathf.Abs(transform.lossyScale.y));
 
         // 当たり判定を消して縮小フェードで消滅
         foreach (var col in GetComponentsInChildren<Collider2D>())

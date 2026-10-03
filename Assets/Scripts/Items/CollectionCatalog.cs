@@ -5,10 +5,20 @@ using UnityEngine;
 /// <summary>
 /// アイテム画面の「収集品」「資料」に並べる物の一覧 (データだけ)。
 /// どちらも拾った時に立つ進行フラグ (KeyItemPickup の _flagId → GameProgress) で入手済みかを判定する。
-/// - 収集品: ハートピン・糸巻きなど KeyItem で拾う物 (日誌は含めない)。並び順 = 枠の順 (18 枠 × 3 ページ)
+/// - 収集品: ハートピン・糸巻きなど KeyItem で拾う物 (日誌は含めない) と、数えて持つ物 (コイン: Counter)。並び順 = 枠の順 (18 枠 × 3 ページ)
 /// - 資料: 日誌。並び順 = 一覧の順
 /// 新しい物を増やす時はこのアセットに 1 行足すだけでよい (ItemMenuView は表示するだけ)。
 /// </summary>
+/// <summary>収集品のうち、数えて持つ物の種類 (<see cref="CollectionCatalog.Entry.Counter"/>)。</summary>
+public enum CollectionCounter
+{
+    /// <summary>数えない (フラグで入手済みを判定)。</summary>
+    None = 0,
+
+    /// <summary>コイン (PlayerItemInventory.Coins)。</summary>
+    Coins = 1,
+}
+
 [CreateAssetMenu(fileName = "CollectionCatalog", menuName = "NeverNight/Collection Catalog")]
 public class CollectionCatalog : ScriptableObject
 {
@@ -28,6 +38,10 @@ public class CollectionCatalog : ScriptableObject
         [Tooltip("絵 (任意。無ければ名前の文字だけ出す)")]
         public Sprite Icon;
 
+        [Tooltip("数えて持つ物 (コインなど)。None 以外なら Flag ではなく所持数 (1 以上で入手済み) を見て、枠に数を出す")]
+        public CollectionCounter Counter;
+
+        /// <summary>入手済みか (フラグで判定する物)。Counter 付きの物は ItemCollectionTab が所持数で判定する。</summary>
         public bool IsObtained => GameProgress.Has(Flag);
     }
 

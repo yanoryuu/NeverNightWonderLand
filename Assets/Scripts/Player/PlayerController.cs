@@ -1219,11 +1219,18 @@ public class PlayerController : MonoBehaviour
         var center = GetAttackCenter(profile, _facing.Value);
         var hits = Physics2D.OverlapBoxAll(center, profile.BoxSize, 0f, _consts.AttackTargetLayer);
 
+        // 箱・ブロック (BreakableBox / SkillBreakable) は 1 回の攻撃で 1 つだけ (プレイヤーに一番近い物)。
+        // 積んだ箱・隠し壁のセルがまとめて壊れないようにする。敵などそれ以外は今まで通り全部に当てる
+        var block = NearestBlock(hits);
+
         var anyHit = false;
         foreach (var hit in hits)
         {
             if (hit.attachedRigidbody != null && hit.attachedRigidbody.gameObject == gameObject)
                 continue; // 自分自身は無視
+
+            if (IsBlock(hit) && hit != block)
+                continue;
 
             if (hit.TryGetComponent<IDamageable>(out var damageable))
             {
@@ -1240,6 +1247,32 @@ public class PlayerController : MonoBehaviour
             _healGauge.AddCharge();
 
         return anyHit;
+    }
+
+    /// <summary>1 回の攻撃で 1 つだけ壊れる物 (箱・隠し壁のセル・スキルで砕くブロック)。</summary>
+    private static bool IsBlock(Collider2D c) =>
+        c.GetComponent<BreakableBox>() != null || c.GetComponent<SkillBreakable>() != null;
+
+    /// <summary>hits の中の箱・ブロックのうち、プレイヤーに一番近い物 (無ければ null)。</summary>
+    private Collider2D NearestBlock(Collider2D[] hits)
+    {
+        Collider2D best = null;
+        var bestSqr = float.MaxValue;
+        var from = (Vector2)transform.position;
+        foreach (var hit in hits)
+        {
+            if (!IsBlock(hit))
+                continue;
+
+            var sqr = ((Vector2)hit.bounds.center - from).sqrMagnitude;
+            if (sqr < bestSqr)
+            {
+                bestSqr = sqr;
+                best = hit;
+            }
+        }
+
+        return best;
     }
 
     private Vector2 GetAttackCenter(PlayerConsts.AttackProfile profile, int facing)

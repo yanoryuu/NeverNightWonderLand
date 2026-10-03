@@ -20,6 +20,9 @@ public abstract class ItemMenuTab : MonoBehaviour
 
         [Tooltip("名前の文字")]
         public TMP_Text Label;
+
+        [Tooltip("数の文字 (任意。収集品のコインの枚数など。枠の右下)")]
+        public TMP_Text Count;
     }
 
     [Tooltip("タブの中身のルート (表示切替される)")]

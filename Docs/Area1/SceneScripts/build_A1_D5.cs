@@ -65,6 +65,10 @@ public static class BuildD5
         SteamVent(208f, -144f, 9f, 1.4f, 1.8f, 0.8f, true, name: "SteamE3");   // 窪みの真上
         SteamVent(216.5f, -150f, 4.5f, 1.2f, 2.0f, 2.2f, false, name: "SteamE4");
         ThreadPickupAt(209.6f, -152.4f, 15, "A1_Pickup_D5_1");
+        // コインの箱 (2026-10-03 PendingChanges 16: 決めた箱だけにコイン。取ったら二度と出ない。1 回の攻撃で壊れる箱は 1 つ = 17)
+        // 下の通路 E の西の端 (縦穴 B の底の段の下, 床 y-150) に積んだ木箱 2 + 横に 1。上の箱にコイン
+        CrateStack(187.5f, -150f, 2, "A1_Coin_D5_1", 1);
+        Crate(188.5f, -150f);
 
         // ---- 本道の目印: 点滅する案内灯 (到着の小部屋 → 本道 → 出口。点滅が東へ流れる)
         var lamps = new (float x, float y)[]

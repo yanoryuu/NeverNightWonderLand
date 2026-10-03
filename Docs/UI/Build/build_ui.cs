@@ -422,6 +422,11 @@ public static class BuildUI
     const string StageNameCatalogPath = "Assets/Resources/StageNameCatalog.asset";
     const string FallbackFontPath = "Assets/Art/Fonts/JapaneseUI SDF.asset";
     const string PropsPath = "Assets/LocalData/StageAsset/Area1Gen/props/";
+    // Drive「プロップス素材」(2026-10-03 PendingChanges 14)。ステージ用の元絵 (Props/) と UI 用に縮めたアイコン (UI/icons/, import_ui.cs が設定)
+    const string HudPrefabPath = "Assets/Prefabs/HUD.prefab";
+    public static float CollectionCountFont = 30f;  // 収集品: 枠の右下の数 (コインの枚数)
+    public static float ThreadIconSize = 64f;       // 装備品: 右上の糸の帯の糸巻きの絵
+    public static float HudThreadIconSize = 36f;    // HUD: 糸の所持数の左の糸巻きの絵
 
     // ---- アイテム画面の文字 (完成形に文字の見本が無い所は枠に収まる大きさ。仮) ----
     public static float ItemNameFont = 40f;       // 装備品: 左下の帯 (名前)
@@ -499,6 +504,58 @@ public static class BuildUI
     }
 
     /// <summary>
+    /// HUD (HUD.prefab) の糸の所持数の左に糸巻きの絵 (icons/icon_thread.png) を置く (PendingChanges 14)。何度流してもよい。
+    /// 文字は ThreadCountPresenter が「x所持数」で出す (「糸」の字は絵に置き換え)。HUD の他の部分はレシピが無いのでここでは触らない。
+    /// </summary>
+    public static string HudThreadIcon()
+    {
+        var root = PrefabUtility.LoadPrefabContents(HudPrefabPath);
+        try
+        {
+            var view = root.GetComponentInChildren<ThreadCountView>(true) ?? throw new Exception("ThreadCountView missing in HUD.prefab");
+            var label = new SerializedObject(view).FindProperty("_label").objectReferenceValue as TMP_Text
+                        ?? throw new Exception("ThreadCountView._label missing");
+            var parent = view.transform;
+            var old = parent.Find("ThreadIcon");
+            if (old != null)
+                UnityEngine.Object.DestroyImmediate(old.gameObject);
+
+            // 文字の左端 (枠の左) から少し左に絵。文字は左揃えのままなら絵のぶん右へずらす
+            var lrt = label.rectTransform;
+            var rt = Rect("ThreadIcon", parent, Vector2.zero, Vector2.one * HudThreadIconSize);
+            rt.anchorMin = rt.anchorMax = lrt.anchorMin;
+            rt.pivot = new Vector2(0f, 0.5f);
+            var corners = new Vector3[4];
+            lrt.GetLocalCorners(corners);
+            var left = lrt.localPosition.x + corners[0].x;
+            var midY = lrt.localPosition.y + (corners[0].y + corners[1].y) * 0.5f;
+            rt.localPosition = new Vector3(left, midY, 0f);
+            var img = AddImage(rt.gameObject, S("icons/icon_thread.png"));
+            img.preserveAspect = true;
+            if (label.alignment is TextAlignmentOptions.Left or TextAlignmentOptions.MidlineLeft or TextAlignmentOptions.TopLeft
+                or TextAlignmentOptions.BottomLeft or TextAlignmentOptions.BaselineLeft or TextAlignmentOptions.CaplineLeft)
+            {
+                var m = label.margin;
+                m.x = HudThreadIconSize + 6f;
+                label.margin = m;
+            }
+            else
+            {
+                // 中央揃え・右揃えなら文字の位置はそのまま、絵を枠の左の外へ
+                rt.localPosition = new Vector3(left - HudThreadIconSize - 4f, midY, 0f);
+            }
+
+            label.text = "x0";
+            PrefabUtility.SaveAsPrefabAsset(root, HudPrefabPath);
+            return $"HUD ThreadIcon at {rt.localPosition} (label align {label.alignment}, size {lrt.rect.size})";
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+    }
+
+    /// <summary>
     /// 消耗品アイテム (Assets/Items/*.asset の ItemDefinition) のアイコン。専用の絵が来るまで image-gen の仮素材
     /// (_temp/icon_&lt;id&gt;.png = 通常、icon_&lt;id&gt;_gray.png = 所持数 0) を入れる (UIAssignment.md「4回目の決定」3)。
     /// </summary>
@@ -509,16 +566,20 @@ public static class BuildUI
             ("MachiNeedle", "machi_needle"), ("MishinNeedle", "mishin_needle"), ("ClothCutter", "cloth_cutter"),
             ("ThreadBall", "thread_ball"), ("BobbinBomb", "bobbin_bomb"), ("PinCushion", "pin_cushion"),
         };
+        // ミシン針・まち針・布カッターは Drive の本素材 (icons/: Props の絵を 256 に縮めた物と、灰色 = 輝度 ×0.58。PendingChanges 14)。
+        // 残り 3 種は仮素材 (_temp/) のまま
+        var real = new HashSet<string> { "mishin_needle", "machi_needle", "cloth_cutter" };
         var log = "";
         foreach (var (asset, id) in map)
         {
             var def = AssetDatabase.LoadAssetAtPath<ItemDefinition>($"Assets/Items/{asset}.asset") ?? throw new Exception("item missing: " + asset);
             var so = new SerializedObject(def);
-            so.FindProperty("_icon").objectReferenceValue = S($"_temp/icon_{id}.png");
-            so.FindProperty("_iconEmpty").objectReferenceValue = S($"_temp/icon_{id}_gray.png");
+            var dir = real.Contains(id) ? "icons" : "_temp";
+            so.FindProperty("_icon").objectReferenceValue = S($"{dir}/icon_{id}.png");
+            so.FindProperty("_iconEmpty").objectReferenceValue = S($"{dir}/icon_{id}_gray.png");
             so.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(def);
-            log += $"{asset} ({def.DisplayName}) <- icon_{id}\n";
+            log += $"{asset} ({def.DisplayName}) <- {dir}/icon_{id}\n";
         }
 
         AssetDatabase.SaveAssets();
@@ -553,6 +614,8 @@ public static class BuildUI
         // 絵: ステージの拾い物の絵を仮に使う (UIAssignment.md「3回目の決定」2)。秘伝書 (A1_Skill_SpinSlash) は 2026-10-03 に項目ごと削除 (屋根裏のご褒美を糸の大束に変更)
         var heartPin = AssetDatabase.LoadAssetAtPath<Sprite>(PropsPath + "heart_pin.png") ?? throw new Exception("heart_pin.png missing");
         var spool = AssetDatabase.LoadAssetAtPath<Sprite>(PropsPath + "thread_spool.png") ?? throw new Exception("thread_spool.png missing");
+        // コイン (PendingChanges 16): 数えて持つ物。Flag は無く、枚数 1 以上で入手済み。絵は Drive の本素材 (Props/coin.png を 512 に縮めた icons/icon_coin.png)
+        var coin = S("icons/icon_coin.png");
         CollectionCatalog.Entry E(string flag, string name, string desc, Sprite icon = null) =>
             new() { Flag = flag, Name = name, Description = desc, Icon = icon };
         catalog.SetEntries(
@@ -565,6 +628,7 @@ public static class BuildUI
                 E("A1_Spool1", "糸巻き1", todoDesc, spool),
                 E("A1_Spool2", "糸巻き2", todoDesc, spool),
                 E("A1_Spool3", "糸巻き3", todoDesc, spool),
+                new() { Flag = "", Name = "コイン", Description = todoDesc, Icon = coin, Counter = CollectionCounter.Coins },
             },
             new[]
             {
@@ -576,7 +640,7 @@ public static class BuildUI
             });
         EditorUtility.SetDirty(catalog);
         AssetDatabase.SaveAssets();
-        return "CollectionCatalog: 7 collectibles, 5 journals";
+        return "CollectionCatalog: 8 collectibles (coin = count), 5 journals";
     }
 
     /// <summary>
@@ -740,6 +804,10 @@ public static class BuildUI
         var threadStrip = Img("ThreadFrame", root, "item/soubi/soubi_frame2.png", new Vector2(522f, 308f));
         var thread = Txt("Thread", threadStrip.transform, "糸  0", new Vector2(0f, 4f), new Vector2(540f, 70f), ItemThreadFont, Orange,
             TextAlignmentOptions.Midline, LabelSpacing);
+        // 糸巻きの絵 (PendingChanges 14)。帯の左寄り、文字 (中央揃え) と重ならない位置
+        var threadIcon = AddImage(Rect("ThreadIcon", threadStrip.transform, new Vector2(-170f, 4f), Vector2.one * ThreadIconSize).gameObject,
+            S("icons/icon_thread.png"));
+        threadIcon.preserveAspect = true;
 
         // 中央の縦長の枠: ハサミ強化
         var mid = Img("UpgradeFrame", root, "item/soubi/soubi_frame3.png", new Vector2(0f, -132.5f));
@@ -843,6 +911,7 @@ public static class BuildUI
         float[] xs = { -733f, -440f, -146.5f, 146.5f, 440f, 733f };
         float[] ys = { 120f, -122f, -365f };
         var cells = new List<(RectTransform, Image, TMP_Text)>();
+        var countTexts = new List<TMP_Text>();
         for (var r = 0; r < ys.Length; r++)
         for (var c = 0; c < xs.Length; c++)
         {
@@ -850,6 +919,10 @@ public static class BuildUI
             var ic = IconSlot(f.transform, new Vector2(0f, 6f), new Vector2(180f, 170f));
             var label = WrapTxt("Name", f.transform, "", new Vector2(0f, 6f), new Vector2(200f, 170f), CollectionCellFont, Orange,
                 TextAlignmentOptions.Center, 16f);
+            // 数 (コインの枚数)。枠の右下
+            var count = Txt("Count", f.transform, "", new Vector2(40f, -62f), new Vector2(120f, 44f), CollectionCountFont, Orange,
+                TextAlignmentOptions.BottomRight);
+            countTexts.Add(count);
             cells.Add((f.rectTransform, ic, label));
         }
 
@@ -882,7 +955,10 @@ public static class BuildUI
         var arr = so.FindProperty("_cells");
         arr.arraySize = cells.Count;
         for (var i = 0; i < cells.Count; i++)
+        {
             SetCell(arr.GetArrayElementAtIndex(i), cells[i].Item1, cells[i].Item2, cells[i].Item3);
+            arr.GetArrayElementAtIndex(i).FindPropertyRelative("Count").objectReferenceValue = countTexts[i];
+        }
         so.FindProperty("_pageDots").objectReferenceValue = dots;
         var pages = so.FindProperty("_pageSprites");
         pages.arraySize = 3;

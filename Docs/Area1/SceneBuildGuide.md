@@ -104,8 +104,9 @@ unity command capture_scene_view --caller plugin --skill unity-cli --width 1600 
 ### 配置物 (グループ: Transitions / Terrain Objects / Gimmicks / Pickups / Enemies / TutorialHints / Props / Background)
 | メソッド | 内容 |
 |---|---|
-| `HiddenWall(x0,y0,x1,y1, flagId, hp=3)` | 隠し壁 = BreakableBox(`_flagId`) + ひび割れタイルの Tiled スプライト, layer 10。範囲の岩は自動で消す。flag は `A1_Hidden_<部屋>` |
-| `SkillBlock(x0,y0,x1,y1, PlayerSkill, flagId)` | SkillBreakable (落下/突進/大ジャンプの専用タイル絵)。flag は `A1_Slam_<部屋>_<n>` 等 |
+| `HiddenWall(x0,y0,x1,y1, flagId, hp=1)` | 隠し壁。**1 セル = 1 個の BreakableBox** (子 `Cell_x_y`, ひび割れタイルの絵, hp はセルごと, 同じ `_flagId`), layer 10。範囲の岩は自動で消す。flag は `A1_Hidden_<部屋>` (§14) |
+| `SkillBlock(x0,y0,x1,y1, PlayerSkill, flagId)` | SkillBreakable (落下/突進/大ジャンプの専用タイル絵)。**1 セル = 1 個** (同じ flag)。flag は `A1_Slam_<部屋>_<n>` 等 (§14) |
+| `Crate(x, floorY, coinId=null)` / `CrateStack(x, floorY, count, coinId, coinIndex)` | 壊せる木箱 (BreakableBox hp 1, cargo_crate, Rigidbody2D 動的・横と回転固定 = 積める)。coinId (`A1_Coin_<部屋>_<n>`) でコインの箱 (§14) |
 | `Spikes(x0, x1, y)` | トゲ床 (HazardZone, 安全地点へ戻す, layer 2) |
 | `Ladder(x, y0, y1)` | 梯子 (見た目 + 2.5 間隔のすり抜け横木) |
 | `ConveyorBelt(x0, x1, top, speed, reverseFlag)` | Conveyor (layer 10) |
@@ -113,7 +114,7 @@ unity command capture_scene_view --caller plugin --skill unity-cli --width 1600 
 | `Enemy(x, y, flying, scale, heavy, name)` | Enemy/FlyingEnemy プレハブ。y = 床+1 |
 | `BossRoom(arenaRect, flag, bossPos, flying, gateRects[], msg, followUpMessage="", followUpUnlessRed=false)` | BossArena + 仮ボス (2倍+Heavy) + 非アクティブのゲート。followUp = 撃破通知の後の一文 (赤ハサミ未入手時だけ等) |
 | `SpeakerAt(x, floorY, flag)` / `SavePointAt(x, floorY)` | スピーカー / セーブ (ベンチの絵) |
-| `ThreadPickupAt(x, y, amount, pickupId)` / `KeyItemAt(x, floorY, name, flag, pickupId)` / `ConsumablePickupAt(...)` | ピックアップ。Id は `A1_Pickup_<部屋>_<n>` |
+| `ThreadPickupAt(x, y, amount, pickupId)` / `KeyItemAt(x, floorY, name, flag, pickupId)` / `ConsumablePickupAt(...)` | ピックアップ。Id は `A1_Pickup_<部屋>_<n>`。糸の絵は Drive の糸巻き `PropsRoot + "/thread_spool.png"` (100 以上は ×1.25)。`Art()` は "Assets/" で始まるパスをそのまま読む (`PropsRoot` = `Assets/LocalData/StageAsset/Props`) |
 | `Hint(x0,y0,x1,y1, keyboard, gamepad, name)` | TutorialHintZone (layer 2) |
 | `Prop(relPath, x, y, scale, order, flipX)` | Area1Gen の飾り (当たり無し) |
 | `NpcDialogueAt(x, floorY, sprite, name, label, repeatLabel, talkedFlag, rewardThread, flipX)` | **Utage 会話の NPC** (NpcTalkPoint, layer 11 + トリガー)。セリフは Dialogue.xls のラベル。一度きりの糸は talkedFlag + rewardThread。エリア1 の NPC はこちら (2026-10-03〜) |
@@ -509,3 +510,37 @@ UI ごとに専用プレハブ + 専用 UI シーン (`Assets/Scenes/UI/`, 名�
 変えていないシーン (数): T1 0 / T2 1 / B1 ボス / H 0 / C1 0 / U3 闘技場 (波で出る) / U4 0 / MB1・MB2・AB ボス。合計 21 体を追加、17 シーンを作り直し Validate 全 0 error / 0 warning。
 再生で T3 / U1 / U2 / W1 / W2 / W5 / FP / D4 の敵が置いた位置で床に立つ・浮く・巡回することを確認。
 点検: `SceneScripts/enemy_shots.cs` (`EnemyShots.Many(scene, tag, "name:x:y;...")` = 指定位置を ortho 8 で撮る) → `Assets/Screenshots/Area1/enemies_before_*` / `enemies_after_*`、左右比較 `sheets/enemies_sheet_<scene>.png` (右の赤丸 = 足した敵)。
+
+## 14. プロップス素材・糸の粒・コイン・箱を一つずつ (2026-10-03, PendingChanges 14〜17)
+
+**素材** (Drive「プロップス素材」→ 1024 の正方形に切り抜き): `Assets/LocalData/StageAsset/Props/` の coin / thread_spool / mishin_needle / machi_needle / cloth_cutter (+ 小さい粒用の 128px 縮小 thread_piece / coin_piece)。
+インポートは `SceneScripts/prep_props.cs` (Sprite, 中心ピボット, PPU = 幅 = 1 単位, ミップマップなし, 最大 512, 非圧縮)。UI 用は `Assets/LocalData/UI/icons/` (256 / 512 に縮めた物と灰色 = 輝度 ×0.58, `import_ui.cs` が設定)。
+使い道: ステージの糸の大束・糸 (`ThreadPickupAt`) / T3b のまち針 (`ConsumablePickupAt` の絵) / 散らばる糸の粒 / コイン。HUD の糸・アイテム画面の糸の帯・アイテムの選び直しの一覧のアイコンは UIImplementation.md §12。
+
+**糸の粒** (Gimmicks.md「LootPiece」): 敵を倒すと糸が粒になって散らばり、触れる/近づくと拾える (以前の自動加算は廃止)。粒 = min(糸, 12) 個、値は均等割り。いまの敵の糸は 2 (EnemyConsts / Swift)、3 (Heavy = 仮ボス・重装甲) なので粒は 2〜3 個 (ボスは広く飛ぶだけ)。
+
+**コインの箱** (6 か所。取ったら `A1_Coin_<部屋>_1` が立ち、箱ごと出なくなる):
+
+| コイン Id | シーン | 部屋 | 位置 (箱) | 置き方 |
+|---|---|---|---|---|
+| `A1_Coin_T3c_1` | A1_T3 | T3c 楽屋裏の勝手口 (行き止まり) | 左の隅 x142.5 床 y-96 | 3 段積みの真ん中 + 横に 1 |
+| `A1_Coin_H2_1` | A1_H | H2 迷子センター | 高い棚 (y-14) の右端 x230.4 | 1 個 |
+| `A1_Coin_U2r_1` | A1_U2 | U2r 裏方の通用口 (床下) | 西の行き止まり x156.5 床 y-12 | 2 段積みの下 + 横に 1 |
+| `A1_Coin_D5_1` | A1_D5 | 蒸気管の迷路の下の通路 E (寄り道の輪) | 西の端 x187.5 床 y-150 (縦穴 B の底の段の下) | 2 段積みの上 + 横に 1 |
+| `A1_Coin_W1_1` | A1_W1 | 観覧車の乗り場 | 壊れた乗り場のリフトのかご (上面 y12) x42.2 (鉄骨 y9/y15 から跳び移る) | 1 個 |
+| `A1_Coin_FP2_1` | A1_FP | FP2 正門前の並木道 | 閉じた売店の屋根 (y14, 二段ジャンプ) x427.6 | 1 個 |
+
+**箱は一つずつ** (PendingChanges 17 「積んだ箱がまとめて壊れる」): 原因は、隠し壁 (`HiddenWall`) とスキルブロック (`SkillBlock`) が「矩形 1 個の BreakableBox / SkillBreakable + Tiled の絵」だったこと。絵は箱を積んだように見える (特に落下攻撃の橙のブロック) のに、1 回当てると全部消えていた。
+- ビルダーで 1 セル = 1 個に分けた (子 `Cell_x_y`、同じフラグ。1 個壊れるとフラグが立ち、隠し部屋の幕が開く。再訪では全部消えている)。
+- 通常攻撃は箱・ブロックを 1 回に 1 つだけ (プレイヤーに一番近い物。`PlayerController.PerformAttackHit`)。敵への当たり方は変えていない。
+- スキル (落下攻撃・大ジャンプ・突進) は体が通るセルだけを砕く。落下攻撃は積んだ段を順に突き抜ける (`GroundSlamState`: 着地しかけても足元のブロックを砕けたら落下を続ける)。
+- 隠し壁のセルの hp は 1 (以前は壁全体で 3)。T2 の 2×3 の壁は 4 回 (下 2 段) で通れる。
+- テストプレイのボット: `BotExecutor.BreakBlocker` は足元と頭の高さの 2 本の線で壁を探す (下の段を壊した後に頭の段が残るため)。ボットは糸の自動加算に頼っていない (糸を使う所が無い)。
+
+作り直し (16 シーン, Validate 全 0 error / 0 warning): T2 T3 H U2 U3 U4 W1 W2 W4 W5 D2 D3 D4 D5 AB FP。前後の全オブジェクト比較で違いは 隠し壁/スキルブロックのセル化・木箱・T3b の絵・岩の飾りの散らし直し (木箱の位置を避けるため数個) だけ。
+
+再生で確認 (`SceneScripts/playtest_props.cs`, スクリーンショット `Assets/Screenshots/Area1/props_*.png`):
+- T3 の敵を倒す → 粒 2 個が散って床で止まる (`props_thread_scatter_*`) → 近づくと吸い寄せられて取れ、糸 0→2、帯は出ない (`props_thread_collected_*`)。B1 のボス → 粒 3 個が広く飛ぶ (`props_boss_scatter_*`)。
+- T3c の木箱: 1 回の攻撃で 1 個ずつ壊れ、下を壊すと上が落ちる (`props_crates_before/hit1/hit2`)。コインの箱からコインが飛び出し (`props_coin_pop_*`)、取るとコイン 1。H2 の箱 → 「コインを手に入れた (計 1 枚)」(`props_coin_box_h2_*`)。T3 を出て入り直すとコインの箱だけ無く、ほかの木箱は復活 (`props_coin_reenter_*`)。セーブの `coins` と `A1_Coin_*` フラグの出し入れ (`SaveCheck`)。
+- T2 の隠し壁: 1 回に 1 セル (`props_wall_before/hit1/hit4`)。H の床の落下攻撃ブロック: 落下攻撃で 1 列 (3 段) を突き抜けて Hs2 へ (`props_slam_before` / `props_slam_after_*`)。
+- Hs1 の糸の大束・T3b のまち針の新しい絵 (`props_thread_bundle_hs1_*` / `props_machi_needle_t3b_*`)、U2r の積んだ木箱 (`props_crates_u2r_*`)。

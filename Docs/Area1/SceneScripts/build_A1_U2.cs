@@ -148,6 +148,10 @@ public static class BuildU2
         // 奥の紫の板壁 (突進でのみ壊れる)
         SkillBlock(177, -12, 180, -3, PlayerSkill.ChargeRush, "A1_Rush_U2r");
         HangLamp(170f, -3f, 0.55f);
+        // コインの箱 (2026-10-03 PendingChanges 16: 決めた箱だけにコイン。取ったら二度と出ない。1 回の攻撃で壊れる箱は 1 つ = 17)
+        // U2r の西の行き止まり (床 y-12) に積んだ木箱 2 + 横に 1。下の箱にコイン
+        CrateStack(156.5f, -12f, 2, "A1_Coin_U2r_1", 0);
+        Crate(157.5f, -12f);
 
         // ================= U2r2 (x180..195, y-12..-3): 裏方の倉庫。糸の大束×80
         Prop("props/shop_stall.png", 189f, -12f, 1.1f, -6, false, new Color(0.5f, 0.45f, 0.58f));  // しまわれた屋台

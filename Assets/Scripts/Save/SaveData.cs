@@ -34,6 +34,9 @@ public class SaveData
     /// <summary>素材「糸」の所持数。</summary>
     public int thread;
 
+    /// <summary>コイン (収集品) の枚数。取ったコインの箱は progressFlags の A1_Coin_* で分かる (旧セーブは 0)。</summary>
+    public int coins;
+
     /// <summary>装備中の近接攻撃 (□) の ID (AttackDefinition のアセット名。空は未装備)。</summary>
     public string equippedMeleeId;
 

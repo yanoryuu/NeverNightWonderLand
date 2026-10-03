@@ -22,7 +22,7 @@ public sealed class ThreadCountPresenter : IStartable, IDisposable
 
     public void Start()
     {
-        _subscription = _inventory.Thread.Subscribe(thread => _view.SetText($"糸 x{thread}"));
+        _subscription = _inventory.Thread.Subscribe(thread => _view.SetText($"x{thread}"));
     }
 
     public void Dispose()

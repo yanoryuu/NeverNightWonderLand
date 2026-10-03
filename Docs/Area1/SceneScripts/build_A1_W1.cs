@@ -81,6 +81,9 @@ public static class BuildW1
         carArt.transform.localScale = new Vector3(2f, 1f, 1f);
         AddSprite(carArt, Art("platforms/lift_platform.png"), OrderGimmick, null, new Color(0.8f, 0.7f, 0.8f));
         Box(car, new Vector2(5.6f, 0.5f), false, new Vector2(0, 0.25f));
+        // コインの箱 (2026-10-03 PendingChanges 16: 決めた箱だけにコイン。取ったら二度と出ない。1 回の攻撃で壊れる箱は 1 つ = 17)
+        // 壊れた乗り場のリフトのかご (上面 y12, 鉄骨 y9/y15 から跳び移る) に残った荷物の木箱 1 つ (コイン入り)
+        Crate(42.2f, 12f, "A1_Coin_W1_1");
         var cable = NewObject("SnappedCable", new Vector2(44.6f, 15.2f), LayerDefault, "Props");
         cable.transform.rotation = Quaternion.Euler(0, 0, 80f);
         AddSprite(cable, Art("ferris/spoke_beam.png"), -6, new Vector2(7f, 0.25f), new Color(0.55f, 0.55f, 0.62f));

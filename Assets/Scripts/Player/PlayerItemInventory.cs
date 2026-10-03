@@ -6,7 +6,8 @@ using VContainer;
 /// <summary>
 /// 携帯アイテムの所持数・スロットと素材「糸」の管理 (MonoBehaviour アダプタ)。
 /// データの実体は <see cref="PlayerItemInventoryModel"/> が持ち、本クラスはカタログの提供
-/// (ScriptableObject 参照) と敵ドロップ購読などシーン側との橋渡しを担う。
+/// (ScriptableObject 参照) などシーン側との橋渡しを担う。敵の糸のドロップは ThreadDropSpawner が地面に散らす粒になり、
+/// 拾った時に <see cref="AddThread"/> される。
 /// Model は PlayerLifetimeScope (プレハブ同梱) 経由で注入され、DI の無いシーンでは自前生成にフォールバックする。
 /// </summary>
 [RequireComponent(typeof(PlayerController))]
@@ -22,6 +23,9 @@ public class PlayerItemInventory : MonoBehaviour
     private bool _ownsModel;
 
     public ReadOnlyReactiveProperty<int> Thread => _model.Thread;
+
+    /// <summary>コインの枚数 (収集品。HUD には出さない)。</summary>
+    public ReadOnlyReactiveProperty<int> Coins => _model.Coins;
 
     /// <summary>入手できる全アイテム (メニューの一覧などに使う)。</summary>
     public IReadOnlyList<ItemDefinition> Catalog => _model.Catalog;
@@ -44,25 +48,10 @@ public class PlayerItemInventory : MonoBehaviour
         _model.ResetForSpawn(_catalog, _defaultSlots);
     }
 
-    private void OnEnable()
-    {
-        EnemyController.ThreadDropped += OnThreadDropped;
-    }
-
-    private void OnDisable()
-    {
-        EnemyController.ThreadDropped -= OnThreadDropped;
-    }
-
     private void OnDestroy()
     {
         if (_ownsModel)
             _model.Dispose();
-    }
-
-    private void OnThreadDropped(Vector2 position, int amount)
-    {
-        _model.AddThread(amount);
     }
 
     #region Slots
@@ -95,7 +84,11 @@ public class PlayerItemInventory : MonoBehaviour
 
     #region Thread / Refill
 
-    public void AddThread(int amount) => _model.AddThread(amount);
+    /// <summary>糸を増やす。notify = false なら入手通知の帯を出さない (敵の糸の粒など、HUD の所持数だけ増える物)。</summary>
+    public void AddThread(int amount, bool notify = true) => _model.AddThread(amount, notify);
+
+    /// <summary>コインを増やす (通知は呼び出し側)。</summary>
+    public void AddCoins(int amount) => _model.AddCoins(amount);
 
     /// <summary>糸を消費する (ショップ購入用)。足りなければ false。</summary>
     public bool TrySpendThread(int amount) => _model.TrySpendThread(amount);

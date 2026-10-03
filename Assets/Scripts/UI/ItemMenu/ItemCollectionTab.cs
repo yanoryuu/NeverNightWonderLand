@@ -5,6 +5,7 @@ using UnityEngine.UI;
 /// <summary>
 /// アイテム画面「収集品」タブ (完成形 item/shushu/装備_shushu.png / 装備_shushu_detail.png)。
 /// - 18 枠 (6×3) × 3 ページ。CollectionCatalog の収集品を先頭から並べ、入手済み (フラグが立っている) の物だけ名前 (絵) を出す。未入手は空の枠
+/// - 数えて持つ物 (コイン, Entry.Counter) は 1 枚以上で入手済み。枠の右下に「x枚数」、詳細の説明の後に「持っている数」
 /// - 上下左右で枠を移動。上の段から上 / 下の段から下でページを移る (右端のページの点 shushu_page1〜3 と矢印)
 /// - 決定で詳細 (左に絵・右に名前と説明)。BACK / NEXT (左右) で前後の入手済みの物へ、戻る (閉じる) で一覧へ
 /// </summary>
@@ -142,7 +143,25 @@ public class ItemCollectionTab : ItemMenuTab
     private CollectionCatalog.Entry EntryAt(int i) =>
         _catalog != null && i >= 0 && i < _catalog.Collectibles.Count ? _catalog.Collectibles[i] : null;
 
-    private bool IsObtained(int i) => EntryAt(i)?.IsObtained == true;
+    private bool IsObtained(int i) => IsObtained(EntryAt(i));
+
+    /// <summary>入手済みか: 数えて持つ物 (コイン) は所持数 1 以上、それ以外はフラグ。</summary>
+    private bool IsObtained(CollectionCatalog.Entry entry) =>
+        entry != null && (entry.Counter != CollectionCounter.None ? CountOf(entry) > 0 : entry.IsObtained);
+
+    /// <summary>数えて持つ物の所持数 (それ以外は 0)。</summary>
+    private int CountOf(CollectionCatalog.Entry entry)
+    {
+        if (entry == null || entry.Counter == CollectionCounter.None)
+            return 0;
+
+        var inventory = Player != null ? Player.Inventory : null;
+        return entry.Counter switch
+        {
+            CollectionCounter.Coins => inventory != null ? inventory.Coins.CurrentValue : 0,
+            _ => 0,
+        };
+    }
 
     private void RenderPage()
     {
@@ -156,9 +175,10 @@ public class ItemCollectionTab : ItemMenuTab
                 continue;
 
             var entry = EntryAt(_page * CellsPerPage + i);
-            var obtained = entry != null && entry.IsObtained;
+            var obtained = IsObtained(entry);
             SetIcon(cell.Icon, obtained ? entry.Icon : null);
             SetText(cell.Label, obtained && entry.Icon == null ? entry.Name : "");
+            SetText(cell.Count, obtained && entry.Counter != CollectionCounter.None ? $"x{CountOf(entry)}" : "");
         }
 
         RenderSelection();
@@ -196,7 +216,9 @@ public class ItemCollectionTab : ItemMenuTab
         SetIcon(_detailIcon, entry.Icon);
         SetText(_detailIconName, entry.Icon == null ? entry.Name : "");
         SetText(_detailName, entry.Name);
-        SetText(_detailText, entry.Description);
+        SetText(_detailText, entry.Counter != CollectionCounter.None
+            ? $"{entry.Description}\n\n持っている数: {CountOf(entry)} 枚"
+            : entry.Description);
         SetArrowAlpha(_backArrow, FindObtained(entryIndex, -1) >= 0);
         SetArrowAlpha(_nextArrow, FindObtained(entryIndex, +1) >= 0);
 

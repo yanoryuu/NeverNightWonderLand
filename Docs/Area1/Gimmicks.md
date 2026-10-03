@@ -287,18 +287,30 @@ BossArena の複数ウェーブ版。入るとゲートを閉じ、ウェーブ�
 
 配置例 (スピーカー3つの大扉): FlagDoor(`_flagId="A1_Speaker1"`, `_additionalFlags=["A1_Speaker2","A1_Speaker3"]`, `_slideDistance`=扉の高さ)。
 
-### BreakableBox (`Assets/Scripts/Enemy/BreakableBox.cs`) — 永続化フラグ対応
+### BreakableBox (`Assets/Scripts/Enemy/BreakableBox.cs`) — 永続化フラグ・コインの箱対応
 攻撃で壊れる箱/隠し壁 (HP+防御値ダメージ合算)。**`_flagId` を追加**: 設定すると破壊時に Set、フラグ済みなら Awake で消える。空なら従来どおり再入場で復活。
 - 必須: SpriteRenderer + 非トリガー Collider2D、攻撃が当たるよう **layer 10** (足場・壁として振る舞う) か 9。
+- **1 回の攻撃で壊れるのは 1 つだけ** (2026-10-03 PendingChanges 17): `PlayerController.PerformAttackHit` は当たった物のうち箱・ブロック (BreakableBox / SkillBreakable) は**プレイヤーに一番近い 1 つ**にだけダメージを与える (敵など他の物は今まで通り全部)。突進系のアイテム・スキル・ボビン爆弾・飛び道具は従来どおり。
+- **隠し壁・スキルブロックは 1 セル = 1 個** (ビルダー `HiddenWall` / `SkillBlock` が子 `Cell_x_y` を並べる)。全セルが同じ `_flagId` を共有し、1 セル壊れた時点でフラグが立つ (隠し部屋の幕が開く)。再訪では同じフラグのセルが全部消えている。以前は壁全体が 1 個 (Tiled の絵) で、1 発で全部消えていた = 「積んだ箱がまとめて壊れる」の原因。
 
 | フィールド | 型 | 既定 | 意味 |
 |---|---|---|---|
 | `_maxHp` | int | 1 | 耐久 |
 | `_flagId` | string | "" | **新規**。破壊の永続化 (例 `A1_Hidden_U2`) |
+| `_coinId` | string | "" | **新規 (2026-10-03)**。コインの箱: 壊すと `CoinPiece` が飛び出す (例 `A1_Coin_T3c_1`)。コインを取った後 (GameProgress に `_coinId`) は箱ごと出ない。取らずに部屋を出たら次は箱もコインも元どおり |
+| `_coinPrefab` | CoinPiece | null | コインのプレハブ (`Assets/Prefabs/CoinPiece.prefab`) |
 | `_hitFlashTime` | float | 0.1 | 被弾フラッシュ |
 | `_breakFadeTime` | float | 0.3 | 破壊演出時間 |
 
-配置例 (隠し壁): 岩と同じ見た目のスプライトで通路を塞ぐ BreakableBox(`_maxHp=3`, `_flagId="A1_Hidden_<部屋>"`) を layer 10 に。
+配置例 (隠し壁): ビルダー `HiddenWall(x0,y0,x1,y1,"A1_Hidden_<部屋>", hp=1)` (セルごとの hp。以前の壁全体 HP3 から変更)。
+配置例 (木箱): ビルダー `Crate(x, floorY, coinId=null)` / `CrateStack(x, floorY, count, coinId, coinIndex)`。絵 = `Area1Gen/props/cargo_crate.png`、hp 1、Rigidbody2D (動的, 横と回転を固定) なので積むと乗り、下を壊すと上が落ちる。箱そのものは永続化しない。
+
+### LootPiece / ThreadPiece / CoinPiece / ThreadDropSpawner (`Gimmick/Pickups/`) — 地面に散らばって拾う物 (2026-10-03 新規)
+- `LootPiece` (基底): Rigidbody2D (動的, 回転固定) + CircleCollider2D + 跳ねる物理マテリアル (`Prefabs/LootBounce`: 弾み 0.35 / 摩擦 0.8)。**layer 2 (Ignore Raycast)** で、`Rigidbody2D.excludeLayers = ~Ground` なので当たるのは layer 10 だけ (プレイヤー・敵・トリガーとは接触しない。すり抜け床は上から落ちれば乗る)。出てから `_pickupDelay` 0.35 秒後、プレイヤー中心から `_magnetRadius` 1.6 以内で吸い寄せ (物理を止めて直接動かす)、`_collectRadius` 0.55 以内で取得 → ふくらんで消える。消えるのは取得とシーン遷移だけ (時間では消えない)。出た位置から `_lostFallDistance` 40 下へ落ちたら (地形の外) その場で取得扱い。生成位置が地形の中なら上へずらす (`FreeSpawnPoint`)。
+- `ThreadPiece` (`Prefabs/ThreadPiece.prefab`, 絵 `StageAsset/Props/thread_piece.png` = 糸巻きの 128px 縮小): 取ると `AddThread(value, notify: false)` = **入手通知の帯は出さない** (HUD の所持数が増えるだけ)。
+- `ThreadDropSpawner` (Player.prefab): `EnemyController.ThreadDropped (位置, 数, 敵の大きさ)` を購読して粒を散らす (以前の「倒した瞬間に自動加算」は廃止)。粒の数 = min(糸, `_maxPieces` 12)、値は均等割り (余りは先頭)。大きさ = `_pieceScale` 0.38 × (1 + 0.15 × (値−1))。初速: 横 ±`_burstX` 3.2 × 広がり (敵の大きさ × (1 + 0.04 × 粒数))、上 `_burstY` 5〜8.5 (ボス (scale 2) は ×1.2)。プレハブが無い時は従来どおりその場で加算。
+- `CoinPiece` (`Prefabs/CoinPiece.prefab`, 0.55 単位, 絵 `Props/coin_piece.png`): 取ると `GameProgress.Set(_coinId)` + `PlayerItemInventory.AddCoins(1)` + 通知「コインを手に入れた (計 n 枚)」。枚数はセーブ (`SaveData.coins`) とアイテム画面の収集品 (`CollectionCatalog` の Counter=Coins の項目) に出す。HUD には出さない。交換は未定。
+- 作り直し: `Docs/Area1/SceneScripts/prep_props.cs` (`PrepProps.Run`: Props の絵のインポート / 2 つのプレハブ / Player.prefab の ThreadDropSpawner)。
 
 ---
 
@@ -331,6 +343,7 @@ BossArena の複数ウェーブ版。入るとゲートを閉じ、ウェーブ�
 ### SkillBreakable (`Gimmick/SkillBreakable.cs`)
 移動スキルの衝撃でのみ壊れるブロック (通常攻撃はヒントのみ)。必須: SpriteRenderer + 非トリガー Collider2D, **layer 10**。
 フィールド: `_requiredSkill` (PlayerSkill: `GroundSlam`=落下攻撃, `SuperJump`=大ジャンプ, `ChargeRush`=横突進), `_flagId` (例 `A1_Slam_<部屋>_<n>`, `A1_Super_<部屋>`, `A1_Rush_<部屋>`), `_lockedMessage` (空=自動)。色: 落下=橙 / 大ジャンプ=空色 / 突進=紫。
+2026-10-03〜: ビルダー `SkillBlock` は **1 セル = 1 個** (同じ `_flagId`)。スキルは当たったセルだけ砕く = 体の通る穴 (落下攻撃・大ジャンプ = 幅 1〜2 の縦穴、突進 = 高さ 2 の横穴) が開く。落下攻撃は着地しかけた時も足元のブロックを砕いて落下を続ける (`GroundSlamState`: 積んだ段を順に突き抜ける)。ヒント通知の連発防止は全ブロック共通 (2 秒) で、スキルで砕いた直後 1 秒は出さない。
 
 ### UpgradeWall (`Gimmick/UpgradeWall.cs`)
 指定のハサミ強化を持つ攻撃でのみ壊れる壁。必須: SpriteRenderer + Collider2D, layer 10。フィールド: `_required` (ScissorUpgrade, Red), `_flagId`, `_lockedMessage`。
@@ -350,8 +363,8 @@ BossArena の複数ウェーブ版。入るとゲートを閉じ、ウェーブ�
 
 ### ItemPickup 系 (`Gimmick/Pickups/`)
 共通 (基底 `ItemPickup`): 必須 SpriteRenderer, **layer 11** + トリガー Collider2D。フィールド `_pickupId` (永続化 Id, 例 `A1_Pickup_<部屋>_<n>`。空=再訪で復活), `_promptText` (拾う), `_promptOffset` ((0,1,0))。
-- `ThreadPickup`: `_amount` (int, 10) 糸。
-- `ConsumableItemPickup`: `_item` (ItemDefinition, プレイヤーのカタログ内), `_count` (1)。
+- `ThreadPickup`: `_amount` (int, 10) 糸。絵は Drive の糸巻き `StageAsset/Props/thread_spool.png` (2026-10-03〜。ビルダー `ThreadPickupAt`、100 以上の大束は ×1.25)。
+- `ConsumableItemPickup`: `_item` (ItemDefinition, プレイヤーのカタログ内), `_count` (1)。まち針 (A1_T3 の T3b) は絵を Drive の `Props/machi_needle.png` に (ミシン針・布カッターはステージに置いていない)。
 - `EquipmentPickup`: `_attack` (AttackDefinition) 攻撃方法の解放。
 - `KeyItemPickup`: `_itemName` (通知用), `_flagId` (立てるフラグ)。
 - `UpgradePickup` (新規, 上記)。
@@ -408,7 +421,8 @@ UI シーン StageUI (プレハブ `StageUI.prefab`) の子 (旧ステージは�
 | `A1_LiftWheel`, `A1_FenceOpen`, `A1_LadderBackstage`, `A1_BeltReversed` | LeverSwitch `_progressFlag` | MovingPlatform `_requiredFlag` / FlagDoor / FlagActivator / Conveyor `_reverseFlag` |
 | `A1_ArenaCups`, `A1_RatNest` | WaveArena `_flagId` | FlagActivator (ご褒美) |
 | `A1_Boss1`, `A1_MidBossUpper`, `A1_MidBossLower`, `A1_AreaBoss` | BossArena `_flagId` | FlagActivator (UpgradePickup 等) / BossPhaseSwitch `_defeatedFlag` |
-| `A1_Hidden_*` | BreakableBox `_flagId` | — |
+| `A1_Hidden_*` | BreakableBox `_flagId` (セルごと、共有) | FlagActivator / HiddenRoomCover (隠し部屋の幕) |
+| `A1_Coin_*` | CoinPiece (コインの箱 BreakableBox `_coinId`) | BreakableBox (取った後は箱ごと出ない) |
 | `A1_Slam_*`, `A1_Rush_*`, `A1_Super_*` | SkillBreakable `_flagId` | — |
 | `A1_Pickup_*` | ItemPickup `_pickupId` | — |
 

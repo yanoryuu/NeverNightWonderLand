@@ -66,8 +66,10 @@ public static class BuildT3
         Clear(134, -97, 137, -96); Spikes(134, 137, -97);       // 段から跳ぶ 3 マス
         // 段から登る棚の上に道具「まち針」(落ちるとトゲ)
         OneWay(127, 131, -91);
-        var needle = ConsumablePickupAt(129f, -91f, "Assets/Items/MachiNeedle.asset", 3, "A1_Pickup_T3b_1");
-        needle.GetComponent<BoxCollider2D>().offset = new Vector2(0, 0.6f);
+        // 絵は Drive の本素材のまち針 (2026-10-03 PendingChanges 14。中心ピボット 1 単位なので床の 0.55 上)
+        var needle = ConsumablePickupAt(129f, -90.45f, "Assets/Items/MachiNeedle.asset", 3, "A1_Pickup_T3b_1",
+            PropsRoot + "/machi_needle.png");
+        needle.GetComponent<BoxCollider2D>().offset = Vector2.zero;
 
         // ================= T3c (x141..159, y-99..-84): 楽屋裏の勝手口 (行き止まり)
         Ground(141, 159, -96);
@@ -96,6 +98,11 @@ public static class BuildT3
         AddComp<FlagActivator>(act, ("_flags", new[] { "A1_LadderBackstage" }),
             ("_showWhenSet", new Object[] { lidOpen, ladderTop }), ("_hideWhenSet", new Object[] { lidClosed }));
         MoveSpawn("A1_D2", 155.5f, -94.5f);
+
+        // コインの箱 (2026-10-03 PendingChanges 16: 決めた箱だけにコイン。取ったら二度と出ない。1 回の攻撃で壊れる箱は 1 つ = 17)
+        // T3c (行き止まり) の左の隅に積んだ木箱 3 + 横に 1。真ん中の箱にコイン
+        CrateStack(142.5f, -96f, 3, "A1_Coin_T3c_1", 1);
+        Crate(143.5f, -96f);
 
         // 開かない勝手口 (右の壁)
         Prop("props/fence_gate.png", 157.6f, -96f, 1f, OrderProp, false, new Color(0.8f, 0.75f, 0.85f));

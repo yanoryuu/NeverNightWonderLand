@@ -236,12 +236,17 @@ public class BotExecutor
     private void BreakBlocker(PlayerController player, float dir)
     {
         if (Time.time < _nextTap) return;
+        // 箱・隠し壁は 1 セルずつ壊れるので、足元の高さと頭の高さの両方を見る (下の段を壊した後に頭の段が残る)
         var origin = (Vector2)player.transform.position;
-        var hit = Physics2D.Raycast(origin, new Vector2(dir, 0f), 1.4f, _world.GroundMask);
-        if (hit.collider != null && BotWorld.IsBreakable(hit.collider) && hit.collider.GetComponent<SkillBreakable>() == null)
+        foreach (var dy in new[] { 0f, 0.45f })
         {
-            _input.Tap(PlayerButton.Attack);
-            _nextTap = Time.time + 0.3f;
+            var hit = Physics2D.Raycast(origin + new Vector2(0f, dy), new Vector2(dir, 0f), 1.4f, _world.GroundMask);
+            if (hit.collider != null && BotWorld.IsBreakable(hit.collider) && hit.collider.GetComponent<SkillBreakable>() == null)
+            {
+                _input.Tap(PlayerButton.Attack);
+                _nextTap = Time.time + 0.3f;
+                return;
+            }
         }
     }
 

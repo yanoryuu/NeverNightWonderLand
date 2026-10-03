@@ -97,6 +97,7 @@ public class PlayerSaveBridge : MonoBehaviour
             skills = _progression != null ? _progression.CollectSkills() : new int[0],
             forgeLevel = _progression != null ? _progression.ForgeLevel : 0,
             thread = _inventory != null ? _inventory.Thread.CurrentValue : 0,
+            coins = _inventory != null ? _inventory.Coins.CurrentValue : 0,
             progressFlags = GameProgress.Collect(),
             savedAt = System.DateTime.Now.ToString("o"),
             playTimeSeconds = GameSession.PlayTimeSeconds,

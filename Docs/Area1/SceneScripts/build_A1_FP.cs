@@ -130,6 +130,9 @@ public static class BuildFP
         var pe = roof.AddComponent<PlatformEffector2D>();
         pe.useOneWay = true;
         pe.surfaceArc = 180f;
+        // コインの箱 (2026-10-03 PendingChanges 16: 決めた箱だけにコイン。取ったら二度と出ない。1 回の攻撃で壊れる箱は 1 つ = 17)
+        // 閉じた売店の屋根 (y14, 二段ジャンプで乗る) の上に木箱 1 つ (コイン入り)
+        Crate(427.6f, 14f, "A1_Coin_FP2_1");
 
         // 正門 (扉は閉じたまま)。当たり = 門の形の箱 (上面 y20、アーチの上に立てる)
         var gate = Art2("hall/park_gate.png", 438.5f, 9f, 6.87f, -12);

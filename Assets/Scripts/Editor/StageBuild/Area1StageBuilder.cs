@@ -46,6 +46,9 @@ namespace NeverNight.StageBuild
         // エリア1 専用の RuleTile (内部は絵なし・縁は切り抜き版。下の Backfill に岩肌を敷く)。旧シーンの StageTerrainRule は使わない
         private const string RuleTilePath = Area1AssetPrep.A1TerrainRulePath;
         private const string ArtRoot = Area1AssetPrep.ArtRoot;
+        // Drive「プロップス素材」(2026-10-03 PendingChanges 14): コイン・糸巻き・ミシン針・まち針・布カッター (1024px, PPU 1024 = 1 単位, 中心ピボット)
+        public const string PropsRoot = "Assets/LocalData/StageAsset/Props";
+        public const string CoinPrefabPath = "Assets/Prefabs/CoinPiece.prefab";
 
         // 現在組み立て中のシーン Id (BuildBase で設定。Finish/Validate が使う)
         private static string _sceneId;
@@ -772,9 +775,11 @@ namespace NeverNight.StageBuild
             return c;
         }
 
+        /// <summary>Area1Gen/ からの相対パスで絵を読む。"Assets/" で始まるパスはそのまま (例 PropsRoot + "/coin.png")。</summary>
         public static Sprite Art(string relPath)
         {
-            var s = AssetDatabase.LoadAssetAtPath<Sprite>($"{ArtRoot}/{relPath}");
+            var path = relPath.StartsWith("Assets/") ? relPath : $"{ArtRoot}/{relPath}";
+            var s = AssetDatabase.LoadAssetAtPath<Sprite>(path);
             if (s == null)
                 throw new ArgumentException("sprite not found: " + relPath + " (Area1AssetPrep.ImportArt 済み?)");
             return s;
@@ -863,20 +868,42 @@ namespace NeverNight.StageBuild
         // ================================================================== ギミック
 
         /// <summary>
-        /// 隠し壁 (攻撃で壊れる、BreakableBox + flagId で永続化)。見た目はひび割れタイルの Tiled スプライト。
+        /// 隠し壁 (攻撃で壊れる、BreakableBox + flagId で永続化)。見た目はひび割れタイル。
         /// layer 10 の実体なので岩と同じく足場/壁になる。[x0,x1)×[y0,y1) を塞ぐ。
+        /// **1 セル = 1 個の BreakableBox** (子 "Cell_x_y", hp = セルごと)。1 回の攻撃で壊れるのは 1 セルだけ
+        /// (2026-10-03 PendingChanges 17: 積んだ箱がまとめて壊れる → 一つずつ)。全セルが同じ flagId を共有し、
+        /// 1 セル壊れた時点でフラグが立つ (隠し部屋の幕が開く)。再訪では全セルが消えている。
         /// ※ 岩の Terrain タイルとは別物なので、その範囲の Terrain は Clear しておくこと (このメソッドが消す)。
         /// </summary>
-        public static GameObject HiddenWall(int x0, int y0, int x1, int y1, string flagId, int hp = 3)
+        public static GameObject HiddenWall(int x0, int y0, int x1, int y1, string flagId, int hp = 1)
         {
             FillRect(Map("Terrain"), x0, y0, x1, y1, null);
             FillRect(Map("Backfill"), x0, y0, x1, y1, null); // 壊した後に岩肌が残らないように
             var size = new Vector2(x1 - x0, y1 - y0);
             var go = NewObject("HiddenWall_" + flagId, new Vector2(x0, y0) + size * 0.5f, LayerGround, "Terrain Objects");
-            AddSprite(go, Art("tiles/tile_crack_wall.png"), OrderTerrain, size);
-            Box(go, size, false);
-            AddComp<BreakableBox>(go, ("_maxHp", hp), ("_flagId", flagId));
+            var art = Art("tiles/tile_crack_wall.png");
+            foreach (var cell in Cells(go, x0, y0, x1, y1))
+            {
+                AddSprite(cell, art, OrderTerrain);
+                Box(cell, Vector2.one, false);
+                AddComp<BreakableBox>(cell, ("_maxHp", hp), ("_flagId", flagId));
+            }
             return go;
+        }
+
+        /// <summary>[x0,x1)×[y0,y1) の 1 セルずつの子 (名前 Cell_x_y, レイヤーは親と同じ) を作る。</summary>
+        private static List<GameObject> Cells(GameObject parent, int x0, int y0, int x1, int y1)
+        {
+            var list = new List<GameObject>();
+            for (var y = y0; y < y1; y++)
+            for (var x = x0; x < x1; x++)
+            {
+                var cell = new GameObject($"Cell_{x}_{y}") { layer = parent.layer };
+                cell.transform.SetParent(parent.transform, false);
+                cell.transform.position = new Vector3(x + 0.5f, y + 0.5f, 0f);
+                list.Add(cell);
+            }
+            return list;
         }
 
         /// <summary>移動スキルでのみ壊れるブロック (SkillBreakable)。見た目は各スキル色のタイル。</summary>
@@ -888,9 +915,14 @@ namespace NeverNight.StageBuild
             var art = skill == PlayerSkill.GroundSlam ? "tiles/tile_slam_block.png"
                 : skill == PlayerSkill.ChargeRush ? "tiles/tile_rush_block.png" : "tiles/tile_super_block.png";
             var go = NewObject("SkillBlock_" + flagId, new Vector2(x0, y0) + size * 0.5f, LayerGround, "Terrain Objects");
-            AddSprite(go, Art(art), OrderTerrain, size);
-            Box(go, size, false);
-            AddComp<SkillBreakable>(go, ("_requiredSkill", (int)skill), ("_flagId", flagId));
+            // 1 セル = 1 個 (HiddenWall と同じ。スキルは当たったセルだけ砕く = 体の通る穴が開く)。全セルが flagId を共有
+            var sprite = Art(art);
+            foreach (var cell in Cells(go, x0, y0, x1, y1))
+            {
+                AddSprite(cell, sprite, OrderTerrain);
+                Box(cell, Vector2.one, false);
+                AddComp<SkillBreakable>(cell, ("_requiredSkill", (int)skill), ("_flagId", flagId));
+            }
             return go;
         }
 
@@ -983,10 +1015,13 @@ namespace NeverNight.StageBuild
             return go;
         }
 
-        /// <summary>糸のピックアップ (thread_spool)。pickupId は A1_Pickup_&lt;部屋&gt;_&lt;n&gt;。</summary>
+        /// <summary>
+        /// 糸のピックアップ (糸巻きの絵 = Props/thread_spool.png, 2026-10-03 PendingChanges 14)。pickupId は A1_Pickup_&lt;部屋&gt;_&lt;n&gt;。
+        /// 糸の大束 (100 以上) は少し大きく (×1.25) 描く。
+        /// </summary>
         public static GameObject ThreadPickupAt(float x, float y, int amount, string pickupId)
         {
-            var go = PickupBase("Thread_" + pickupId, "props/thread_spool.png", x, y, 1f);
+            var go = PickupBase("Thread_" + pickupId, PropsRoot + "/thread_spool.png", x, y, amount >= 100 ? 1.25f : 1f);
             AddComp<ThreadPickup>(go, ("_amount", amount), ("_pickupId", pickupId));
             return go;
         }
@@ -1013,6 +1048,43 @@ namespace NeverNight.StageBuild
             AddComp<ConsumableItemPickup>(go, ("_item", AssetDatabase.LoadMainAssetAtPath(itemDefinitionPath)),
                 ("_count", count), ("_pickupId", pickupId));
             return go;
+        }
+
+        /// <summary>
+        /// 壊せる木箱 (BreakableBox, hp 1, 1×1, 絵 = cargo_crate)。(x, floorY) = 箱の下の床面の中心 (箱の中心は floorY + 0.5)。
+        /// Rigidbody2D (動的, 横と回転は固定) なので積むと重なって乗り、下の箱を壊すと上の箱が落ちる。
+        /// coinId を渡すとコインの箱 (A1_Coin_&lt;部屋&gt;_&lt;n&gt;): 壊すとコインが飛び出し、取った後は箱ごと出ない (2026-10-03 PendingChanges 16)。
+        /// 箱そのものは永続化しない (コインの無い箱は再訪で復活)。1 回の攻撃で壊れるのは 1 個だけ (PendingChanges 17)。
+        /// </summary>
+        public static GameObject Crate(float x, float floorY, string coinId = null, Color? tint = null, string name = null)
+        {
+            var go = NewObject(name ?? (string.IsNullOrEmpty(coinId) ? "Crate" : "CoinCrate_" + coinId),
+                new Vector2(x, floorY + 0.5f), LayerGround, "Gimmicks");
+            AddSprite(go, Art("props/cargo_crate.png"), OrderGimmick, null, tint ?? new Color(0.92f, 0.84f, 0.74f));
+            Box(go, new Vector2(0.96f, 1f), false);
+            var rb = go.AddComponent<Rigidbody2D>();
+            rb.bodyType = RigidbodyType2D.Dynamic;
+            rb.gravityScale = 3f;
+            rb.mass = 5f;
+            rb.constraints = RigidbodyConstraints2D.FreezePositionX | RigidbodyConstraints2D.FreezeRotation;
+            rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+            rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            var coinPrefab = string.IsNullOrEmpty(coinId) ? null
+                : AssetDatabase.LoadAssetAtPath<CoinPiece>(CoinPrefabPath)
+                  ?? throw new InvalidOperationException(CoinPrefabPath + " がありません (SceneScripts/prep_props.cs)");
+            AddComp<BreakableBox>(go, ("_maxHp", 1), ("_coinId", coinId ?? ""), ("_coinPrefab", coinPrefab));
+            return go;
+        }
+
+        /// <summary>
+        /// 積んだ木箱 (下から順に Crate を重ねる)。coinIndex 番目 (0 = 一番下) の箱にコイン (coinId)。coinId が null ならコイン無し。
+        /// </summary>
+        public static GameObject[] CrateStack(float x, float floorY, int count, string coinId = null, int coinIndex = 0)
+        {
+            var list = new List<GameObject>();
+            for (var i = 0; i < count; i++)
+                list.Add(Crate(x, floorY + i, i == coinIndex ? coinId : null));
+            return list.ToArray();
         }
 
         /// <summary>セーブポイント (SavePoint.prefab にベンチの絵を差す)。y = 床面。</summary>

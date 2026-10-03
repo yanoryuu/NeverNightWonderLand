@@ -244,6 +244,7 @@ GameObject:
   - component: {fileID: 8107723167950756562}
   - component: {fileID: 643932579543092333}
   - component: {fileID: 4951286625531776819}
+  - component: {fileID: 2698254697732654049}
   m_Layer: 8
   m_Name: Player
   m_TagString: Untagged
@@ -570,3 +571,21 @@ MonoBehaviour:
   _riseVelocity: 3
   _fallVelocity: -3
   _mixDuration: 0.12
+--- !u!114 &2698254697732654049
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6311746777100379849}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7423bbfb3371c74493df38e1ce02c7f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _piecePrefab: {fileID: 6222507469634181466, guid: 2991e25d320f023429a7da8441ea8d9b, type: 3}
+  _maxPieces: 12
+  _pieceScale: 0.38
+  _scalePerValue: 0.15
+  _burstX: 3.2
+  _burstY: {x: 5, y: 8.5}
