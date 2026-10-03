@@ -31,9 +31,16 @@
 | A1_AB / A1_FP | ✅ 縦の遷移: AB の ST 最上段 (L7 y-5) から跳ぶ → FP `FromA1_AB` (355.5,1.5, 噴水の池の底 y0)。FP の排水口の格子 (x345..354 y0, ↓+ジャンプ) から降りる → AB `FromA1_FP` (353.5,-3.5, L7 の上) | — |
 | (別エリア) エリア2 | A1_FP の FP2 東端の正門 (hall/park_gate, 扉は閉じたまま、当たり `GateBody` x431..446 y9..20) に「エリア2へ (準備中)」の看板とヒントだけ (遷移なし)。エリア2 を作る時は正門の扉 (x436..441) を開く仕掛けと遷移 (右端 x447 y15 付近) を足す | A1_FP |
 
-仮置きのご褒美: ハートピン・新技「回転斬り」・糸巻きはゲーム側に仕組みがないため KeyItemPickup (フラグ `A1_HeartPin<n>` / `A1_Skill_SpinSlash` / `A1_Spool<n>`) で置く。
+仮置きのご褒美: ハートピン・糸巻きはゲーム側に仕組みがないため KeyItemPickup (フラグ `A1_HeartPin<n>` / `A1_Spool<n>`) で置く。拠点 A1_H の屋根裏 Hs1 (大ジャンプ) は 2026-10-03 から糸の大束 ×150 (ThreadPickup, `A1_Pickup_Hs1_1`。新技「回転斬り」の秘伝書 `A1_Skill_SpinSlash` は収集品カタログからも削除)。
 ハートピン②は A1_W2 の W2s (`A1_HeartPin2`, `A1_Pickup_W2s_1`)。日誌その5は A1_W4 の W4r (`A1_Lore_Journal5`, `A1_Pickup_W4r_1`)。ハートピン①は A1_U3 の U3s (`A1_HeartPin1`, `A1_Pickup_U3s_1`)。ボビン爆弾は ItemDefinition (`Assets/Items/BobbinBomb.asset`) があったので ConsumableItemPickup ×3 (`A1_Pickup_U2a_1`)。
 糸巻き②は A1_D5 の D6 (KeyItemPickup `A1_Spool2`, `A1_Pickup_D6_1`)。道具「糸玉」×3 は A1_D2 の D2w (ConsumableItemPickup `Assets/Items/ThreadBall.asset`, `A1_Pickup_D2w_1`)、日誌その3 (`A1_Lore_Journal3`, `A1_Pickup_D2w_2`)。D5 の下の通路の窪みに糸×15 (`A1_Pickup_D5_1`)。
 道具「針山」は A1_W6 の W7 (ConsumableItemPickup `Assets/Items/PinCushion.asset` ×3, `A1_Pickup_W7_1`)。糸の大束×100 は A1_W5 の W5g (`A1_Pickup_W5g_1`)。
 糸巻き③は A1_D3 の D7 (ネズミの巣のクリアで出る宝箱、KeyItemPickup `A1_Spool3`, `A1_Pickup_D7_1`)。糸の大束×60 は A1_D3 の D3a (二段ジャンプ、`A1_Pickup_D3a_1`)。ハートピン④は A1_D4 の D4s (`A1_HeartPin4`, `A1_Pickup_D4s_1`)。
-日誌その4 (噴水の碑文) は A1_FP の大噴水の前 (KeyItemPickup `A1_Lore_Journal4`, `A1_Pickup_FP_1`, 絵 hall/inscription_plaque)。糸巻き①は A1_FP の FP2 の正門のアーチの上 (`A1_Spool1`, `A1_Pickup_FP2_1`, 二段ジャンプ)。赤ハサミ (二段ジャンプ+滑空) は A1_AB のエリアボス撃破後 (UpgradePickup Red, `A1_Pickup_AB_1`)。
+日誌その4 (噴水の碑文) は A1_FP の大噴水の前 (KeyItemPickup `A1_Lore_Journal4`, `A1_Pickup_FP_1`, 絵 hall/inscription_plaque)。糸巻き①は A1_FP の FP2 の正門のアーチの上 (`A1_Spool1`, `A1_Pickup_FP2_1`, 二段ジャンプ)。**赤ハサミ (二段ジャンプ+滑空) = 最初のハサミ** は 2026-10-03 から拠点 A1_H の鍛冶師が渡す (Blacksmith `_requiredAnyFlags=["A1_MidBossUpper","A1_MidBossLower"]` = 中ボスどちらかの撃破後に話しかける。それまでは「地上か地下の中ボスを倒して来い」の案内 3 行)。A1_AB のエリアボス撃破後のご褒美は糸の大束 ×200 (ThreadPickup, `A1_Pickup_AB_1` を引き継ぎ)。
+
+## 二段ジャンプ (赤ハサミ) の前提 (2026-10-03〜)
+| 場所 | 前提 | 備考 |
+|---|---|---|
+| A1_W5 W5g / A1_D3 D3a / A1_FP FP2 の糸巻き① | 二段ジャンプ (寄り道のご褒美) | 中ボスどちらかを倒し、拠点の鍛冶師に話してから戻ってくる場所 |
+| A1_AB ST (噴水への大階段) | 二段ジャンプで**だけ**登れる (段差 5) | AB に入るには大扉 (スピーカー①②③) = 中ボス 2 体とも撃破済み。鍛冶師に話していないと ST を登れないが、**AB → C1 → H へは二段ジャンプ無しで歩いて戻れる** (AB の入口の段 3・C1 は平らな床・C1→H も床 y-54。ボスのゲートは撃破で開く)。鍛冶師へ誘導する仕掛けは今は無い |
+| 出口の見通し | 全シーンの出口は先 14 セルまで見た目で開いている (SceneBuildGuide §12)。当たりは `Grid/ExitStop` で元の位置 | 隣のシーンを作り直す時もビルダーの Carve が自動で作る |

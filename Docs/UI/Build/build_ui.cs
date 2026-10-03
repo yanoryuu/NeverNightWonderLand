@@ -504,7 +504,7 @@ public static class BuildUI
 
         const string todoDesc = "TODO: 説明文は未作成";
         const string todoBody = "TODO: 本文は未作成";
-        // 絵: ステージの拾い物の絵を仮に使う (UIAssignment.md「3回目の決定」2)。秘伝書はステージにも専用の絵が無いので空 (名前の文字)
+        // 絵: ステージの拾い物の絵を仮に使う (UIAssignment.md「3回目の決定」2)。秘伝書 (A1_Skill_SpinSlash) は 2026-10-03 に項目ごと削除 (屋根裏のご褒美を糸の大束に変更)
         var heartPin = AssetDatabase.LoadAssetAtPath<Sprite>(PropsPath + "heart_pin.png") ?? throw new Exception("heart_pin.png missing");
         var spool = AssetDatabase.LoadAssetAtPath<Sprite>(PropsPath + "thread_spool.png") ?? throw new Exception("thread_spool.png missing");
         CollectionCatalog.Entry E(string flag, string name, string desc, Sprite icon = null) =>
@@ -519,7 +519,6 @@ public static class BuildUI
                 E("A1_Spool1", "糸巻き1", todoDesc, spool),
                 E("A1_Spool2", "糸巻き2", todoDesc, spool),
                 E("A1_Spool3", "糸巻き3", todoDesc, spool),
-                E("A1_Skill_SpinSlash", "新技「回転斬り」の秘伝書", todoDesc),
             },
             new[]
             {
@@ -531,7 +530,7 @@ public static class BuildUI
             });
         EditorUtility.SetDirty(catalog);
         AssetDatabase.SaveAssets();
-        return "CollectionCatalog: 8 collectibles, 5 journals";
+        return "CollectionCatalog: 7 collectibles, 5 journals";
     }
 
     /// <summary>

@@ -223,7 +223,7 @@ BossArena の複数ウェーブ版。入るとゲートを閉じ、ウェーブ�
 公開: `event Action OnCleared`。配置例: `Arena` (layer 2) に BoxCollider2D(trigger, 部屋の内側) + WaveArena、左右の入口に `GateL`/`GateR` (layer 10, BoxCollider2D+SpriteRenderer, 非アクティブ)。ご褒美は FlagActivator で `_flagId` に連動。
 
 ### UpgradePickup (`Assets/Scripts/Gimmick/Pickups/UpgradePickup.cs`)
-拾うとハサミ強化を得る (`ItemPickup` 派生)。エリアボス後の赤ハサミ (二段ジャンプ+滑空)。通知「赤色のハサミを手に入れた!」は PlayerProgression.Grant が出し、続けて `_hintMessage`。
+拾うとハサミ強化を得る (`ItemPickup` 派生)。(2026-10-03: エリア1 では使っていない。赤ハサミは拠点の鍛冶師 (Blacksmith `_requiredAnyFlags`) が渡し、A1_AB の撃破報酬は糸の大束 ×200 になった。部品としては残す)。通知「赤色のハサミを手に入れた!」は PlayerProgression.Grant が出し、続けて `_hintMessage`。
 - 必須: ItemPickup と同じ (SpriteRenderer 必須 + **layer 11** + トリガー Collider2D)。
 
 | フィールド | 型 | 既定 | 意味 |
@@ -234,7 +234,7 @@ BossArena の複数ウェーブ版。入るとゲートを閉じ、ウェーブ�
 | `_upgrade` | ScissorUpgrade | Red | `Yellow`(0)=壁張り付き / `Blue`(1)=グラップル / `Red`(2)=二段ジャンプ+滑空 |
 | `_hintMessage` | string | 「空中でもう一度…」 | 取得後の操作説明 (空なら出さない) |
 
-配置例: ボス部屋に非アクティブで `RedScissors` (UpgradePickup) を置き、FlagActivator(`_flags=["A1_AreaBoss"]`, `_showWhenSet=[RedScissors]`)。
+配置例 (旧 A1_AB): ボス部屋に非アクティブで `RedScissors` (UpgradePickup) を置き、FlagActivator(`_flags=["A1_AreaBoss"]`, `_showWhenSet=[RedScissors]`)。現在の A1_AB は同じ方法で ThreadPickup ×200 (`ThreadBundle`) を出す。
 
 ### NpcTalk (`Assets/Scripts/Gimmick/NpcTalk.cs`)
 数行のセリフを順に出す NPC (迷子の人形・地図売り)。インタラクトのたびに次の行を **TutorialMessageView** (UI シーン StageUI の `TutorialMessage`) に表示、最後の次で閉じる。`_hideDistance` 以上離れると途中で閉じる。TutorialMessageView が無いシーンでは Notifier に全行を流す。
@@ -339,7 +339,9 @@ BossArena の複数ウェーブ版。入るとゲートを閉じ、ウェーブ�
 
 ### Blacksmith (`Gimmick/Blacksmith.cs`)
 鍛冶師 NPC (ハサミ強化を授ける+有償の鍛冶強化)。必須: SpriteRenderer, **layer 11** + トリガー Collider2D。
-フィールド: `_upgrade` (ScissorUpgrade), `_grantsUpgrade` (bool, 既定 true。**false = ハサミ強化を授けず鍛冶強化と会話だけ** — 拠点 A1_H の鍛冶師), `_smithName`, `_promptOffset`, `_requiredFlags` (string[], 全て立つまで渡さない), `_lockedMessage`, `_forgeId` (空=有償強化なし), `_forgeCost` (30)。
+フィールド: `_upgrade` (ScissorUpgrade), `_grantsUpgrade` (bool, 既定 true。false = ハサミ強化を授けず鍛冶強化と会話だけ), `_smithName`, `_promptOffset`, `_requiredFlags` (string[], **全て**立つまで渡さない = AND), `_requiredAnyFlags` (string[], 2026-10-03 追加。空でなければ**どれか 1 つ**が立つまで渡さない = OR。`_requiredFlags` と両方あれば両方を満たす), `_lockedMessage` (解禁前のトースト), `_lockedLines` (string[], 追加。設定すると解禁前は話しかけるたびに 1 行ずつ画面上部の案内枠 (StageUI の TutorialMessageView) に「名前「行」」で出し、最後の行の次で閉じる・離れると (`_hideDistance` 3) 閉じる。空なら従来どおり `_lockedMessage`), `_grantMessage` (追加, 既定「いいハサミだ。強化してやろう」= 従来の台詞。渡す時のトースト。続けて PlayerProgression.Grant が取得通知 (操作説明の 2 行目つき) を出す), `_forgeId` (空=有償強化なし), `_forgeCost` (30)。新しいフィールドの既定値は従来の動きと同じ (旧ステージの鍛冶師はそのまま)。
+流れ (`_grantsUpgrade` true): 未取得かつ未解禁 → 案内 / 未取得かつ解禁 → `_grantMessage` + Grant / 取得済み → 有償の鍛冶強化 (1 回) → 「〜の調子はどうだ?」。
+**拠点 A1_H の鍛冶師** (2026-10-03〜): `_grantsUpgrade=true`, `_upgrade=Red`, `_requiredAnyFlags=["A1_MidBossUpper","A1_MidBossLower"]`, `_lockedLines` 3 行 (「地上の観覧車のてっぺんか、地下の歯車の奥のどちらかのデカブツを倒して戻ってこい、ハサミを鍛えてやる」), `_forgeId=A1_Hub` 糸 30。**最初のハサミ = 赤 (二段ジャンプ・滑空) はここで受け取る**。有償の鍛冶強化は赤ハサミを渡した後から。
 
 ### ShopKeeper (`Gimmick/ShopKeeper.cs`)
 インタラクトで ShopView を開く。必須: SpriteRenderer, **layer 11** + トリガー Collider2D。ShopView+ShopPanel は UI シーン ShopUI にある (旧ステージは自前の SceneUI)。フィールド: `_shop` (ShopView, null=同じシーン → UI シーンの順で検索), `_promptOffset`。

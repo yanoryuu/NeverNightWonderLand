@@ -307,6 +307,19 @@ namespace NeverNight.StageBuild
                 foreach (var r in room.Rects)
                     AddCells(open, new RectInt(r.xMin, r.yMin, r.width, fill.yMax - r.yMin));
 
+            // 出口の先の「見た目だけ開けた通路」(2026-10-03 ユーザー指示「出入り口はブロックで埋めずに開けて」)
+            var views = ComputeExitViews(sceneId, open, fill);
+            var viewCells = new HashSet<Vector2Int>();
+            var wallCells = new HashSet<Vector2Int>();
+            foreach (var v in views)
+            {
+                AddCells(viewCells, v.View);
+                AddCells(wallCells, v.WallA);
+                AddCells(wallCells, v.WallB);
+            }
+            wallCells.ExceptWith(open);
+            wallCells.ExceptWith(viewCells);
+
             var rule = RuleTile;
             var cover = Tile("stagetile_coverbox");      // Backfill の仮置き (Finish の PaintRock で岩肌に置き換わる)
             var seal = Tile(Area1AssetPrep.RockSealTileName); // 絵なし・当たりあり (縁飾りが出ない)
@@ -315,19 +328,37 @@ namespace NeverNight.StageBuild
             for (var x = rock.xMin; x < rock.xMax; x++)
             for (var y = rock.yMin; y < rock.yMax; y++)
             {
-                if (open.Contains(new Vector2Int(x, y)))
+                var c = new Vector2Int(x, y);
+                if (open.Contains(c) || viewCells.Contains(c) || wallCells.Contains(c))
                     continue;
                 var isSeal = x < rock.xMin + SealRing || x >= rock.xMax - SealRing || y < rock.yMin + SealRing || y >= rock.yMax - SealRing;
                 tPos.Add(new Vector3Int(x, y, 0));
                 tTiles.Add(isSeal ? seal : rule);
             }
+            // 開けた通路の両側の壁 (岩の外周・Backfill の所も縁が出る RuleTile にして、床・天井の線を画面の外まで続ける)
+            foreach (var c in wallCells)
+            {
+                tPos.Add(new Vector3Int(c.x, c.y, 0));
+                tTiles.Add(rule);
+            }
             terrain.SetTiles(tPos.ToArray(), tTiles.ToArray());
+
+            // 当たりの止め: 元の掘削の端 (= 以前は岩の壁だった所) に絵なしの当たりを残す (ExitStop タイルマップ)。
+            // 遷移ゾーンは今までどおりこの手前で反応し、プレイヤーが場外へ出ることはない
+            var stop = ExitStopMap();
+            stop.ClearAllTiles();
+            var sPos = new List<Vector3Int>();
+            foreach (var v in views)
+                for (var x = v.Stop.xMin; x < v.Stop.xMax; x++)
+                for (var y = v.Stop.yMin; y < v.Stop.yMax; y++)
+                    sPos.Add(new Vector3Int(x, y, 0));
+            stop.SetTiles(sPos.ToArray(), Enumerable.Repeat<TileBase>(seal, sPos.Count).ToArray());
 
             var bPos = new List<Vector3Int>();
             for (var x = fill.xMin; x < fill.xMax; x++)
             for (var y = fill.yMin; y < fill.yMax; y++)
             {
-                if (open.Contains(new Vector2Int(x, y)))
+                if (open.Contains(new Vector2Int(x, y)) || viewCells.Contains(new Vector2Int(x, y)))
                     continue;
                 if (rock.Contains(new Vector2Int(x, y)) && x >= rock.xMin + SealRing && x < rock.xMax - SealRing
                     && y >= rock.yMin + SealRing && y < rock.yMax - SealRing)
@@ -336,7 +367,169 @@ namespace NeverNight.StageBuild
             }
             backfill.SetTiles(bPos.ToArray(), Enumerable.Repeat<TileBase>(cover, bPos.Count).ToArray());
 
-            return $"[Carve] bounds={b} rockCells={tPos.Count} backfill={bPos.Count} open={open.Count}";
+            return $"[Carve] bounds={b} rockCells={tPos.Count} backfill={bPos.Count} open={open.Count} exitViews="
+                   + string.Join(",", views.Select(v => $"{v.Exit.OtherScene ?? v.Exit.OtherRoom}:{v.Length}{(v.Sky ? "(sky)" : "")}"));
+        }
+
+        // ================================================================== 出口の先の見通し
+
+        /// <summary>出口の先を見た目で開けておく長さ (セル)。カメラの半幅 ≈9.8 + 止めの 3 より長く</summary>
+        public const int ExitViewLength = 14;
+        /// <summary>見通しの止め (当たり) の厚さ。元の掘削の端から</summary>
+        public const int ExitStopThickness = 2;
+
+        public class ExitView
+        {
+            public BoundaryExit Exit;
+            public RectInt View;          // 見た目だけ開ける範囲 (掘削の端の外側)
+            public RectInt Stop;          // 当たりを残す範囲 (View の掘削側の端 ExitStopThickness セル)
+            public RectInt WallA, WallB;  // 通路の両側の壁 (縁を出す RuleTile)。空の通路 (Sky) は床だけ
+            public int Length;
+            public bool Sky;              // 屋外どうしの横の出口: 床から上を空まで開ける
+            public bool Dark;             // 屋内の通路: 奥へ暗くする
+        }
+
+        // 最後に Carve したシーンの見通し (Background / Validate が使う)
+        private static readonly List<ExitView> ExitViews = new List<ExitView>();
+        private static string _exitViewsScene;
+
+        /// <summary>このシーンの出口の見通し (最後の Carve の結果。別シーンなら空)。</summary>
+        public static IReadOnlyList<ExitView> ExitViewsOf(string sceneId) =>
+            _exitViewsScene == sceneId ? ExitViews : (IReadOnlyList<ExitView>)Array.Empty<ExitView>();
+
+        /// <summary>
+        /// 各出口 (他シーンへの通路・移動装置の部屋への通路) の掘削の端の外側に、通路の断面のまま ExitViewLength セルの
+        /// 「見通し」を作る。シーン内の他の空間に 2 セル以内まで近づいたら手前で止める (見た目で別の場所とつながらないように)。
+        /// 屋外どうしの横の出口は床から上を空まで開ける (境の岩の柱を作らない)。
+        /// </summary>
+        private static List<ExitView> ComputeExitViews(string sceneId, HashSet<Vector2Int> open, RectInt fill)
+        {
+            var layout = Area1Layout.Load();
+            bool Outdoor(string roomId) { var rm = layout.GetRoom(roomId); return rm != null && rm.Outdoor; }
+            bool Indoor(string roomId) { var rm = layout.GetRoom(roomId); return rm != null && !rm.Outdoor; }
+            var result = new List<ExitView>();
+            foreach (var e in BoundaryExits(sceneId))
+            {
+                var p = e.Passage;
+                var z = e.Carved;
+                var horizontal = e.Dir == ExitDir.Left || e.Dir == ExitDir.Right;
+                var sky = horizontal && Outdoor(e.OurRoom) && Outdoor(e.OtherRoom);
+                int a0, a1; // 断面 (横の出口 = y、縦の出口 = x)
+                if (horizontal) { a0 = p.yMin; a1 = sky ? fill.yMax : p.yMax; }
+                else { a0 = p.xMin; a1 = p.xMax; }
+
+                RectInt Slice(int k, int pad)
+                {
+                    switch (e.Dir)
+                    {
+                        case ExitDir.Right: return new RectInt(z.xMax + k, a0 - pad, 1, a1 - a0 + 2 * pad);
+                        case ExitDir.Left: return new RectInt(z.xMin - 1 - k, a0 - pad, 1, a1 - a0 + 2 * pad);
+                        case ExitDir.Up: return new RectInt(a0 - pad, z.yMax + k, a1 - a0 + 2 * pad, 1);
+                        default: return new RectInt(a0 - pad, z.yMin - 1 - k, a1 - a0 + 2 * pad, 1);
+                    }
+                }
+
+                var len = 0;
+                for (var k = 0; k < ExitViewLength; k++)
+                {
+                    var s = Slice(k, 0);
+                    if (!fill.Contains(s.min) || !fill.Contains(s.max - Vector2Int.one))
+                        break;
+                    // 先 2 セルまで含めて、他の空間 (部屋・通路) に近づいたら止める
+                    var near = false;
+                    for (var f = 0; f <= 2 && !near; f++)
+                    {
+                        var probe = Slice(k + f, sky ? 0 : 2);
+                        for (var x = probe.xMin; x < probe.xMax && !near; x++)
+                        for (var y = probe.yMin; y < probe.yMax && !near; y++)
+                        {
+                            var c = new Vector2Int(x, y);
+                            near = open.Contains(c) && !z.Contains(c);
+                        }
+                    }
+                    if (near)
+                        break;
+                    len = k + 1;
+                }
+                if (len == 0)
+                    continue;
+
+                var first = Slice(0, 0);
+                var last = Slice(len - 1, 0);
+                var view = new RectInt(Mathf.Min(first.xMin, last.xMin), Mathf.Min(first.yMin, last.yMin), 0, 0);
+                view.xMax = Mathf.Max(first.xMax, last.xMax);
+                view.yMax = Mathf.Max(first.yMax, last.yMax);
+                var stopSlice = Slice(Mathf.Min(ExitStopThickness, len) - 1, 0);
+                var stop = new RectInt(Mathf.Min(first.xMin, stopSlice.xMin), Mathf.Min(first.yMin, stopSlice.yMin), 0, 0);
+                stop.xMax = Mathf.Max(first.xMax, stopSlice.xMax);
+                stop.yMax = Mathf.Max(first.yMax, stopSlice.yMax);
+
+                RectInt wallA, wallB;
+                if (horizontal)
+                {
+                    wallA = new RectInt(view.xMin, view.yMin - 2, view.width, 2);                      // 床
+                    wallB = sky ? new RectInt() : new RectInt(view.xMin, view.yMax, view.width, 2);    // 天井
+                }
+                else
+                {
+                    wallA = new RectInt(view.xMin - 2, view.yMin, 2, view.height);
+                    wallB = new RectInt(view.xMax, view.yMin, 2, view.height);
+                }
+
+                result.Add(new ExitView
+                {
+                    Exit = e, View = view, Stop = stop, WallA = wallA, WallB = wallB, Length = len, Sky = sky,
+                    Dark = !sky && (Indoor(e.OurRoom) || Indoor(e.OtherRoom)),
+                });
+            }
+            ExitViews.Clear();
+            ExitViews.AddRange(result);
+            _exitViewsScene = sceneId;
+            return result;
+        }
+
+        /// <summary>
+        /// レシピが出口の見通しの両側の岩を消した (空に開けた: MB1 の観覧車のてっぺん等) 場合、その見通しの
+        /// 暗がり (ExitFade_*) と背景板 (Backdrop_ExitView_*) は空に浮いて見えるので消す。Finish が呼ぶ。
+        /// </summary>
+        private static void PruneExitViewDecor()
+        {
+            var id = CurrentId;
+            var terrain = Map("Terrain");
+            var group = Group("Background");
+            foreach (var v in ExitViewsOf(id))
+            {
+                int total = 0, rock = 0;
+                foreach (var r in new[] { v.WallA, v.WallB })
+                    for (var x = r.xMin; x < r.xMax; x++)
+                    for (var y = r.yMin; y < r.yMax; y++)
+                    {
+                        total++;
+                        if (terrain.HasTile(new Vector3Int(x, y, 0))) rock++;
+                    }
+                if (total == 0 || rock * 2 >= total)
+                    continue;
+                foreach (var n in new[] { $"ExitFade_{v.Exit.OtherScene ?? v.Exit.OtherRoom}", $"Backdrop_ExitView_{v.Exit.OurRoom}-{v.Exit.OtherRoom}" })
+                {
+                    var t = group.Find(n);
+                    if (t != null)
+                        Object.DestroyImmediate(t.gameObject);
+                }
+            }
+        }
+
+        /// <summary>出口の止め (絵なし・当たりあり) のタイルマップ。無ければ Grid の下に作る (古いシーンでも Carve で足される)。</summary>
+        private static Tilemap ExitStopMap()
+        {
+            var grid = ActiveScene.GetRootGameObjects().FirstOrDefault(g => g.name == "Grid");
+            if (grid == null)
+                throw new InvalidOperationException("Grid がありません (BuildBase 済みか確認)");
+            var t = grid.transform.Find("ExitStop");
+            if (t != null)
+                return t.GetComponent<Tilemap>();
+            var tm = NewTilemap(grid.transform, "ExitStop", OrderTerrain, LayerGround);
+            tm.gameObject.AddComponent<TilemapCollider2D>();
+            return tm;
         }
 
         private static RectInt Expand(RectInt r, int m) => new RectInt(r.xMin - m, r.yMin - m, r.width + 2 * m, r.height + 2 * m);
@@ -934,6 +1127,7 @@ namespace NeverNight.StageBuild
                 // 縦横とも Tiled で敷き、カメラに 0.85 で追従 (段違いの機械室が奥に続いて見える)
                 AddParallax(group, "Underground", Art("bg/bg_underground.png"), center, new Vector2(0.85f, 0.85f), 3.2f,
                     b.width + 60f, OrderSky, b.height + 60f);
+                ExitViewFades(group, sceneId);
                 return "[Background] underground";
             }
 
@@ -954,11 +1148,49 @@ namespace NeverNight.StageBuild
             foreach (var e in BoundaryExits(sceneId))
                 if (Indoor(e.OurRoom) && Indoor(e.OtherRoom))
                     passageRects.Add(($"Backdrop_{e.OurRoom}-{e.OtherRoom}", e.Carved));
+            // 出口の先の見通し: 屋内の通路は背景板も先まで続ける
+            foreach (var v in ExitViewsOf(sceneId))
+                if (!v.Sky && (Indoor(v.Exit.OurRoom) || Indoor(v.Exit.OtherRoom)))
+                    passageRects.Add(($"Backdrop_ExitView_{v.Exit.OurRoom}-{v.Exit.OtherRoom}", v.View));
             foreach (var (name, r) in passageRects)
             {
                 IndoorBackdrop(group, name, r);
             }
+            ExitViewFades(group, sceneId);
             return "[Background] outdoor sky+silhouette" + (sil != null ? "" : "");
+        }
+
+        /// <summary>
+        /// 屋内の出口の見通しの奥半分を暗く沈める (通路が闇の奥へ続いて見える。床・天井の縁も一緒に沈める order 1)。
+        /// 掘削の端から 4 セルは素の明るさ (プレイヤーが立てる所)。
+        /// </summary>
+        private static void ExitViewFades(Transform group, string sceneId)
+        {
+            foreach (var v in ExitViewsOf(sceneId))
+            {
+                if (!v.Dark || v.Length < 6)
+                    continue;
+                var r = v.View;
+                var keep = 3;                 // 手前の明るいまま残す長さ
+                var len = v.Length - keep;
+                var horizontal = v.Exit.Dir == ExitDir.Left || v.Exit.Dir == ExitDir.Right;
+                Vector2 c; float across; float rot;
+                switch (v.Exit.Dir)
+                {
+                    case ExitDir.Right: c = new Vector2(r.xMax - len * 0.5f, r.center.y); rot = 90f; break;
+                    case ExitDir.Left: c = new Vector2(r.xMin + len * 0.5f, r.center.y); rot = -90f; break;
+                    case ExitDir.Up: c = new Vector2(r.center.x, r.yMax - len * 0.5f); rot = 180f; break;
+                    default: c = new Vector2(r.center.x, r.yMin + len * 0.5f); rot = 0f; break;
+                }
+                across = (horizontal ? r.height : r.width) + 4f; // 両側の壁の縁 (2 セル) まで
+                var go = new GameObject($"ExitFade_{v.Exit.OtherScene ?? v.Exit.OtherRoom}");
+                go.transform.SetParent(group, false);
+                go.transform.position = c;
+                go.transform.rotation = Quaternion.Euler(0, 0, rot);
+                var sw = 32f / Area1AssetPrep.PixelsPerUnit;
+                go.transform.localScale = new Vector3(across / sw, len, 1f);
+                AddSprite(go, Art("fx/shade.png"), OrderTerrain + 1, null, new Color(1f, 1f, 1f, 0.8f));
+            }
         }
 
         /// <summary>
@@ -2164,6 +2396,7 @@ namespace NeverNight.StageBuild
         public static string Finish(bool save = true)
         {
             Refresh();
+            PruneExitViewDecor();
             // 見た目: 岩肌 (Backfill) と飾り。地形が出来上がった後に毎回作り直す (当たりには触れない)
             var look = PaintRock() + "\n" + ApplyRockTints() + ScatterRockDecor(DecorDensity) + "\n";
             var report = look + Validate();
@@ -2192,6 +2425,10 @@ namespace NeverNight.StageBuild
             var pc = Map("Platforms").GetComponent<TilemapCollider2D>();
             if (pc != null)
                 pc.ProcessTilemapChanges();
+            var grid = ActiveScene.GetRootGameObjects().FirstOrDefault(g => g.name == "Grid");
+            var stop = grid != null ? grid.transform.Find("ExitStop") : null;
+            if (stop != null && stop.TryGetComponent<TilemapCollider2D>(out var sc))
+                sc.ProcessTilemapChanges();
             Physics2D.SyncTransforms();
         }
 
@@ -2313,6 +2550,30 @@ namespace NeverNight.StageBuild
                         if (blocked.Count > 0) Err($"{name}: 通路が岩で塞がれている {string.Join(" ", blocked)}");
                     }
                 }
+            }
+
+            // 出口の見通し: 掘削の端の先が見た目で開いているか、止めの当たりがあるか
+            var views = ExitViewsOf(id);
+            if (views.Count == 0)
+                Warn("出口の見通しの情報が無い (BuildBase と同じ呼び出しで Finish していない?)");
+            var backfillMap = Map("Backfill");
+            foreach (var v in views)
+            {
+                var tag = $"見通し {v.Exit.Dir}→{v.Exit.OtherScene ?? v.Exit.OtherRoom}";
+                var closed = 0;
+                for (var x = v.View.xMin; x < v.View.xMax; x++)
+                for (var y = v.View.yMin; y < Mathf.Min(v.View.yMax, v.View.yMin + 12); y++)
+                {
+                    var c = new Vector3Int(x, y, 0);
+                    if (terrain.HasTile(c) || backfillMap.HasTile(c)) closed++;
+                }
+                var stopOk = true;
+                for (var x = v.Stop.xMin; x < v.Stop.xMax && stopOk; x++)
+                for (var y = v.Stop.yMin; y < Mathf.Min(v.Stop.yMax, v.Stop.yMin + 12) && stopOk; y++)
+                    stopOk = SolidAt(x + 0.5f, y + 0.5f);
+                if (!stopOk) Err($"{tag}: 止めの当たりが無い (場外へ出られる)");
+                if (closed > 0) Warn($"{tag}: 開けた先の {closed} セルがレシピで塞がれている");
+                else Ok($"{tag}: 先 {v.Length} セルまで開いている{(v.Sky ? " (空)" : "")}");
             }
 
             // 一方通行の受け側・双方向の入口ごとにスポーンがあるか

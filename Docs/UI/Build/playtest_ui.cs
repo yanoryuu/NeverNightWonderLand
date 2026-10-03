@@ -66,7 +66,7 @@ public static class PlayUIx
     /// <summary>収集品・日誌のフラグを一部立てる (入手済みの表示確認用)。</summary>
     public static string Flags()
     {
-        foreach (var f in new[] { "A1_HeartPin1", "A1_HeartPin3", "A1_Spool2", "A1_Skill_SpinSlash", "A1_Lore_Journal1", "A1_Lore_Journal2", "A1_Lore_Journal5" })
+        foreach (var f in new[] { "A1_HeartPin1", "A1_HeartPin3", "A1_Spool2", "A1_Spool3", "A1_Lore_Journal1", "A1_Lore_Journal2", "A1_Lore_Journal5" })
             GameProgress.Set(f);
         var p = Object.FindAnyObjectByType<PlayerController>();
         p?.Progression?.Grant(ScissorUpgrade.Yellow);

@@ -65,7 +65,12 @@ public static class BuildH
         OneWay(276, 285, -21);              // 屋根裏の床 (突き抜けた後の着地点)
 
         // ---- 拠点の設備 (床 y-54)
-        Prop("props/carousel.png", 257f, -54f, 1.8f, -4);                             // 回転木馬 (飾り)
+        // 回転木馬の大きな飾りは撤去 (2026-10-03 ユーザー指示)。空いた床の中ほどには拠点の他の所と同じ小物だけ:
+        // 荷物の木箱 (W8 の荷物と同じ絵) と床置きの灯。奥の壁はビルダーの壁飾り (ランプ・ポスター・旗) が自動で埋める
+        Prop("props/cargo_crate.png", 250.6f, -53.45f, 1.4f, OrderProp, false, new Color(0.78f, 0.72f, 0.8f));
+        Prop("props/cargo_crate.png", 252.2f, -53.57f, 1.1f, OrderProp, true, new Color(0.7f, 0.65f, 0.74f));
+        Prop("props/cargo_crate.png", 250.9f, -52.27f, 1.0f, OrderProp, false, new Color(0.74f, 0.68f, 0.78f));
+        Prop("props/boss_door_lamp_on.png", 262.5f, -53.7f, 0.6f, OrderProp, false, new Color(1f, 0.85f, 0.6f));
         SavePointAt(268.3f, -54f);
         var stall = NewObject("ShopKeeper", new Vector2(273.4f, -54f), LayerInteractable, "Gimmicks");
         AddSprite(stall, Art("props/shop_stall.png"), OrderProp);
@@ -74,7 +79,17 @@ public static class BuildH
         var smith = NewObject("Blacksmith", new Vector2(237.6f, -54f), LayerInteractable, "Gimmicks");
         AddSprite(smith, Art("props/anvil_smith.png"), OrderProp);
         Box(smith, new Vector2(2.4f, 2.4f), true, new Vector2(0, 1.2f));
-        AddComp<Blacksmith>(smith, ("_grantsUpgrade", false), ("_smithName", "木馬の鍛冶師"),
+        // 最初のハサミ = 赤 (二段ジャンプ・滑空)。中ボス 2 体 (観覧車のてっぺん / 地下の歯車の重馬) のどちらかを倒すと渡す。
+        // それまでは案内のセリフ。渡した後は従来どおり有償の鍛冶強化 (A1_Hub, 糸 30) と会話 (2026-10-03 ユーザー決定)
+        AddComp<Blacksmith>(smith, ("_grantsUpgrade", true), ("_upgrade", ScissorUpgrade.Red), ("_smithName", "木馬の鍛冶師"),
+            ("_requiredAnyFlags", new[] { "A1_MidBossUpper", "A1_MidBossLower" }),
+            ("_lockedLines", new[]
+            {
+                "改札の番人を抜けてきたか。……そのハサミ、まだ目を覚ましちゃいねえな。",
+                "地上の観覧車のてっぺんか、地下の歯車の奥。どっちかに居座ってるデカブツを倒してこい。",
+                "どっちか片方でいい。倒して戻ってきたら、お前のハサミを鍛えてやる。",
+            }),
+            ("_grantMessage", "「よく戻った。約束どおり、ハサミを鍛えてやろう」"),
             ("_forgeId", "A1_Hub"), ("_forgeCost", 30), ("_promptOffset", new Vector3(0, 2.6f, 0)));
 
         // 灯り (飾り)
@@ -100,8 +115,8 @@ public static class BuildH
         Prop("props/boss_door_lamp_on.png", 228.5f, -13.7f, 0.6f, OrderProp, false, warm);
         Prop("props/boss_door_lamp_on.png", 216.5f, -16.7f, 0.6f, OrderProp, false, warm);
 
-        // ================= Hs1 (x273..291, y-21..-12): 屋根裏の回転灯。新技「回転斬り」
-        KeyItemAt(288.5f, -21f, "新技「回転斬り」の秘伝書", "A1_Skill_SpinSlash", "A1_Pickup_Hs1_1");
+        // ================= Hs1 (x273..291, y-21..-12): 屋根裏の回転灯。糸の大束 ×150 (2026-10-03: 新技の秘伝書から変更)
+        ThreadPickupAt(288.5f, -20.2f, 150, "A1_Pickup_Hs1_1");
         var beacon = Prop("props/boss_door_lamp_on.png", 281f, -13.2f, 1.0f, OrderProp, false, new Color(1f, 0.5f, 0.45f));
         beacon.transform.rotation = Quaternion.Euler(0, 0, 180f);   // 天井から吊った回転灯
 

@@ -8,7 +8,8 @@ using static NeverNight.StageBuild.Area1StageBuilder;
 //     エリアボス「指揮者ノクターン」= BossRoom A1_AreaBoss (FlyingEnemy ×2.5 + EnemyConsts_A1Conductor)。入ると西のゲートが閉じる。
 //     前半 (HP 50% まで) = 浮遊する音符の足場 4 枚 (MovingPlatform, すり抜け, 段差 3 = 通常ジャンプで乗り継げる) で空中のボスを叩く。
 //     後半 = 音符が点滅して消え、床の昇降台 5 本 (Piston, 上向き +3/+6, 押しつぶし無し) が 2 組交互にせり上がる (BossPhaseSwitch)。
-//     撃破: 赤ハサミ (UpgradePickup Red) がホールの中央に出現 + 二段ジャンプのヒント + 天井の点検口 (ハッチ) が開き、
+//     撃破: 糸の大束 ×200 (ThreadPickup, A1_Pickup_AB_1) がホールの中央に出現 + 天井の点検口 (ハッチ) が開き、
+//     (赤ハサミ = 二段ジャンプは 2026-10-03 から拠点 A1_H の鍛冶師が中ボス撃破後に渡す。ここに来る時は中ボス 2 体とも倒している)
 //     静止した音符の階段 4 段 (段差 5 = 二段ジャンプ) が天井の穴へ。
 // ST: 天井の穴〜噴水の真下の縦穴。左右交互の岩棚 6 段 (段差 6 / 最後 5, 棚は横に重ねてあるので真上へ抜けられない) = 二段ジャンプでだけ登れる。
 //     最上段 (y-5) から跳ぶと噴水の排水口 → A1_FP。
@@ -213,18 +214,16 @@ public static class BuildAB
             ("_phase1", new Object[] { p1 }), ("_phase2", new Object[] { p2 }), ("_blinkTime", 1.6f),
             ("_phase2Message", "ノクターンが指揮棒を振り下ろした! 音符が消え、床がせり上がる……"));
 
-        // ---- 撃破後: 赤ハサミ + 静止した音符の階段 (段差 5 = 二段ジャンプ) + 天井の点検口が開く
-        var red = NewObject("RedScissors", new Vector2(342f, -58.6f), LayerInteractable, "Pickups");
-        red.transform.localScale = Vector3.one * 0.85f;
-        AddSprite(red, Art("hall/red_scissors.png"), OrderGimmick);
-        Box(red, new Vector2(1.6f, 1.6f) / 0.85f, true);
-        AddComp<UpgradePickup>(red, ("_pickupId", "A1_Pickup_AB_1"), ("_promptText", "拾う"), ("_upgrade", 2),
-            ("_promptOffset", new Vector3(0, 1.3f, 0)),
-            ("_hintMessage", "空中でもう一度ジャンプすると二段ジャンプ! 落ちながらジャンプを押し続けると滑空できる"));
+        // ---- 撃破後: 糸の大束 ×200 + 静止した音符の階段 (段差 5 = 二段ジャンプ) + 天井の点検口が開く
+        // (2026-10-03 ユーザー決定: 赤ハサミ (二段ジャンプ) は拠点の鍛冶師が中ボス撃破後に渡すので、ここのご褒美は糸の大束に。
+        //  Id は元の赤ハサミと同じ A1_Pickup_AB_1 = このホールで唯一のご褒美。二重取りにならない)
+        var red = ThreadPickupAt(342f, -59.2f, 200, "A1_Pickup_AB_1");
+        red.name = "ThreadBundle";
+        red.transform.localScale = Vector3.one * 1.25f;   // 大束 (通常の糸より大きく)
         var redGlow = new GameObject("Glow");
         redGlow.transform.SetParent(red.transform, false);
-        redGlow.transform.localScale = Vector3.one * 2.6f;
-        AddSprite(redGlow, Art("fx/glow.png"), OrderGimmick - 1, null, new Color(1f, 0.3f, 0.35f, 0.55f));
+        redGlow.transform.localScale = Vector3.one * 2.2f;
+        AddSprite(redGlow, Art("fx/glow.png"), OrderGimmick - 1, null, new Color(1f, 0.82f, 0.5f, 0.45f));
         red.SetActive(false);
 
         var stairs = NewObject("AfterBoss_NoteStairs", new Vector2(348f, -48f), LayerDefault, "Gimmicks");
