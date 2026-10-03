@@ -149,6 +149,24 @@ public class BotExecutor
             case BotActionKind.SuperJump: TickSuperJump(player); break;
             case BotActionKind.Wait:
                 _input.Move = 0f;
+                // 待っている間に敵が間合いに入ったら斬る
+                foreach (var e in _world.Enemies)
+                {
+                    if (!EntityAlive(e)) continue;
+                    var c = BotWorld.FirstCollider(e.Source);
+                    var center = c != null ? (Vector2)c.bounds.center : e.Rect.center;
+                    var d = center - (Vector2)player.transform.position;
+                    if (Mathf.Abs(d.x) > 1.6f || Mathf.Abs(d.y) > 1.6f) continue;
+                    _input.Move = Mathf.Sign(d.x) * 0.02f;
+                    if (Time.time > _nextTap)
+                    {
+                        _input.Tap(PlayerButton.Attack);
+                        _nextTap = Time.time + 0.22f;
+                    }
+
+                    break;
+                }
+
                 if (elapsed > Mathf.Max(0.3f, Action.WalkX)) Finish(BotStatus.Succeeded, "waited");
                 break;
         }
@@ -158,9 +176,9 @@ public class BotExecutor
     {
         BotActionKind.WalkTo => 2.5f + Mathf.Abs(Action.WalkX - _startPos.x) / 5f,
         BotActionKind.JumpTo => 4f + (Action.Plan != null ? Mathf.Abs(Action.Plan.TakeoffX - _startPos.x) / 5f : 0f),
-        BotActionKind.WaitForPlatform => 14f,
-        BotActionKind.RideTo => 16f,
-        BotActionKind.Attack => 3.5f,
+        BotActionKind.WaitForPlatform => 9f,
+        BotActionKind.RideTo => 10f,
+        BotActionKind.Attack => 3.5f + (Action.Entity != null ? Mathf.Abs(Action.Entity.Rect.center.x - _startPos.x) / 6f : 0f),
         BotActionKind.Interact => 6f,
         _ => 4f,
     };
@@ -450,7 +468,7 @@ public class BotExecutor
         _replanAt = Time.time + 0.06f;
 
         var from = _world.SegmentUnder(player);
-        var plan = _physics.Plan(from, pos, Action.Target, 40);
+        var plan = _physics.Plan(from, pos, Action.Target, 12, pos.x); // 今の位置から跳べるかだけを見る (足場は動き続ける)
         if (plan.Valid && Mathf.Abs(plan.TakeoffX - pos.x) < 0.3f && !plan.Dash)
         {
             Action.Plan = plan;

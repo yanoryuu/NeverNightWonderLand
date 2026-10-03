@@ -16,7 +16,7 @@
 | `Assets/Scripts/TestPlay/TestPlayOverlay.cs` | 実行時オーバーレイ (IMGUI) |
 | `Assets/Scripts/Editor/DebugPanelWindow.cs` | `NeverNight/Debug Panel` に「速度」「入力の記録・再生」を追加。ワープは全ステージ + 入口選択に。チート等は TestPlayActions を呼ぶ形に整理 |
 | `Docs/TestPlay/playtest_testplay.cs` | 動作確認用の run_script (Assets 外なのでコンパイル対象外) |
-| `TestPlay/Recordings/*.json` | 記録ファイル (プロジェクト直下。Development Build では `persistentDataPath/TestPlay/Recordings`) |
+| `TestPlay/Recordings/*.json` | 記録ファイル (プロジェクト直下。Development Build では `persistentDataPath/TestPlay/Recordings`)。**git の追跡対象外** (.gitignore) |
 
 ### ゲーム側の変更 (リリースにも入る、挙動は不変)
 - `PlayerController.ReadInput` は `PlayerInputSource.ReadForPlayer()` を読むだけになった (キー割り当ては PlayerInputSource.ReadDevice へ移動、内容は同じ)。
@@ -145,3 +145,64 @@ TestPlayRecorder.StartReplay(path); TestPlayRecorder.ReplayFinished += report =>
 `RecordStart` → (待つ) → `RecordStop` / `Replay` → `Report` / `Overlay ["1"]` / `Spawns ["A1_T2"]` / `Warp ["A1_T2","FromA1_T1"]` / `Abilities` / `Presets` / `Cheats`。
 オーバーレイ (IMGUI) は `capture_game_view` / `screenshot` には写らない。`ScreenCapture.CaptureScreenshot` (eval) で撮る。
 スクリプトを書き換えると再生が止まって再コンパイルされる (このプロジェクトの設定)。
+
+## 自動テストプレイボット (Jev による判断 + プログラムによる実行, 2026-10-03)
+
+**判断 = Jev** (TypeSafe System One, `jev-latest`)、**実行 = プログラム**の組み合わせ。床に着くたび・行動が終わるたびに、
+プログラムが物理で確かめた「次の行動の候補」と状態 (コンパクトな JSON) を Jev に送り、1 つ選ばせる。選ばれた行動は
+物理予測どおりのフレーム入力に変えて `VirtualPlayerInput` から流す。エディタ / Development Build のみ (ゲーム側の挙動は不変)。
+
+### ファイル (`Assets/Scripts/TestPlay/Bot/`)
+| ファイル | 役割 |
+|---|---|
+| `TestPlayBot.cs` | 本体 (常駐 `[TestPlay]` に付く)。区間の進行・ゴール決め・候補作り・Jev への問い合わせ・止まり/死亡の検出・レポート。`BotSettings` |
+| `BotWorld.cs` | 「目」: Ground レイヤーを 0.5 単位の格子で走査 → 立てる床のセグメント (`P12`、動く足場 `M3`)・解析的な移動グラフ・ゴールからの逆 Dijkstra。敵・危険・出口・移動装置・闘技場の一覧 |
+| `BotPhysics.cs` | `PlayerController` と同じ式の空中シミュレーション (当たりは本物の CapsuleCast、崖登り判定も同じ式) と跳躍計画 (離陸点・ダッシュ・長押し時間・二段ジャンプ・空中ダッシュ)。空中の舵取り `Steer` は計画と実行で共用。`BotPlatformPredictor` = MovingPlatform の内部状態から先の位置を正確に予測 |
+| `BotExecutor.cs` | 行動 → フレーム入力 (歩く・跳ぶ・すり抜ける・動く足場を待って乗る・斬る・裁断・回避・回復・調べる・大ジャンプ)。高速時は離陸直前と空中だけフレームあたりの物理ステップを 2 回までに抑える |
+| `JevClient.cs` | API 呼び出し (UnityWebRequest、メインスレッドで見張る)。401/422 は即失敗、429/529/5xx/通信エラーは 0.5→1→2→4 秒で再試行。呼び出し数・トークンを集計 |
+| `BotRoutes.cs` | エリア1 のクリティカルパス 29 区間 (目的: ボス/スピーカー/ピックアップ)、途中開始時のフラグ・能力、「全入口×全出口」 |
+| `BotReport.cs` / `BotJson.cs` | レポート (Markdown + 判断の全記録 JSONL + スクリーンショット) / 最小の JSON |
+| `Assets/Scripts/Editor/TestPlayBotWindow.cs` | `NeverNight/Test Play Bot` ウィンドウ |
+| `Assets/Scripts/Editor/PlayFromTitle.cs` | `NeverNight/タイトルからプレイ` (Ctrl+Alt+P): 開いているシーンはそのまま、TitleScene から再生 (止めると元に戻る) |
+| `Docs/TestPlay/playtest_bot.cs` | Unity CLI の run_script 用 (開始・状態・グラフ調査・単発の跳躍テスト) |
+
+### API キー
+`TYPESAFE_API_KEY` 環境変数 (プロセス → Windows のユーザー環境変数の順。エディタ起動後に設定しても読める) →
+無ければ **`UserSettings/TypeSafeApiKey.txt`** (キーだけを 1 行。UserSettings は .gitignore 済み)。キーはログ・レポート・画面に出さない。
+キーが無い・Jev が失敗した時は「プログラムの推奨 (ローカル方針)」で動き続ける (レポートの判断の出所が `local`)。
+
+### 使い方
+- **ウィンドウ** `NeverNight/Test Play Bot`: 「ルート」(開始/終了の区間、T1→T4・U・D などのボタン) か「全入口 × 全出口」(シーンごと/エリア1 全部) を選び、
+  速度 (0.1〜8)・Jev の応答待ち (自動 = 等倍以上は停止 / スローは 0.25 まで)・無敵・Jev の有無・途中開始のフラグ付与 などを設定して **▶ 開始**
+  (プレイ中でなければ「プレイして開始」)。下に状態 (区間・シーン・ゴール・実行中の手順・最後の判断と確信度・Jev の回数/トークン) とレポートへのボタン。
+- **オーバーレイ** (F1 / R3 長押し) の「ボット」タブ: 区間の選択・速度・無敵・Jev・開始/停止・状態。
+- **CLI**: `run_script --file Docs/TestPlay/playtest_bot.cs --entry PlayBot.Start --args '["0","3","1","1"]'` (開始区間, 終了区間, 速度, Jev 1/0[, 無敵 1/0]) →
+  `PlayBot.Status` / `PlayBot.Summary` / `PlayBot.Stop` / `PlayBotLog.Recent ["20"]` / `PlayBotProbe.Graph ["A1_T4"]` / `PlayBotTest.Jump ["P9","P3"]` → `PlayBotTest.Result`。
+- 途中の区間から始めると、エリア1 のフラグを外してから「前の区間まで終えた」フラグ (と AB 以降は赤ハサミ) を付ける。開始シーンにいる時は読み直す。
+
+### 判断の仕組み
+- 候補: ゴールへ直接 (`go_exit` / `use_transport` / `go_goal`)、隣の床へ (`jump_to_platform:P12` / `dash_jump:` / `drop_to:` / `drop_through:` / `walk_to:`)、
+  動く足場 (`wait_for_platform:M3` / `ride_to:P5`)、`attack:E2` / `finisher:` / `dodge` / `retreat` / `heal` / `interact` / `wait`、止まった時だけ `explore_left/right` と `use_ability:super_jump`。
+  各候補に「ルート上か (best / alternative / no)」「シミュレーションで着地するか」「危険」「失敗回数」と **`planner_pick` (プログラムの推奨)** を付ける。数値計算はすべてプログラム側。
+- 問い: `action` (choice) と、無敵でなく敵が 5 以内の時だけ `danger` (noul)。選択肢が 1 つなら聞かない (`auto`)。
+- ゴール: 区間の目的 (ボス・スピーカー・ピックアップ) → 戦闘中の闘技場 (ゲートが閉じている WaveArena/BossArena の敵) → 次のシーンへの出口 / 移動装置。
+- 失敗した跳躍・シミュレーションで着地できない辺は重くして経路を引き直す。目的でない出口には歩き・跳躍とも入らない。
+- **止まった**: 30 ゲーム秒進展なし、または同じ行動が 4 回続けて失敗 → スクリーンショット付きで記録。2 回目でその区間を失敗にし、次の区間の入口へワープして続ける。
+  **迷った**: Jev の確信度 < 0.5 の判断 (床ごとに 1 枚スクリーンショット)。死亡は記録して読み直し (3 回で区間失敗)。穴/トゲでの戻しも記録。
+- 速度: 応答待ちの間だけゲームを止める/遅くする。高速時は離陸の直前と空中だけ 1 フレームの物理を 2 ステップまでに抑える。
+
+### 結果 (`TestPlay/Reports/<日時>_<名前>.md` + `_decisions.jsonl` + `_img/`。git の追跡対象外)
+確認 (2026-10-03, エディタ, 無敵):
+| 区間 | 速度 | 結果 | Jev 回数 / トークン |
+|---|---|---|---|
+| T1→T2→T3→T4→B1 | 1x / 4x / 8x (実効約 4.3x) / 0.25x | 4/4 (どの速度も) | 24〜36 回 / 約 2.3〜3.6 万 |
+| B1 (番人+スピーカー①)→S1→H | 2x | 成功 | 13 回 / 1.2 万 |
+| H→U1→…→MB1→ジップライン (U ルート 13 区間) | 4x | 8/13 | 280 回 / 27.7 万 |
+U ルートで止まった所: U3 (コーヒーカップの闘技場の飛ぶ敵に届かない, (109.5,3.9))、W3 (動く足場 M5 に飛び乗れない, (52,90))、
+W4→W5 (W3 側の出口へ出てしまう)、W5 (回るゴンドラから先へ跳べない, (62.5,192)/(52,184))、MB1 (中ボスが足場の 5 上にいて届かない, (55.6,351.9))。
+D ルート・C1→AB→FP は未確認。
+
+### 既知の限界
+- 動く足場: 待っている床の端から歩きの速さで跳べる時だけ乗る (助走・ダッシュ併用の乗り移りは未対応)。回る足場 (Orbit) は失敗が多い。
+- 飛ぶ敵・高い所のボス: 近くに来るのを待って斬るだけ。横風 (W4)・水中 (D4/D5) の補正はシミュレーションに無い (空中の舵取りで補うのみ)。
+- 0.5 単位より狭い足場は床として扱わない。グラップル (青)・壁張り付き (黄)・アイテムは使わない。

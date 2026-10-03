@@ -557,6 +557,17 @@ public class BotWorld
                 });
             }
 
+            foreach (var wave in root.GetComponentsInChildren<WaveArena>(false))
+            {
+                var col = wave.GetComponent<Collider2D>();
+                if (col == null) continue;
+                Entities.Add(new BotEntity
+                {
+                    Id = "A" + (++n), Kind = "wavearena", Label = GetField<string>(wave, "_flagId"),
+                    Rect = ToRect(col.bounds), Source = wave,
+                });
+            }
+
             foreach (var box in root.GetComponentsInChildren<BreakableBox>(false))
                 AddBreakable(box, "breakable", "box", ref n);
             foreach (var sb in root.GetComponentsInChildren<SkillBreakable>(false))
@@ -830,7 +841,7 @@ public class BotWorld
             var lo = Mathf.Max(a.XMin, b.XMin) + 0.3f;
             var hi = Mathf.Min(a.XMax, b.XMax) - 0.3f;
             for (var x = lo; x <= hi + 0.01f; x += Res)
-                if (ColumnEmpty(x, ay - 0.6f, by + 0.3f)) return true;
+                if (ColumnEmptyBelow(x, ay, by + 0.3f)) return true;
             return false;
         }
 
@@ -852,8 +863,7 @@ public class BotWorld
 
             // 下へ跳ぶ時は、着地点の真上に別の床が無いこと (先にそちらへ着いてしまう)
             if (dy < -0.5f && !a.Moving && !b.Moving &&
-                !ColumnEmpty(bx, Mathf.Min(ay + 1f, by + 4.5f), by + 0.3f) &&
-                !ColumnEmpty(b.CenterX, Mathf.Min(ay + 1f, by + 4.5f), by + 0.3f))
+                !LandingClear(a, bx, ay, by) && !LandingClear(a, b.CenterX, ay, by))
                 continue;
 
             edge.Move = b.Moving || a.Moving ? BotMove.Platform : mode;
@@ -929,6 +939,21 @@ public class BotWorld
         edge.Move = gap > WalkSpeed * t ? BotMove.DashJump : g.yMax < ay ? BotMove.Drop : BotMove.Jump;
         edge.Cost = 0.4f + gap / WalkSpeed + Mathf.Max(0f, dy) * 0.08f;
         return true;
+    }
+
+    /// <summary>x の真上 (着地の直前に通る所) に別の床が無いか。離陸する床 a 自身の厚みは除く。</summary>
+    private bool LandingClear(BotSegment a, float x, float ay, float by)
+    {
+        if (x >= a.XMin && x <= a.XMax) return ColumnEmptyBelow(x, a.YAt(x), by + 0.3f);
+        return ColumnEmpty(x, Mathf.Min(ay + 1f, by + 4.5f), by + 0.3f);
+    }
+
+    /// <summary>床 (面の高さ ay) の厚みの下から yBottom まで何も無いか (すり抜けて落ちる時)。</summary>
+    private bool ColumnEmptyBelow(float x, float ay, float yBottom)
+    {
+        var y = ay - Res * 0.5f;
+        while (y > yBottom && CellAt(x, y) != 0) y -= Res;
+        return ColumnEmpty(x, y, yBottom);
     }
 
     /// <summary>縦の柱に何も無いか (すり抜け床も含めて。落ちる途中で別の床に着かないか)。</summary>

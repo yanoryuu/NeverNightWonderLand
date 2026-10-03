@@ -141,7 +141,11 @@ public class TestPlayBot : MonoBehaviour
         Begin(steps, title, () =>
         {
             if (!Settings.ApplyPresets) return;
+            // 「前の区間まで終えた」状態にそろえる: エリア1 のフラグを外してから前の区間のフラグを立てる
+            TestPlayActions.ClearArea1Flags();
             foreach (var flag in BotRoutes.FlagsBefore(route, from)) GameProgress.Set(flag);
+            // 同じシーンにいる時は読み直さないとフラグ (倒したボス等) が反映されない
+            _reloadFirst = TestPlayActions.CurrentStageName == route[Mathf.Max(0, from)].Scene;
             foreach (var up in BotRoutes.UpgradesBefore(route, from)) TestPlayActions.SetUpgrade(up, true);
         });
     }
@@ -455,8 +459,21 @@ public class TestPlayBot : MonoBehaviour
 
         if (_prepareOnce != null)
         {
-            _prepareOnce();
+            var once = _prepareOnce;
             _prepareOnce = null;
+            once();
+        }
+
+        if (_reloadFirst)
+        {
+            _reloadFirst = false;
+            SnapshotAbilities(player);
+            GamePause.Reset();
+            StageLoader.LoadWithPlayerScene(step.Scene);
+            _prepareOnce = RestoreAbilities;
+            _forceWarp = true;
+            _phaseT0 = Time.realtimeSinceStartup;
+            return;
         }
 
         var current = TestPlayActions.CurrentStageName;
@@ -476,6 +493,7 @@ public class TestPlayBot : MonoBehaviour
     }
 
     private string _hopEntrance;
+    private bool _reloadFirst;
 
     private void TickWaitLoad(PlayerController player)
     {
@@ -637,6 +655,7 @@ public class TestPlayBot : MonoBehaviour
 
     private bool _transitionPending;
     private int _bestBossHp = int.MaxValue;
+    private int _lastEnemyCount = -1;
 
     private void OnActionFinished(PlayerController player)
     {
@@ -734,6 +753,12 @@ public class TestPlayBot : MonoBehaviour
         _goalEntrance = null;
         _goalNextScene = step.Next;
 
+        // 戦闘が始まった闘技場 (ウェーブ・ボス) ではゲートが閉じている: 敵を倒すのが先
+        if (TryFightGoal(player))
+            return;
+
+        _goalNextScene = step.Next;
+
         if (Settings.Objectives)
         {
             foreach (var o in step.Objectives)
@@ -819,6 +844,62 @@ public class TestPlayBot : MonoBehaviour
         _world.BuildGraph(best.Rect);
     }
 
+    /// <summary>始まった (ゲートが閉じた) 闘技場があれば、その敵をゴールにする。</summary>
+    private bool TryFightGoal(PlayerController player)
+    {
+        Rect? arenaRect = null;
+        EnemyController boss = null;
+        foreach (var e in _world.Entities)
+        {
+            if (e.Source == null) continue;
+            if (e.Kind == "wavearena" && e.Source is WaveArena wa && wa.enabled &&
+                BotWorld.GetField<bool>(wa, "_started") && !GameProgress.Has(e.Label))
+            {
+                arenaRect = e.Rect;
+                break;
+            }
+
+            if (e.Kind == "arena" && e.Source is BossArena ba && ba.enabled && BotWorld.GetField<bool>(ba, "_started"))
+            {
+                var b = BotWorld.GetField<EnemyController>(ba, "_boss");
+                if (b != null && !b.IsDead)
+                {
+                    arenaRect = e.Rect;
+                    boss = b;
+                    break;
+                }
+            }
+        }
+
+        if (!arenaRect.HasValue) return false;
+
+        var pos = (Vector2)player.transform.position;
+        var area = new Rect(arenaRect.Value.xMin - 6f, arenaRect.Value.yMin - 6f, arenaRect.Value.width + 12f, arenaRect.Value.height + 12f);
+        var target = boss != null
+            ? _world.Enemies.FirstOrDefault(e => e.Source == boss)
+            : _world.Enemies.Where(e => BotExecutor.EntityAlive(e) && area.Contains(e.Rect.center))
+                .OrderBy(e => (e.Rect.center - pos).sqrMagnitude).FirstOrDefault();
+
+        if (target == null)
+        {
+            // ウェーブの合間: 闘技場の中で待つ
+            _goalKind = "fight_wait";
+            _goalEntity = null;
+            _goalRect = arenaRect.Value;
+            GoalText = "闘技場: 次のウェーブを待つ";
+            _world.BuildGraph(_goalRect);
+            return true;
+        }
+
+        _goalKind = "fight";
+        _goalEntity = target;
+        var r = target.Rect;
+        _goalRect = new Rect(r.xMin - 0.8f, r.yMin - 0.3f, r.width + 1.6f, r.height + 0.6f);
+        GoalText = $"闘技場: {target.Kind} {target.Id} を倒す ({r.center.x:F0},{r.center.y:F0})";
+        _world.BuildGraph(_goalRect);
+        return true;
+    }
+
     // ------------------------------------------------------------------ 判断
 
     private BotSegment _decisionSegment;
@@ -826,9 +907,8 @@ public class TestPlayBot : MonoBehaviour
     private void Decide(PlayerController player)
     {
         // ボスなど動く目的は毎回ゴールを取り直す
-        if (_goalKind == "boss" || _goalKind == "speaker" || _goalKind == "pickup" || _goalEntity == null && _goalKind != "reach")
-            ResolveGoal(player);
-        else _world.RefreshEnemies();
+        // ゴールは毎回取り直す (ボスなど動く目的・途中で始まる闘技場の戦闘・開いた扉)
+        ResolveGoal(player);
 
         var cur = _world.SegmentUnder(player);
         if (cur == null)
@@ -839,6 +919,11 @@ public class TestPlayBot : MonoBehaviour
             cur = _world.SegmentAt((Vector2)player.transform.position - new Vector2(0f, _world.PivotToFeet), 1.6f);
         }
         else _noSegmentSince = -1f;
+
+        // 目的でない出口には跳び込まない (計画のシミュレーションで避ける)
+        _physics.AvoidRects.Clear();
+        foreach (var e in _world.Entities)
+            if (e.Kind == "exit" && e != _goalEntity) _physics.AvoidRects.Add(e.Rect);
 
         _decisionSegment = cur;
         if (cur != null) _visited.Add(SegKey(cur));
@@ -1021,6 +1106,17 @@ public class TestPlayBot : MonoBehaviour
             _stuckMode = false;
         }
 
+        // 闘技場: 敵の数が変わったら進展 (倒した・次のウェーブ)
+        if (_goalKind == "fight" || _goalKind == "fight_wait")
+        {
+            var alive = _world.Enemies.Count(e => BotExecutor.EntityAlive(e));
+            if (alive != _lastEnemyCount)
+            {
+                _lastEnemyCount = alive;
+                _lastProgressT = Time.time;
+            }
+        }
+
         // ボス戦: 削った HP・防御値も進展とみなす
         if (_goalEntity != null && _goalEntity.Source is EnemyController boss && !boss.IsDead)
         {
@@ -1118,30 +1214,14 @@ public class TestPlayBot : MonoBehaviour
             }
         }
 
-        // 3) 床の端まで歩く (探索: 止まった時・ルートが無い時だけ。ほかの出口には入らない)
-        var hasRoute = list.Any(o => o.OnRoute);
-        if (cur != null && !cur.Moving && (_stuckMode || !hasRoute))
-        {
-            var left = AvoidOtherExits(cur.XMin + 0.3f, pos, cur);
-            var right = AvoidOtherExits(cur.XMax - 0.3f, pos, cur);
-            if (pos.x - left > 1.5f)
-                list.Add(WalkOption("explore_left", left, pos, curCost));
-            if (right - pos.x > 1.5f)
-                list.Add(WalkOption("explore_right", right, pos, curCost));
-        }
-        else if (cur == null && player.IsGrounded)
-        {
-            // 床として認識できない所 (狭い足場・段の角など): 少しずつ動いて抜ける
-            list.Add(WalkOption("explore_left", AvoidOtherExits(pos.x - 2f, pos, null), pos, curCost));
-            list.Add(WalkOption("explore_right", AvoidOtherExits(pos.x + 2f, pos, null), pos, curCost));
-        }
-
         // 4) 敵・壊せる物
         foreach (var e in _world.Enemies.Concat(_world.Entities.Where(x => (x.Kind == "breakable" || x.Kind == "speaker") && x.Active)))
         {
             if (!BotExecutor.EntityAlive(e)) continue;
             var d = e.Rect.center - pos;
-            if (Mathf.Abs(d.x) > 7f || Mathf.Abs(d.y) > 3.5f) continue;
+            // 近くの敵・物。目的の相手 (ボス・闘技場の敵) は同じ床の上なら遠くても出す
+            var goalOnFloor = _goalEntity == e && cur != null && Mathf.Abs(d.x) < 30f && Mathf.Abs(d.y) < 2.5f;
+            if (!goalOnFloor && (Mathf.Abs(d.x) > 7f || Mathf.Abs(d.y) > 3.5f)) continue;
             if (e.Kind == "breakable" && e.Label.StartsWith("needs_")) continue; // スキルが要る物は通常攻撃では壊れない
             var isGoal = _goalEntity == e;
             var blocks = Mathf.Abs(d.x) < 2.5f && Mathf.Abs(d.y) < 1.5f;
@@ -1184,6 +1264,24 @@ public class TestPlayBot : MonoBehaviour
             }
         }
 
+        // 3) 床の端まで歩く (探索: 止まった時・ルートが無い時だけ。ほかの出口には入らない)
+        var hasRoute = list.Any(o => o.OnRoute);
+        if (cur != null && !cur.Moving && (_stuckMode || !hasRoute))
+        {
+            var left = AvoidOtherExits(cur.XMin + 0.3f, pos, cur);
+            var right = AvoidOtherExits(cur.XMax - 0.3f, pos, cur);
+            if (pos.x - left > 1.5f)
+                list.Add(WalkOption("explore_left", left, pos, curCost));
+            if (right - pos.x > 1.5f)
+                list.Add(WalkOption("explore_right", right, pos, curCost));
+        }
+        else if (cur == null && player.IsGrounded)
+        {
+            // 床として認識できない所 (狭い足場・段の角など): 少しずつ動いて抜ける
+            list.Add(WalkOption("explore_left", AvoidOtherExits(pos.x - 2f, pos, null), pos, curCost));
+            list.Add(WalkOption("explore_right", AvoidOtherExits(pos.x + 2f, pos, null), pos, curCost));
+        }
+
         // 5) 回復・レバー
         var hp = player.Health != null ? player.Health.Hp.CurrentValue : 10;
         var maxHp = player.Health != null ? player.Health.MaxHp : 10;
@@ -1219,6 +1317,29 @@ public class TestPlayBot : MonoBehaviour
             });
         }
 
+        if (_goalKind == "fight" && _goalEntity != null && (_goalEntity.Rect.center.y - pos.y > 2.5f || float.IsInfinity(curCost)))
+        {
+            // 飛んでいる・届かない敵: 近くに来るのを待って斬る
+            list.Add(new BotOption
+            {
+                Key = "wait", Action = new BotAction { Kind = BotActionKind.Wait, WalkX = 0.8f }, Score = 2f, OnRoute = true,
+                Description = Desc("wait here for the enemy to come within reach, then attack", "goal", "not needed", null, 0),
+            });
+        }
+
+        if (_goalKind == "fight_wait")
+        {
+            list.Add(new BotOption
+            {
+                Key = "wait", Action = new BotAction { Kind = BotActionKind.Wait, WalkX = 0.6f }, Score = -1f, OnRoute = true,
+                Description = Desc("wait for the next wave of enemies (the arena gates are closed)", "goal", "not needed", null, 0),
+            });
+        }
+
+        // シミュレーションで着地できない選択肢は、止まっている時以外は出さない
+        if (!_stuckMode && list.Any(o => o.PhysicsOk))
+            list.RemoveAll(o => !o.PhysicsOk);
+
         foreach (var o in list) o.Action.Key = o.Key;
         // 同じキーは 1 つ。プログラムの推奨 (いちばん小さいスコア) に印を付ける
         var result = list.GroupBy(o => o.Key).Select(g => g.OrderBy(o => o.Score).First()).OrderBy(o => o.Score).Take(12).ToList();
@@ -1230,12 +1351,14 @@ public class TestPlayBot : MonoBehaviour
     private float AvoidOtherExits(float x, Vector2 pos, BotSegment cur)
     {
         var feet = cur != null ? cur.YAt(pos.x) : pos.y - _world.PivotToFeet;
-        var band = new Rect(Mathf.Min(pos.x, x), feet, Mathf.Abs(x - pos.x), _world.PlayerHeight);
+        var halfW = _world.PlayerWidth * 0.5f + 0.35f; // 体の幅 (向きで中心が 0.2 ずれる分も含む)
+        var band = new Rect(Mathf.Min(pos.x, x) - halfW, feet, Mathf.Abs(x - pos.x) + halfW * 2f, _world.PlayerHeight);
         foreach (var e in _world.Entities)
         {
             if (e.Kind != "exit" || e == _goalEntity || !e.Rect.Overlaps(band)) continue;
-            var half = _world.PlayerWidth * 0.5f + 0.6f;
-            x = x > pos.x ? Mathf.Min(x, e.Rect.xMin - half) : Mathf.Max(x, e.Rect.xMax + half);
+            // 進む向きにある出口だけ (入口のすぐ脇に出た時、背中側の出口で止まらない)
+            if (x > pos.x ? e.Rect.center.x < pos.x : e.Rect.center.x > pos.x) continue;
+            x = x > pos.x ? Mathf.Max(pos.x, Mathf.Min(x, e.Rect.xMin - halfW)) : Mathf.Min(pos.x, Mathf.Max(x, e.Rect.xMax + halfW));
         }
 
         return x;
@@ -1281,7 +1404,15 @@ public class TestPlayBot : MonoBehaviour
         else if (e.Move == BotMove.Walk)
         {
             key = "walk_to:" + b.Name;
-            action = new BotAction { Kind = BotActionKind.WalkTo, Target = target, WalkX = b.ClampX(pos.x, 0.5f) };
+            var walkX = b.ClampX(pos.x, 0.5f);
+            if (!Mathf.Approximately(AvoidOtherExits(walkX, pos, cur), walkX))
+            {
+                // 歩く途中で目的でない出口に入ってしまう
+                MarkSimFail(cur.Id, b.Id);
+                return null;
+            }
+
+            action = new BotAction { Kind = BotActionKind.WalkTo, Target = target, WalkX = walkX };
         }
         else
         {

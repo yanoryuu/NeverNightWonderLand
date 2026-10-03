@@ -63,6 +63,8 @@ public class BotPhysics
     public bool CanGlide;
 
     public int LastSimulations;
+    /// <summary>入ってはいけない矩形 (目的でない出口)。軌道が触れたら失敗とみなす。</summary>
+    public readonly List<Rect> AvoidRects = new();
 
     private Vector2 Off(int facing) => new(CapsuleOffset.x * (facing == 0 ? 1 : facing), CapsuleOffset.y);
     public float LedgeFeetOffset = 1f; // transform.y - (GroundCheck.y - 半径) = 崖登り判定の足元
@@ -149,7 +151,7 @@ public class BotPhysics
     }
 
     /// <summary>跳躍計画を探す。見つからなければ Valid=false。</summary>
-    public BotJumpPlan Plan(BotSegment from, Vector2 playerPos, BotTarget target, int budget = 360)
+    public BotJumpPlan Plan(BotSegment from, Vector2 playerPos, BotTarget target, int budget = 360, float? onlyX = null)
     {
         var plan = new BotJumpPlan();
         LastSimulations = 0;
@@ -157,10 +159,15 @@ public class BotPhysics
 
         if (from == null)
             return plan;
+        PrepareMovers(playerPos, target);
 
         // 離陸点の候補 (今の位置に近い順)
         var xs = new List<float>();
-        if (from.Moving)
+        if (onlyX.HasValue)
+        {
+            xs.Add(onlyX.Value);
+        }
+        else if (from.Moving)
         {
             xs.Add(playerPos.x);
         }
@@ -307,6 +314,56 @@ public class BotPhysics
             if (BotWorld.IsOneWay(cols[i])) _ignore.Add(cols[i]);
     }
 
+    // ------------------------------------------------------------------ 動く足場の予測
+
+    private class Mover
+    {
+        public BotSegment Seg;
+        public Vector2[] Path;
+    }
+
+    private readonly List<Mover> _movers = new();
+    private Mover _targetMover;
+
+    private void PrepareMovers(Vector2 playerPos, BotTarget target)
+    {
+        _movers.Clear();
+        _targetMover = null;
+        foreach (var seg in _world.Segments)
+        {
+            if (!seg.Moving || seg.Body == null || seg.Collider == null) continue;
+            var isTarget = target.Segment == seg;
+            if (!isTarget && Vector2.Distance(seg.Collider.bounds.center, playerPos) > 25f) continue;
+            var mp = seg.Body.GetComponent<MovingPlatform>();
+            if (mp == null) continue;
+            var m = new Mover { Seg = seg, Path = BotPlatformPredictor.Predict(mp, 140, Dt) };
+            _movers.Add(m);
+            if (isTarget) _targetMover = m;
+        }
+    }
+
+    private static Vector2 MoverShift(Mover m, float t)
+    {
+        var k = Mathf.Clamp(Mathf.RoundToInt(t / Dt), 0, m.Path.Length - 1);
+        return m.Path[k] - m.Path[0];
+    }
+
+    private bool LandsOnOtherMover(float prevFeet, Vector2 pos, float t)
+    {
+        var feet = pos.y - _world.PivotToFeet;
+        foreach (var m in _movers)
+        {
+            if (m == _targetMover) continue;
+            var b = m.Seg.Collider.bounds;
+            var sh = MoverShift(m, t);
+            var top = b.max.y + sh.y;
+            if (prevFeet >= top - 0.1f && feet <= top + 0.05f && pos.x > b.min.x + sh.x - 0.2f && pos.x < b.max.x + sh.x + 0.2f)
+                return true;
+        }
+
+        return false;
+    }
+
     private float TargetTop(BotTarget t) => t.IsRect ? t.Rect.yMax : t.Moving ? t.Segment.Collider.bounds.max.y : t.Segment.YAt(t.CenterX);
 
     private bool Simulate(Sim s, BotTarget target, bool running, float hold, bool doubleJump, bool airDash, BotJumpPlan plan)
@@ -314,7 +371,6 @@ public class BotPhysics
         LastSimulations++;
         plan.Path.Clear();
         var t = 0f;
-        var platformVel = target.Moving ? target.Segment.Body.linearVelocity : Vector2.zero;
         var targetBottom = target.IsRect ? target.Rect.yMin : target.Moving ? target.Segment.Collider.bounds.max.y - 3f : target.Segment.YMin;
         var speed = running ? _world.RunSpeed : _world.WalkSpeed;
         s.Running = running;
@@ -324,7 +380,8 @@ public class BotPhysics
         while (t < 2.6f)
         {
             t += Dt;
-            var shift = platformVel * t;
+            var shift = _targetMover != null ? MoverShift(_targetMover, t) : Vector2.zero;
+            var prevFeet = s.Pos.y - _world.PivotToFeet;
             var move = Steer(s.Pos, s.Vel, target, speed, shift);
 
             // 二段ジャンプ・空中ダッシュは頂点で
@@ -372,11 +429,22 @@ public class BotPhysics
                 MoveAndCollide(ref s, move);
             plan.Path.Add(s.Pos);
 
+            if (AvoidRects.Count > 0)
+            {
+                var bodyRect = new Rect(s.Pos + Off(s.Facing) - CapsuleSize * 0.5f, CapsuleSize);
+                foreach (var r in AvoidRects)
+                    if (bodyRect.Overlaps(r)) return false;
+            }
+
+            // 的でない動く足場 (乗っている足場を含む) の上に落ちたら失敗 (予測した位置で見る)
+            if (s.Vel.y <= 0f && LandsOnOtherMover(prevFeet, s.Pos, t))
+                return false;
+
             // 的の上をどれだけ高く越えたか (ぎりぎりの跳躍は本番で外れやすいので、余裕のある計画だけ採る)
             if (!target.IsRect)
             {
                 var f = s.Pos.y - _world.PivotToFeet;
-                var sh = platformVel * t;
+                var sh = shift;
                 if (s.Pos.x >= target.XMin + sh.x - 0.2f && s.Pos.x <= target.XMax + sh.x + 0.2f)
                 {
                     var top = target.Moving ? target.Segment.Collider.bounds.max.y + sh.y : target.Segment.YAt(s.Pos.x);
@@ -538,6 +606,110 @@ public class BotPhysics
         }
 
         return best;
+    }
+}
+
+/// <summary>
+/// 動く足場 (MovingPlatform) の先の位置を予測する。MovingPlatform.FixedUpdate と同じ計算を、今の内部状態
+/// (非公開フィールドを読む) から 0.02 秒刻みで進める。待ち・折り返し・イージングも含めて正確に一致する。
+/// </summary>
+public static class BotPlatformPredictor
+{
+    public static Vector2[] Predict(MovingPlatform mp, int steps, float dt)
+    {
+        var rb = mp.GetComponent<Rigidbody2D>();
+        var result = new Vector2[steps + 1];
+        var pos = rb != null ? rb.position : (Vector2)mp.transform.position;
+        result[0] = pos;
+
+        var running = BotWorld.GetField<bool>(mp, "_running");
+        var delay = BotWorld.GetField<float>(mp, "_delayTimer");
+        var mode = BotWorld.GetField<object>(mp, "_mode")?.ToString() ?? "PingPong";
+        var wps = BotWorld.GetField<Vector2[]>(mp, "_waypoints");
+        var origin = BotWorld.GetField<Vector2>(mp, "_origin");
+        var speed = BotWorld.GetField<float>(mp, "_speed");
+        var waitTime = BotWorld.GetField<float>(mp, "_waitTime");
+        var ease = BotWorld.GetField<bool>(mp, "_easeInOut");
+        var center = BotWorld.GetField<Transform>(mp, "_orbitCenter");
+        var radius = BotWorld.GetField<float>(mp, "_radius");
+        var angular = BotWorld.GetField<float>(mp, "_angularSpeed");
+        var segFrom = BotWorld.GetField<int>(mp, "_segmentFrom");
+        var direction = BotWorld.GetField<int>(mp, "_direction");
+        var segT = BotWorld.GetField<float>(mp, "_segmentT");
+        var wait = BotWorld.GetField<float>(mp, "_waitTimer");
+        var angle = BotWorld.GetField<float>(mp, "_angle");
+        var orbitCenter = center != null ? (Vector2)center.position : origin;
+
+        for (var i = 1; i <= steps; i++)
+        {
+            if (!running || delay > 0f)
+            {
+                if (running) delay -= dt;
+                result[i] = pos;
+                continue;
+            }
+
+            if (mode == "Orbit")
+            {
+                angle += angular * dt;
+                if (angle > 360f) angle -= 360f;
+                else if (angle < -360f) angle += 360f;
+                var rad = angle * Mathf.Deg2Rad;
+                pos = orbitCenter + new Vector2(Mathf.Cos(rad), Mathf.Sin(rad)) * radius;
+                result[i] = pos;
+                continue;
+            }
+
+            if (wps == null || wps.Length < 2 || speed <= 0f)
+            {
+                result[i] = pos;
+                continue;
+            }
+
+            if (wait > 0f)
+            {
+                wait -= dt;
+                pos = origin + wps[segFrom];
+                result[i] = pos;
+                continue;
+            }
+
+            // NextIndex (PingPong は端で向きを反転)
+            int to;
+            if (mode == "Loop") to = (segFrom + 1) % wps.Length;
+            else
+            {
+                to = segFrom + direction;
+                if (to < 0 || to >= wps.Length)
+                {
+                    direction = -direction;
+                    to = segFrom + direction;
+                }
+            }
+
+            var a = origin + wps[segFrom];
+            var b = origin + wps[to];
+            var length = Vector2.Distance(a, b);
+            segT += length > 0.0001f ? speed * dt / length : 1f;
+            if (segT >= 1f)
+            {
+                segT = 0f;
+                segFrom = to;
+                wait = waitTime;
+                if (mode == "PingPong" && (to == 0 || to == wps.Length - 1))
+                    direction = to == 0 ? 1 : -1;
+                pos = b;
+            }
+            else
+            {
+                var e = ease ? Mathf.SmoothStep(0f, 1f, segT) : segT;
+                pos = Vector2.Lerp(a, b, e);
+            }
+
+            result[i] = pos;
+        }
+
+        return result;
     }
 }
 #endif

@@ -193,3 +193,40 @@ public static class PlayBotTest
     public static string Jump(string from, string to) => TestPlayBot.Ensure().TestJump(from, to);
     public static string Result() => TestPlayBot.Instance != null ? TestPlayBot.Instance.TestResult : "no bot";
 }
+
+public static class PlayBotCells
+{
+    // 格子の値 (0 空 / 1 固体 / 2 すり抜け / 3 壊せる) を縦に並べる
+    public static string Column(string xs, string top, string bottom)
+    {
+        var w = new BotWorld();
+        w.Scan(TestPlayActions.Player);
+        var x = float.Parse(xs, System.Globalization.CultureInfo.InvariantCulture);
+        var sb = new System.Text.StringBuilder();
+        for (var y = float.Parse(top, System.Globalization.CultureInfo.InvariantCulture); y >= float.Parse(bottom, System.Globalization.CultureInfo.InvariantCulture); y -= 0.5f)
+        {
+            var cols = Physics2D.OverlapPointAll(new Vector2(x, y), w.GroundMask);
+            sb.AppendLine($"y{y:0.0}: {w.CellAt(x, y)} {string.Join(",", cols.Select(c => c.name + (c.isTrigger ? "(T)" : "") + (BotWorld.IsOneWay(c) ? "(1way)" : "")))}");
+        }
+        return sb.ToString();
+    }
+}
+
+public static class PlayBotMovers
+{
+    public static string List()
+    {
+        var w = new BotWorld();
+        w.Scan(TestPlayActions.Player);
+        var sb = new System.Text.StringBuilder();
+        foreach (var s in w.Segments.Where(s => s.Moving))
+        {
+            var mp = s.Body.GetComponent<MovingPlatform>();
+            var path = BotPlatformPredictor.Predict(mp, 150, 0.02f);
+            var b = s.Collider.bounds;
+            sb.AppendLine($"{s.Name} {s.Body.name} col={s.Collider.GetType().Name} bounds=({b.min.x:0.0},{b.min.y:0.0})-({b.max.x:0.0},{b.max.y:0.0}) oneway={s.AllOneWay} range={s.TravelRange} vel={s.Body.linearVelocity} " +
+                      $"pred: {string.Join(" ", path.Where((p, i) => i % 25 == 0).Select(p => $"({p.x:0.0},{p.y:0.0})"))} mode={BotWorld.GetField<object>(mp, "_mode")} running={mp.IsRunning}");
+        }
+        return sb.ToString();
+    }
+}
