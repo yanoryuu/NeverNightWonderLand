@@ -6,10 +6,12 @@ using UnityEngine;
 /// 攻撃練習用の壊れる箱。防御値は持たず、HP/防御値どちらのダメージも合算して HP で受ける
 /// (どのスタイルでも壊せるようにするため)。
 /// _flagId を設定すると破壊状態が GameProgress で永続化され、再訪しても壊れたまま (隠し壁用)。
-/// 空なら従来どおりシーンに入り直すたびに復活する。
+/// 空なら (ふつうの木箱) 壊れた事を <see cref="BrokenCrateRegistry"/> に記録し、部屋を出入りしても壊れたまま。
+/// 拠点 (SavePoint) で休むと全部元に戻る (2026-10-04 PendingChanges 31)。
 /// _coinId を設定するとコインの箱になる: 壊すとコイン (<see cref="CoinPiece"/>) が飛び出す。
-/// コインを取った後 (GameProgress に _coinId) は箱ごと出現しない。取らずに部屋を出たら、次に来た時は箱もコインも元どおり。
-/// プレイヤーの 1 回の攻撃で壊れる箱は 1 つだけ (PlayerController.PerformAttackHit が一番近い箱を選ぶ)。
+/// コインを取った後 (GameProgress に _coinId) は箱ごと出現しない。取らずに部屋を出たら、次に来た時は箱は壊れたまま、
+/// コインが箱のあった場所に置いてある (コインを失わない。休んだ後は箱が戻り、コインは中に戻る)。
+/// プレイヤーの攻撃の当たり判定に入った箱は全部壊れる (PendingChanges 29。1 回に 1 つだけの制限はやめた)。
 /// 隠し壁・積んだ箱は 1 セル = 1 個の BreakableBox (同じ _flagId を共有。1 個壊れるとフラグが立ち、再訪では全部消える)。
 /// </summary>
 [RequireComponent(typeof(SpriteRenderer))]
@@ -38,6 +40,8 @@ public class BreakableBox : MonoBehaviour, IDamageable
     private int _hp;
     private float _flashTimer;
     private bool _broken;
+    private string _crateId; // 壊れた記録の ID (シーン名+名前+初期位置)。_flagId のある箱 (隠し壁) は使わない
+    private bool _spawnLeftCoin; // 壊れたままのコインの箱: Start でコインだけ置いて箱は消す
 
     /// <summary>破壊された時に発火する (チュートリアルの達成判定用)。</summary>
     public event Action OnBroken;
@@ -58,14 +62,47 @@ public class BreakableBox : MonoBehaviour, IDamageable
             return;
         }
 
+        // ふつうの木箱: 拠点で休むまで壊れたまま (BrokenCrateRegistry)
+        if (string.IsNullOrEmpty(_flagId))
+        {
+            _crateId = $"{gameObject.scene.name}:{name}:{transform.position.x:F1},{transform.position.y:F1}";
+            if (BrokenCrateRegistry.IsBroken(_crateId))
+            {
+                if (string.IsNullOrEmpty(_coinId))
+                {
+                    Destroy(gameObject);
+                    return;
+                }
+
+                // コインの箱を壊してコインを取らずに出た: 箱は壊れたまま、コインを箱の位置に置き直す (Start)
+                _broken = true;
+                _spawnLeftCoin = true;
+                foreach (var col in GetComponentsInChildren<Collider2D>())
+                    col.enabled = false;
+                if (TryGetComponent<Rigidbody2D>(out var body))
+                    body.simulated = false;
+                GetComponent<SpriteRenderer>().enabled = false;
+                return;
+            }
+        }
+
         _sprite = GetComponent<SpriteRenderer>();
         _baseColor = _sprite.color;
         _hp = _maxHp;
     }
 
+    private void Start()
+    {
+        if (!_spawnLeftCoin)
+            return;
+
+        SpawnCoin(Vector2.zero);
+        Destroy(gameObject);
+    }
+
     private void Update()
     {
-        if (_flashTimer > 0f)
+        if (_sprite != null && _flashTimer > 0f)
         {
             _flashTimer -= Time.deltaTime;
             if (_flashTimer <= 0f && !_broken)
@@ -100,6 +137,8 @@ public class BreakableBox : MonoBehaviour, IDamageable
 
         if (!string.IsNullOrEmpty(_flagId))
             GameProgress.Set(_flagId);
+        else
+            BrokenCrateRegistry.MarkBroken(_crateId);
 
         OnBroken?.Invoke();
 
@@ -108,7 +147,7 @@ public class BreakableBox : MonoBehaviour, IDamageable
         if (TryGetComponent<Rigidbody2D>(out var rb))
             rb.simulated = false;
 
-        SpawnCoin();
+        SpawnCoin(new Vector2(UnityEngine.Random.Range(-1.2f, 1.2f), 7.5f));
 
         transform.DOScale(Vector3.zero, _breakFadeTime)
             .SetEase(Ease.InBack)
@@ -120,14 +159,14 @@ public class BreakableBox : MonoBehaviour, IDamageable
         transform.DOKill();
     }
 
-    /// <summary>コインの箱ならコインを上へ飛び出させる (まだ取っていない時だけ)。</summary>
-    private void SpawnCoin()
+    /// <summary>コインの箱ならコインを velocity で飛び出させる (まだ取っていない時だけ。zero = その場に置く)。</summary>
+    private void SpawnCoin(Vector2 velocity)
     {
         if (string.IsNullOrEmpty(_coinId) || _coinPrefab == null || GameProgress.Has(_coinId))
             return;
 
         var coin = Instantiate(_coinPrefab, LootPiece.FreeSpawnPoint(transform.position), Quaternion.identity, transform.parent);
         coin.CoinId = _coinId;
-        coin.Launch(new Vector2(UnityEngine.Random.Range(-1.2f, 1.2f), 7.5f));
+        coin.Launch(velocity);
     }
 }

@@ -156,3 +156,59 @@ public static class PlayBox
         return "virtual off";
     }
 }
+
+// 2026-10-04 (2) PendingChanges 29〜31 の確認用 (playtest_boxfix の続き)。
+//   Registry          : 壊れた木箱の記録 (BrokenCrateRegistry) の数とコインのフラグ
+//   Coins(x, y, r)    : 半径 r 内に落ちているコイン (CoinPiece)
+//   Home              : ホーム画面 (セーブポイントで休む) が開いているか / Close で閉じる
+public static class PlayBox2
+{
+    public static string Registry() =>
+        $"brokenCrates={BrokenCrateRegistry.Count} coinH2={GameProgress.Has("A1_Coin_H2_1")} " + PlayBox.State();
+
+    public static string Coins(float x, float y, float r)
+    {
+        var c = new Vector2(x, y);
+        var list = Object.FindObjectsByType<CoinPiece>(FindObjectsSortMode.None)
+            .Where(p => Vector2.Distance(p.transform.position, c) <= r)
+            .Select(p => $"coin {p.CoinId} ({p.transform.position.x:F2},{p.transform.position.y:F2})").ToArray();
+        return list.Length == 0 ? "no coin" : string.Join("\n", list);
+    }
+
+    public static string Home()
+    {
+        var home = Object.FindFirstObjectByType<HomeUIView>();
+        var menu = home == null ? null : typeof(HomeUIView).GetField("_menu", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(home) as MenuPanelView;
+        return $"home={(home != null)} open={(menu != null && menu.IsOpen)} paused={GamePause.IsPaused}";
+    }
+
+    /// <summary>通常攻撃を 1 回振って、0.6 秒後に (x, y) へ離れる (コインを拾わずに部屋を出る確認用)。</summary>
+    public static string HitAndRun(float x, float y)
+    {
+        var input = PlayerInputSource.Override as VirtualPlayerInput;
+        input.Tap(PlayerButton.Attack);
+        DG.Tweening.DOVirtual.DelayedCall(0.6f, () => Object.FindAnyObjectByType<PlayerController>().Teleport(new Vector2(x, y)), false);
+        return "hit and run";
+    }
+
+    /// <summary>コインのフラグを取り下げる (「壊したがコインは取らずに出た」状態を作る。磁力で拾ってしまうため)。</summary>
+    public static string UnsetCoin(string coinId)
+    {
+        GameProgress.Unset(coinId);
+        return Registry();
+    }
+
+    /// <summary>インタラクトのボタンを押す (セーブポイントで休む)。</summary>
+    public static string Interact()
+    {
+        (PlayerInputSource.Override as VirtualPlayerInput).Tap(PlayerButton.Interact);
+        return "interact";
+    }
+
+    public static string Close()
+    {
+        var home = Object.FindFirstObjectByType<HomeUIView>();
+        typeof(HomeUIView).GetMethod("CloseMenu", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(home, null);
+        return Home();
+    }
+}

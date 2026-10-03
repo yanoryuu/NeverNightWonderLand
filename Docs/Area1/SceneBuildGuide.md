@@ -532,7 +532,7 @@ UI ごとに専用プレハブ + 専用 UI シーン (`Assets/Scenes/UI/`, 名�
 
 **箱は一つずつ** (PendingChanges 17 「積んだ箱がまとめて壊れる」): 原因は、隠し壁 (`HiddenWall`) とスキルブロック (`SkillBlock`) が「矩形 1 個の BreakableBox / SkillBreakable + Tiled の絵」だったこと。絵は箱を積んだように見える (特に落下攻撃の橙のブロック) のに、1 回当てると全部消えていた。
 - ビルダーで 1 セル = 1 個に分けた (子 `Cell_x_y`、同じフラグ。1 個壊れるとフラグが立ち、隠し部屋の幕が開く。再訪では全部消えている)。
-- 通常攻撃は箱・ブロックを 1 回に 1 つだけ (プレイヤーに一番近い物。`PlayerController.PerformAttackHit`)。敵への当たり方は変えていない。
+- ~~通常攻撃は箱・ブロックを 1 回に 1 つだけ (プレイヤーに一番近い物)~~ → 2026-10-04 (PendingChanges 29) にやめた。当たり判定に入った箱・セルは全部壊れる (§14 追補 2026-10-04 (2))。
 - スキル (落下攻撃・大ジャンプ・突進) は体が通るセルだけを砕く。落下攻撃は積んだ段を順に突き抜ける (`GroundSlamState`: 着地しかけても足元のブロックを砕けたら落下を続ける)。
 - 隠し壁のセルの hp は 1 (以前は壁全体で 3)。T2 の 2×3 の壁は 4 回 (下 2 段) で通れる。
 - テストプレイのボット: `BotExecutor.BreakBlocker` は足元と頭の高さの 2 本の線で壁を探す (下の段を壊した後に頭の段が残るため)。ボットは糸の自動加算に頼っていない (糸を使う所が無い)。
@@ -567,7 +567,7 @@ UI ごとに専用プレハブ + 専用 UI シーン (`Assets/Scenes/UI/`, 名�
 
 (T3c / U2r / D5 は元から積んだ木箱の中。)
 
-**飾りの木箱は置かない** (2026-10-04, PendingChanges 28): 以前は背景の飾りに同じ絵の `Prop("props/cargo_crate.png", ...)` (当たり無し) があり、「箱が壊せない」と報告された (叩いていたのは飾り。壊せる木箱は正常)。H / D2 / D3 / D4 / U3 の 16 個を全部 `Crate` / `CrateStack` に置き換えた (H はスポーン SpawnFromA1_D1 を避けて x254.6 の 2 段 + x255.6、D3 のネズミの巣はネズミの出る位置を避けて x273.6 / 286.6)。**cargo_crate の絵は壊せる木箱専用** — 飾りに使わない (例外は W8 の落ちてくる荷物 `FallingObjectSpawner`)。置き場所の下調べは `SceneScripts/crate_probe.cs` (`CrateProbe.Run(scene, "x,床y;...")` = 床面・Ground との重なり・近くのスポーン/出口)。作り直し 5 シーン Validate 全 0 error / 0 warning。再生確認 `SceneScripts/playtest_boxfix.cs` (`boxfix_h_*` / `boxfix_d4_*`)。
+**飾りの木箱は置かない** (2026-10-04, PendingChanges 28): 以前は背景の飾りに同じ絵の `Prop("props/cargo_crate.png", ...)` (当たり無し) があり、「箱が壊せない」と報告された (叩いていたのは飾り。壊せる木箱は正常)。H / D2 / D3 / D4 / U3 の 16 個を全部 `Crate` / `CrateStack` に置き換えた (H はスポーン SpawnFromA1_D1 を避けて x254.6 の 2 段 + x255.6、D3 のネズミの巣はネズミの出る位置を避けて x273.6 / 286.6)。**cargo_crate の絵は壊せる木箱専用** — 飾りにも、W8 の落ちてくる物にも使わない (W8 は 2026-10-04 から鉄のおもり `props/falling_weight.png`, §14 追補 2026-10-04 (2))。置き場所の下調べは `SceneScripts/crate_probe.cs` (`CrateProbe.Run(scene, "x,床y;...")` = 床面・Ground との重なり・近くのスポーン/出口)。作り直し 5 シーン Validate 全 0 error / 0 warning。再生確認 `SceneScripts/playtest_boxfix.cs` (`boxfix_h_*` / `boxfix_d4_*`)。
 
 **投げる針の絵** (23): `PrepProps.Needles` (prep_props.cs, 何度流してもよい) が MachiNeedle / MishinNeedle の弾を作り直す。ルート (scale 1) = BoxCollider2D (まち針 0.6×0.1 / ミシン針 0.4×0.14, 以前の見た目の矩形と同じ) + Rigidbody2D + Projectile (向き = `transform.right` を速度へ)。絵は子 `Art`: 素材の針先は左下を向いているので、針先が +X を向く角度 (まち針 126.34° / ミシン針 119.72°) に回し、針の軸 (針先〜頭の端) の中点が原点に来る位置。軸の長さはまち針 0.8 / ミシン針 0.85 単位。刺さったまち針は半分が壁に入り、緑の玉の頭が外に出る。
 
@@ -577,3 +577,18 @@ UI ごとに専用プレハブ + 専用 UI シーン (`Assets/Scenes/UI/`, 名�
 - B1 のボスを倒す → 粒 12 個 (値 2×8 + 1×4 = 20) が床に散る (`decide3_boss_b1_*`) → 歩いて全部拾い糸 0→20。
 - T3c の 4 個の木箱 (コイン入りは 3 段積みの真ん中) の SpriteRenderer・Collider・Rigidbody2D・hp が同一、見た目も同じ (`decide3_coin_crate_t3c.png`)。
 - まち針: 水平に飛び (`decide3_machi_needle_flight_0p2s`)、壁に針先から刺さって頭が外に出る (`decide3_machi_needle_0p8s`)。ミシン針: 曲射で弧に沿って向きが変わる (`decide3_mishin_needle_0p12s/0p3s`)。
+
+### §14 追補: 箱は同時に壊れてよい・W8 の落ちてくる物・木箱は休むとリセット (2026-10-04 (2), PendingChanges 29〜31)
+
+**当たり判定内の箱は全部壊れる** (29): `PlayerController.PerformAttackHit` から「箱・ブロックは 1 回に一番近い 1 つだけ」(`NearestBlock` / `IsBlock`) を削除し、当たった物すべてにダメージ。隠し壁・能力ブロックのセル分け (1 セル = 1 個, 同じフラグ) と落下攻撃の突き抜け (`GroundSlamState`) はそのまま。この制限に頼っていた所は無い: ボットの `BotExecutor.BreakBlocker` は足元と頭の高さで壊せる物を探して叩くだけ、`SkillBreakable` のヒント通知は静的な 2 秒の間隔なので複数セルに当たっても 1 回。
+
+**W8 の落ちてくる物** (30): `build_A1_W8.cs` の `CargoDrop` の絵を `props/cargo_crate.png` → **`props/falling_weight.png`** (鉄のおもり: 台形の鋳鉄・黄と黒の警告の縞・上に吊り環・金のリベット。546×546 = 1 セル、pivot center、PPU 546)。image-gen が使えなかったので **PIL で描いた仮素材** (manifest.json の note に `TEMP ART`)。当たり・大きさ (1.2×1.2)・落ち方は変えていない。A1_W8 作り直し Validate 0 error / 0 warning、シーンに cargo_crate の参照は 0。
+
+**木箱は休むとリセット** (31): `BrokenCrateRegistry` (新規, `Assets/Scripts/Common/`) に壊した木箱を記録 (`_flagId` の無い BreakableBox だけ。ID = シーン名:名前:初期位置)。部屋を出入りしても壊れたまま、拠点 (SavePoint) で休む (`HomeUIView.Open`, 倒した敵の記録と同じ所) か全リセット (`StageLoader.LoadWithPlayerScene`) で全部戻る。セーブファイルには入れない。隠し壁・能力ブロックは今まで通りフラグで永続。
+コインの箱: 取った後は二度と出ない (今まで通り)。壊したがコインを取らずに出た時は、次に来るとコインが箱のあった場所に置いてある (箱は壊れたまま) → コインは失われず、コインの箱だけが復活して目立つ事も無い。休んだ後は箱が戻り、コインは中に戻る。
+
+再生で確認 (`SceneScripts/playtest_boxfix.cs` の `PlayBox` / `PlayBox2`、仮想入力 = ボットと同じ経路, `Assets/Screenshots/Area1/crates2_*.png`):
+- A1_H 拠点の床: 2 段積み (x254.6) の左に立って 1 振り → 2 個とも壊れる (`crates2_h_before` / `crates2_h_swing` / `crates2_h_after_one_swing`)。H2 の棚の 2 段積み (下がコイン) も 1 振りで 2 個。
+- A1_C1 へ出て戻る → 壊した箱は壊れたまま (`crates2_h_reenter_still_broken`)。コインを取らなかった状態 (磁力で拾ってしまうので `PlayBox2.UnsetCoin` でフラグを戻して再現) → 戻るとコインが棚に置いてある (`crates2_coin_left_on_reenter`)。
+- セーブポイントでインタラクト → ホーム画面が開き記録 0 (`crates2_rest_savepoint`) → 出て戻ると 5 個全部が元どおり、コインの箱も戻る (`crates2_h_after_rest_back`)。コインを取ってから休んで戻る → コインの箱だけ無く、上の木箱が棚に落ちて残る。
+- A1_W8: 鉄のおもりが鉄骨の上に落ちる (`crates2_w8_weight`)。

@@ -166,7 +166,7 @@ PlayerController は毎物理ステップ速度を直接指定するため、`Su
 | `_groundMask` | LayerMask | Default+Ground | 当たると消えるレイヤー |
 | `_stopFlag` | string | "" | 立ったら生成停止 |
 
-配置例: 天井のすぐ下 (天井の下面 −0.6) に `CargoDrop` + FallingObjectSpawner(`_sprite`=荷物のスプライト, `_size=(1.2,1.2)`, `_minX=-4`, `_maxX=4`, `_interval=1.8`)。
+配置例: 天井のすぐ下 (天井の下面 −0.6) に `CargoDrop` + FallingObjectSpawner(`_sprite`=落ちてくる物のスプライト (A1_W8 は鉄のおもり `props/falling_weight.png` = **仮素材**。木箱の絵 `cargo_crate` は「壊せる木箱」の意味なので使わない, PendingChanges 30), `_size=(1.2,1.2)`, `_minX=-4`, `_maxX=4`, `_interval=1.8`)。
 
 ### TransportInteractable (`Assets/Scripts/Gimmick/TransportInteractable.cs`)
 インタラクトで別ステージへ運ぶ移動装置 (ジップライン=一方通行 / 非常用リフト=起動後は双方向 / 搬出エレベーター)。`StageLoader.Instance.TransitionTo(_sceneName, _entranceId)` を呼ぶ (StageLoader が無いテストシーンでは SceneManager.LoadScene)。
@@ -290,14 +290,16 @@ BossArena の複数ウェーブ版。入るとゲートを閉じ、ウェーブ�
 ### BreakableBox (`Assets/Scripts/Enemy/BreakableBox.cs`) — 永続化フラグ・コインの箱対応
 攻撃で壊れる箱/隠し壁 (HP+防御値ダメージ合算)。**`_flagId` を追加**: 設定すると破壊時に Set、フラグ済みなら Awake で消える。空なら従来どおり再入場で復活。
 - 必須: SpriteRenderer + 非トリガー Collider2D、攻撃が当たるよう **layer 10** (足場・壁として振る舞う) か 9。
-- **1 回の攻撃で壊れるのは 1 つだけ** (2026-10-03 PendingChanges 17): `PlayerController.PerformAttackHit` は当たった物のうち箱・ブロック (BreakableBox / SkillBreakable) は**プレイヤーに一番近い 1 つ**にだけダメージを与える (敵など他の物は今まで通り全部)。突進系のアイテム・スキル・ボビン爆弾・飛び道具は従来どおり。
+- **当たり判定に入った箱は全部壊れる** (2026-10-04 PendingChanges 29): `PlayerController.PerformAttackHit` は当たった物すべて (箱・隠し壁のセル・能力ブロックのセル・敵) にダメージを与える。2026-10-03 (PendingChanges 17) に入れた「箱・ブロックは 1 回にプレイヤーに一番近い 1 つだけ」の制限はやめた。セルごとに分けたのはそのまま (当たり判定の外のセルは残る)。能力ブロックの「刃は通らない」のヒントは全ブロック共通の 2 秒の間隔で、複数セルに当たっても 1 回だけ。
+- **壊した木箱は拠点で休むまで壊れたまま** (2026-10-04 PendingChanges 31): `_flagId` が空の箱 (ふつうの木箱・コインの箱) は壊すと `BrokenCrateRegistry` (静的、`DefeatedEnemyRegistry` と同じ扱い) に ID = 「シーン名:オブジェクト名:初期位置 (F1)」を記録し、次に部屋に入った時は Awake で消える。拠点 (SavePoint) で休む = ホーム画面を開いた時 (`HomeUIView.Open`, 倒した敵の記録と同時) と全リセット (`StageLoader.LoadWithPlayerScene` = タイトルから開始・セーブから復帰・死亡リトライ) で記録をクリアして全部元に戻る。**セーブファイルには入れない** (セーブは休んだ後なので、復帰時は全部の箱が元どおりで正しい)。
+- **コインの箱**: コインを取った後は今まで通り箱ごと二度と出ない (GameProgress)。壊したがコインを取らずに部屋を出た場合は、次に来た時は箱は壊れたまま、**コインが箱のあった場所に置いてある** (Start で `CoinPiece` をその場に出す)。休んだ後は箱が戻り、コインは中に戻る。コインは失われず、コインの箱だけ復活して見分けがつく事も無い。
 - **隠し壁・スキルブロックは 1 セル = 1 個** (ビルダー `HiddenWall` / `SkillBlock` が子 `Cell_x_y` を並べる)。全セルが同じ `_flagId` を共有し、1 セル壊れた時点でフラグが立つ (隠し部屋の幕が開く)。再訪では同じフラグのセルが全部消えている。以前は壁全体が 1 個 (Tiled の絵) で、1 発で全部消えていた = 「積んだ箱がまとめて壊れる」の原因。
 
 | フィールド | 型 | 既定 | 意味 |
 |---|---|---|---|
 | `_maxHp` | int | 1 | 耐久 |
 | `_flagId` | string | "" | **新規**。破壊の永続化 (例 `A1_Hidden_U2`) |
-| `_coinId` | string | "" | **新規 (2026-10-03)**。コインの箱: 壊すと `CoinPiece` が飛び出す (例 `A1_Coin_T3c_1`)。コインを取った後 (GameProgress に `_coinId`) は箱ごと出ない。取らずに部屋を出たら次は箱もコインも元どおり |
+| `_coinId` | string | "" | **新規 (2026-10-03)**。コインの箱: 壊すと `CoinPiece` が飛び出す (例 `A1_Coin_T3c_1`)。コインを取った後 (GameProgress に `_coinId`) は箱ごと出ない。取らずに部屋を出たら次は箱は壊れたままでコインがその場に置いてある (2026-10-04) |
 | `_coinPrefab` | CoinPiece | null | コインのプレハブ (`Assets/Prefabs/CoinPiece.prefab`) |
 | `_hitFlashTime` | float | 0.1 | 被弾フラッシュ |
 | `_breakFadeTime` | float | 0.3 | 破壊演出時間 |

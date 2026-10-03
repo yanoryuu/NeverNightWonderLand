@@ -4,7 +4,7 @@ using static NeverNight.StageBuild.Area1StageBuilder;
 // A1_W8 「てっぺんへの梯子」(W8, 真上のスポークの点検坑 x42..60 y276..342)
 // 下 = 中心軸の機械室 A1_W6 (床の口 x45..57。落ちると機械室の天井の渡り y267 へ戻る) / 上 = ゴンドラの道化 A1_MB1 (天井の口 x45..57)
 // 最後の一直線: 右の梯子 → 細い鉄骨 2 枚 → 左の梯子 → 細い鉄骨 2 枚 → 右の梯子 → … を 3 区画 (y276→297→318→342)。
-// 区画ごとに上から荷物が落ちてくる (FallingObjectSpawner、揺れてから落ちる。鉄骨に当たると砕ける)。浮遊する敵 2。
+// 区画ごとに上から鉄のおもりが落ちてくる (FallingObjectSpawner、揺れてから落ちる。鉄骨に当たると砕ける)。浮遊する敵 2。
 // 坑の中心を真上のスポーク (x54, 90 度) が貫いている (奥の飾り)。
 // 先に別の呼び出しで OpenOrCreate("A1_W8") を実行しておくこと。
 public static class BuildW8
@@ -21,7 +21,8 @@ public static class BuildW8
     static GameObject CargoDrop(string name, float x, float y, float minX, float maxX, float interval, float delay)
     {
         var go = NewObject(name, new Vector2(x, y), LayerDefault, "Gimmicks");
-        AddComp<FallingObjectSpawner>(go, ("_sprite", Art("props/cargo_crate.png")), ("_color", Color.white), ("_size", new Vector2(1.2f, 1.2f)),
+        // 落ちてくるのは鉄のおもり (警告の縞入り)。木箱の絵 (cargo_crate) は「壊せる木箱」の意味なので使わない (PendingChanges 30, 仮素材)
+        AddComp<FallingObjectSpawner>(go, ("_sprite", Art("props/falling_weight.png")), ("_color", Color.white), ("_size", new Vector2(1.2f, 1.2f)),
             ("_minX", minX), ("_maxX", maxX), ("_interval", interval), ("_intervalJitter", 0.6f), ("_startDelay", delay),
             ("_activationDistance", 0f), ("_warningTime", 0.7f), ("_sortingOrder", 5));
         // 荷物を吊っている滑車 (落ちてくる場所の目印)

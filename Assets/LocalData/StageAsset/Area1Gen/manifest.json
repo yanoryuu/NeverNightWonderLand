@@ -429,7 +429,7 @@
    1
   ],
   "pivot": "center",
-  "note": "falling cargo for FallingObjectSpawner (A1_W8). gpt-image-2 on green, keyed + cropped"
+  "note": "breakable crate (Crate/CrateStack, BreakableBox). gpt-image-2 on green, keyed + cropped"
  },
  {
   "file": "hall/organ_pipes.png",
@@ -550,5 +550,17 @@
   ],
   "pivot": "top",
   "note": "A1_AB/A1_FP (gpt-image-2, chroma key)"
+ },
+ {
+  "file": "props/falling_weight.png",
+  "kind": "prop",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1,
+   1
+  ],
+  "pivot": "center",
+  "note": "TEMP ART (procedural PIL): falling iron counterweight for FallingObjectSpawner (A1_W8). replace later"
  }
 ]

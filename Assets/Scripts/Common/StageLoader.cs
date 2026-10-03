@@ -168,6 +168,7 @@ public class StageLoader : MonoBehaviour
         GameSession.PendingStage = stageName;
         GamePause.Reset();
         DefeatedEnemyRegistry.Clear(); // 全リセットでは倒した敵も復活する
+        BrokenCrateRegistry.Clear();   // 壊した木箱も元に戻る (セーブからの復帰は全部の箱が元どおり)
 
         if (Application.CanStreamedLevelBeLoaded(PlayerSceneName))
         {

@@ -870,8 +870,8 @@ namespace NeverNight.StageBuild
         /// <summary>
         /// 隠し壁 (攻撃で壊れる、BreakableBox + flagId で永続化)。見た目はひび割れタイル。
         /// layer 10 の実体なので岩と同じく足場/壁になる。[x0,x1)×[y0,y1) を塞ぐ。
-        /// **1 セル = 1 個の BreakableBox** (子 "Cell_x_y", hp = セルごと)。1 回の攻撃で壊れるのは 1 セルだけ
-        /// (2026-10-03 PendingChanges 17: 積んだ箱がまとめて壊れる → 一つずつ)。全セルが同じ flagId を共有し、
+        /// **1 セル = 1 個の BreakableBox** (子 "Cell_x_y", hp = セルごと)。攻撃の当たり判定に入ったセルだけが壊れる
+        /// (2026-10-03 PendingChanges 17 でセルに分けた。2026-10-04 PendingChanges 29: 当たり判定内のセルは同時に壊れてよい)。全セルが同じ flagId を共有し、
         /// 1 セル壊れた時点でフラグが立つ (隠し部屋の幕が開く)。再訪では全セルが消えている。
         /// ※ 岩の Terrain タイルとは別物なので、その範囲の Terrain は Clear しておくこと (このメソッドが消す)。
         /// </summary>
@@ -1054,7 +1054,7 @@ namespace NeverNight.StageBuild
         /// 壊せる木箱 (BreakableBox, hp 1, 1×1, 絵 = cargo_crate)。(x, floorY) = 箱の下の床面の中心 (箱の中心は floorY + 0.5)。
         /// Rigidbody2D (動的, 横と回転は固定) なので積むと重なって乗り、下の箱を壊すと上の箱が落ちる。
         /// coinId を渡すとコインの箱 (A1_Coin_&lt;部屋&gt;_&lt;n&gt;): 壊すとコインが飛び出し、取った後は箱ごと出ない (2026-10-03 PendingChanges 16)。
-        /// 箱そのものは永続化しない (コインの無い箱は再訪で復活)。1 回の攻撃で壊れるのは 1 個だけ (PendingChanges 17)。
+        /// 壊した箱は拠点 (SavePoint) で休むまで壊れたまま (BrokenCrateRegistry, PendingChanges 31)。当たり判定内の箱は同時に壊れる (PendingChanges 29)。
         /// コインの箱は見分けがつかないようにする (PendingChanges 20): 絵・色・大きさ・hp・物理・描画順はふつうの木箱と完全に同じ
         /// (色は <see cref="CrateColor"/> 固定で、個別の色付けはできない)。違うのは GameObject 名 (CoinCrate_…, 画面には出ない) だけ。
         /// </summary>
