@@ -2854,7 +2854,7 @@
    "a": "D2w",
    "b": "T3c",
    "gate": null,
-   "oneWay": true,
+   "oneWay": false,
    "zipline": false,
    "passage": {
     "cellX": 49,

@@ -73,15 +73,17 @@ public static class BuildT3
 
         // ================= T3c (x141..159, y-99..-84): 楽屋裏の勝手口 (行き止まり)
         Ground(141, 159, -96);
-        // 床の跳ね上げ戸 (x148..152)。地下 (D2w) のレバーで梯子が下りると、下から上がってこられる (一方通行)
+        // 床の跳ね上げ戸 (x148..152)。地下 (D2w) のレバーで梯子が下りると開き、地下とつながる近道になる
+        // (開くまでは T3 側からは降りられない。開いた後は戸の穴から縦穴を降りて A1_D2 の梯子の上へ = layout の D2w-T3c は双方向)
         Clear(148, -99, 152, -96);
         var hatch = NewObject("Hatch", new Vector2(150f, -96.25f), LayerGround, "Terrain Objects");
-        Box(hatch, new Vector2(4f, 0.5f), false);
         var plank = (Map("Platforms") != null ? Tile("stagetile_floor_08_m") as UnityEngine.Tilemaps.Tile : null)?.sprite;
-        var lidClosed = new GameObject("LidClosed");
+        // 当たりは閉じた戸 (LidClosed) に付ける。フラグで LidClosed ごと消えるので、開いた後に見えない床が残らない (PendingChanges 40)
+        var lidClosed = new GameObject("LidClosed") { layer = LayerGround };
         lidClosed.transform.SetParent(hatch.transform, false);
         lidClosed.transform.localPosition = new Vector3(0, -0.15f, 0);
         AddSprite(lidClosed, plank, OrderGimmick, new Vector2(4f, 0.8f), new Color(0.75f, 0.6f, 0.55f));
+        Box(lidClosed, new Vector2(4f, 0.5f), false, new Vector2(0, 0.15f));
         var lidOpen = new GameObject("LidOpen");
         lidOpen.transform.SetParent(hatch.transform, false);
         lidOpen.transform.localPosition = new Vector3(2.3f, 1.9f, 0);

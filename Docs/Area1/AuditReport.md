@@ -18,7 +18,7 @@
 
 | 種別 | 内容 | 判定 |
 |---|---|---|
-| 一方通行 | A1_U4(Uh)→A1_T3 / A1_D2(D2w)→A1_T3 / A1_MB1(S2)→A1_U1 (ジップライン) | layout どおり。逆辺は無く、受け側はスポーンのみ |
+| 一方通行 | A1_U4(Uh)→A1_T3 / A1_MB1(S2)→A1_U1 (ジップライン) | layout どおり。逆辺は無く、受け側はスポーンのみ (A1_D2(D2w)↔A1_T3 は 2026-10-04 PendingChanges 40 で双方向に: 戸が開くまでは T3 側の戸の当たりで降りられない) |
 | 余分な辺 | A1_U1→A1_FP (U1 の `ExitToA1_FP`、柵の奥) | layout は `FP→U2e oneWay` だが、CrossSceneContracts の設計 (柵が開けば U1⇔FP) どおり実装。**意図どおり。layout 側の oneWay 表記が実装と食い違う** (情報) |
 | 移動装置 | W6⇔W1 (`EmergencyLift`、要 `A1_LiftWheel` 両側) / MB2⇔C1 (`ElevatorDeep`、要 `A1_ElevatorDeep` 両側) / MB1→U1 (`StarZipline`、要 `A1_ZiplineReady`) | layout は WL を `W6→WL oneWay` と記すが、契約書どおり双方向で実装。意図どおり |
 | 縦の出口 (床の無い幅広ゾーン) | AB→FP, D1→H, D2→D1, D5→D2, H→U1, MB1→W8 (落下), W1→W2, W4→W5, W5→W6, W6→W8, W8→MB1 | ゾーン全幅の下に床が無いのは天井口/穴の縦出口のため仕様どおり。横出口は全て床あり |

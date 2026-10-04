@@ -414,14 +414,14 @@ public class PlayerController : MonoBehaviour
         if (_dashCooldownTimer > 0f) _dashCooldownTimer -= dt;
         if (_specialCooldownTimer > 0f) _specialCooldownTimer -= dt;
 
-        // 降り抜け中のすり抜け床: 体が床と重ならなくなったら衝突を戻す
+        // 降り抜け中のすり抜け床: 体が床の上側に掛かっていなくなったら衝突を戻す
         for (var i = _dropThroughPlatforms.Count - 1; i >= 0; i--)
         {
             _dropThroughTimers[i] += dt;
             var platform = _dropThroughPlatforms[i];
             if (platform != null && platform.enabled && platform.gameObject.activeInHierarchy
                 && (_dropThroughTimers[i] < DropThroughMinTime
-                    || (_dropThroughTimers[i] < DropThroughMaxTime && OverlapsBody(platform.bounds))))
+                    || (_dropThroughTimers[i] < DropThroughMaxTime && IsStillPassingThrough(platform))))
                 continue;
 
             if (_dropThroughPlatforms[i] != null)
@@ -608,7 +608,7 @@ public class PlayerController : MonoBehaviour
     private readonly RaycastHit2D[] _groundCastHits = new RaycastHit2D[8];
 
     // 降り抜け (下入力+ジャンプ) 中に衝突を無効化しているすり抜け床と経過時間。
-    // 一定時間ではなく「体が床と重ならなくなる (床の下へ抜けた・横へ出た・床が下へ過ぎた)」まで無効のままにする。
+    // 一定時間ではなく「体が床の形の上側に掛からなくなる (床の下へ抜けた・横へ出た・床が下へ過ぎた)」まで無効のままにする (IsStillPassingThrough)。
     // 降りていくゴンドラ等は落下の出だしで体と一緒に下がるので、固定 0.3 秒だと抜け切る前に衝突が戻って乗り直していた (PendingChanges 34)
     private const float DropThroughMinTime = 0.1f;  // 最低でもこの時間は無効 (抜け始めの重なり判定のゆらぎ対策)
     private const float DropThroughMaxTime = 2.5f;  // 保険: これを過ぎたら重なっていても戻す
@@ -998,8 +998,15 @@ public class PlayerController : MonoBehaviour
         return true;
     }
 
-    /// <summary>体 (自分のコライダー全体) が bounds と重なっているか (わずかな余白つき)。</summary>
-    private bool OverlapsBody(Bounds other)
+    /// <summary>
+    /// 降り抜け中の床をまだ通り抜けている途中か (今衝突を戻すと床の上へ押し戻されるか)。
+    /// 床の bounds ではなく実際の形 (タイルマップなら 1 マスずつの形) と体を比べる。
+    /// すり抜け床は部屋の段が全部 1 つの TilemapCollider2D なので、bounds で比べると部屋のすり抜け床を全部抜けるまで
+    /// 衝突が戻らず、下の段の床まですり抜けていた (PendingChanges 41)。
+    /// 重なっていても押し出す向きが下 (体が床の厚みの中ほどより下) なら抜けたとみなす:
+    /// 一方通行の床は下へ押し返す接触を無視するので乗り直さず、すぐ下の段には着地できる。
+    /// </summary>
+    private bool IsStillPassingThrough(Collider2D platform)
     {
         const float margin = 0.02f;
         foreach (var own in _ownColliders)
@@ -1007,9 +1014,13 @@ public class PlayerController : MonoBehaviour
             if (own == null || !own.enabled || own.isTrigger)
                 continue;
 
-            var b = own.bounds;
-            if (b.max.x > other.min.x - margin && b.min.x < other.max.x + margin
-                && b.max.y > other.min.y - margin && b.min.y < other.max.y + margin)
+            var d = Physics2D.Distance(own, platform);
+            if (!d.isValid || d.distance >= margin)
+                continue;
+
+            // normal は床の点 → 体の点。重なっている時は 2 点が入れ替わるので、体を押し出す向きは逆になる
+            var pushOut = d.isOverlapped ? -d.normal : d.normal;
+            if (pushOut.y > -0.5f)
                 return true;
         }
 

@@ -4,7 +4,7 @@ using static NeverNight.StageBuild.Area1StageBuilder;
 
 // A1_D2 「搬送ベルトの通路」(D2 x168..252 y-117..-99) + 「錆びた配電室」(D2w x141..165 y-123..-105)
 // 上 = 配管の縦穴 A1_D1 (天井の口 x240..249) / 下 = 蒸気管の迷路 A1_D5 (床の格子 x186..195)
-// 上 (D2w の天井 x147..153) = 楽屋裏の勝手口 A1_T3 (一方通行: 梯子を下ろすと登れる)
+// 上 (D2w の天井 x147..153) = 楽屋裏の勝手口 A1_T3 (梯子を下ろすと登れる。開いた後は T3 の戸の穴から降りても来られる = SpawnFromA1_T3 (150,-106.5) から梯子へ落ちる)
 // D2: 床 y-117 の大半がベルトコンベア (既定は西向き = 奥へ進む向き)。立ち止まると流される。
 //     ベルト 3 本の間に固定の床 (敵が立つ島)、ベルトの上に配管の足場 (y-114, 流れを避ける道)。敵 3 (地上 2 + 浮遊 1)。
 //     東端は縦穴の真下の着地塔 (配管を左右交互に y-102 まで)。
@@ -161,7 +161,7 @@ public static class BuildD2
         var mini = Belt(156, 160, -117, BeltSpeed, "A1_BeltReversed", "BeltIndicator");   // 見た目だけ (盤の上の小さな帯。当たりを外す)
         Object.DestroyImmediate(mini.GetComponent<BoxCollider2D>());
 
-        // レバー②: 跳ね上げ戸 (梯子を下ろす → A1_T3 の楽屋裏へ。一方通行)
+        // レバー②: 跳ね上げ戸 (梯子を下ろす → A1_T3 の楽屋裏へ。開くまでは T3 側から降りられない)
         Lever("LadderLever", 154.2f, -123f, "A1_LadderBackstage", "ガラガラ…… 天井の跳ね上げ戸が開いて梯子が下りてきた!", "lever_handle_teal.png", "跳ね上げ戸を開ける");
         LeverPlaque(154.2f, -118.75f, HatchTint, "sign_ladder", "はね戸");
         // レバー②から天井の跳ね上げ戸へ引き綱 (作用先が見える)
