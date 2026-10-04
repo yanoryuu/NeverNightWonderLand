@@ -1096,7 +1096,7 @@ namespace NeverNight.StageBuild
         public static GameObject SavePointAt(float x, float y)
         {
             var go = NewObject("SavePoint", new Vector2(x, y), LayerInteractable, "Gimmicks");
-            AddSprite(go, Art("props/bench_save.png"), OrderGimmick);
+            AddSprite(go, Art("props/bench_save.png"), OrderProp); // キャラクターより奥 (プレイヤーは 0)
             Box(go, new Vector2(3f, 1.6f), true, new Vector2(0, 0.8f));
             AddComp<SavePoint>(go, ("_promptOffset", new Vector3(0, 2f, 0)));
             return go;
