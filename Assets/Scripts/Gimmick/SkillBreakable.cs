@@ -10,6 +10,7 @@ using UnityEngine;
 /// Area1 のブロックは 1 セル = 1 個 (同じ _flagId を共有)。スキルは当たったセルだけを砕く = 体の通る穴が開く。
 /// 1 個砕けるとフラグが立ち、再訪では同じフラグのセルが全部消えている。
 /// グレーボックス色: 落下=橙 / 大ジャンプ=空色 / 突進=紫。
+/// 砕けると破片が飛び散る (<see cref="BreakDebris"/>, PendingChanges 36): 落下=橙の金具と石 / 大ジャンプ・突進=岩の破片をブロックの色で。
 /// </summary>
 [RequireComponent(typeof(SpriteRenderer))]
 public class SkillBreakable : MonoBehaviour, IDamageable
@@ -58,9 +59,9 @@ public class SkillBreakable : MonoBehaviour, IDamageable
 
     /// <summary>
     /// スキルの衝撃で破壊を試みる。要求スキルと一致した時のみ砕けて true を返す。
-    /// (スキルステートから呼ばれる)
+    /// (スキルステートから呼ばれる。impactFrom = 当てた位置 (プレイヤー)。破片を離れる向きに飛ばす)
     /// </summary>
-    public bool TryBreak(PlayerSkill skill)
+    public bool TryBreak(PlayerSkill skill, Vector2? impactFrom = null)
     {
         if (_broken || skill != _requiredSkill)
             return false;
@@ -76,6 +77,23 @@ public class SkillBreakable : MonoBehaviour, IDamageable
         // すぐに当たりを消してプレイヤーが突き抜けられるようにする (連鎖破壊)
         foreach (var col in GetComponentsInChildren<Collider2D>())
             col.enabled = false;
+
+        // 破片が飛び散る (ブロックはその場で消える)。落下攻撃は上と横へ、当てた側から離れる向き
+        var kind = _requiredSkill switch
+        {
+            PlayerSkill.GroundSlam => BreakDebris.Kind.Slam,
+            PlayerSkill.ChargeRush => BreakDebris.Kind.Rush,
+            _ => BreakDebris.Kind.Super,
+        };
+        // 当てた側 (プレイヤー) から離れる向きへ寄せる。下向きには寄せない (破片は上へ飛び出してから落ちる)
+        var away = impactFrom.HasValue ? (Vector2)transform.position - impactFrom.Value : Vector2.zero;
+        away.y = Mathf.Max(0f, away.y);
+        if (TryGetComponent<SpriteRenderer>(out var sprite) && BreakDebris.Burst(sprite, kind, away))
+        {
+            sprite.enabled = false;
+            Destroy(gameObject);
+            return true;
+        }
 
         transform.DOScale(Vector3.zero, 0.25f)
             .SetEase(Ease.InBack)

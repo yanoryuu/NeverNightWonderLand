@@ -36,7 +36,11 @@ PlayerController は毎物理ステップ速度を直接指定するため、`Su
 (ジャンプ初速 17.5 が接地中の張り付き速度 (下向き) の範囲にクランプされて 0 になる。足場が止まっている間だけ跳べた)。
 今は `LeaveGround()` が先に上乗せ分を取り除き、さらに `Update` でステートが速度を書き換えたら上乗せの記録を捨てる。
 地面を蹴る処理 (ジャンプ・壁ジャンプ・大ジャンプ・ノックバック等) は**必ず `LeaveGround()` を呼んでから初速を書く**こと。
-ジャンプ初速は足場の速度を足さない絶対値 (上昇中のリフトでも下降中でも高さは同じ)。足場の横速度は引き継がない。
+ジャンプ初速は足場の速度を足さない絶対値 (上昇中のリフトでも下降中でも高さは同じ)。
+
+**足場の横の勢いを引き継ぐ** (2026-10-04 (3), PendingChanges 33): 地面からのジャンプ (コヨーテ中を含む。二段ジャンプは除く) の瞬間、直前 (コヨーテの猶予内) に運ばれていた Kinematic の足場の**横速度だけ**を「空中で消える勢い」として外力に足す (`PlayerController.StartCarryMomentum` / `UpdateCarryMomentum`)。縦の速度は足さない (高さは常に 3.33 / 二段 6.63)。自前の空中移動はそのまま効く (入力の速度 + 勢い)。減り方: 最初の 0.12 秒は全量 → 0.38 秒で 0 へ直線 (合計 0.5 秒)。逆方向に入力している間は 3 倍の速さで減る。着地・勢いの向きの壁に触れる・空中ステート (Jump/Fall) と攻撃以外 (ダッシュ・壁張り付き・被弾・スキル・グラップル等) に移る・テレポート・すり抜け床から降りる、で消える。足場の横速度 0.2 未満は引き継がない (縦リフトのゆらぎ)。**コンベア・横風・水流は引き継がない** (乗っている/入っている間だけの床・場の効果。跳んだら素の空中移動に戻る = Hollow Knight の感触。コンベア区間のジャンプの距離が読みやすい)。定数は `PlayerController` の `CarryHoldTime` 0.12 / `CarryDecayTime` 0.38 / `CarryOpposeRate` 3 / `CarryMinSpeed` 0.2。確認 (`SceneScripts/playtest_batch5.cs` `Batch5.Carry`): AB の音符 (横 0.67〜1.8) と W5 ゴンドラ (横 0.5〜1.5) から毎回 rise 3.33、勢い = 足場の横速度 → 約 0.5 秒で 0、入力なしの横ずれ 0.2〜0.54、逆入力 (move=+1 で足場は左) は 3 倍速で消えて 8.0 の空中移動になる。
+
+**すり抜け床から降りる (↓+ジャンプ)** (2026-10-04 (3), PendingChanges 34): 無効にした床との衝突は固定 0.3 秒ではなく「体 (自分のコライダー) が床の bounds と重ならなくなるまで」戻さない (最低 0.1 秒・保険で最長 2.5 秒。床が消えた・無効になった時も戻す)。降りていくゴンドラは落下の出だしで体と一緒に下がるので、固定時間だと抜け切る前に衝突が戻って乗り直していた。また降りるのに使ったジャンプの押しっぱなしでは**滑空しない** (`_glideBlocked`: 一度ジャンプを離すと解除。押し直すと二段ジャンプ → その後押しっぱなしなら滑空)。確認 (`Batch5.Drop`, 赤ハサミ, 降りていく W5 RingA_Gondola1 で ↓+ジャンプ長押し 7 回): 押しっぱなしの間は毎回滑空せず (vy は -20 まで加速)、同じゴンドラに乗り直さない。
 
 ---
 
@@ -173,7 +177,7 @@ PlayerController は毎物理ステップ速度を直接指定するため、`Su
 | `_groundMask` | LayerMask | Default+Ground | 当たると消えるレイヤー |
 | `_stopFlag` | string | "" | 立ったら生成停止 |
 
-配置例: 天井のすぐ下 (天井の下面 −0.6) に `CargoDrop` + FallingObjectSpawner(`_sprite`=落ちてくる物のスプライト (A1_W8 は鉄のおもり `props/falling_weight.png` = **仮素材**。木箱の絵 `cargo_crate` は「壊せる木箱」の意味なので使わない, PendingChanges 30), `_size=(1.2,1.2)`, `_minX=-4`, `_maxX=4`, `_interval=1.8`)。
+配置例: 天井のすぐ下 (天井の下面 −0.6) に `CargoDrop` + FallingObjectSpawner(`_sprite`=落ちてくる物のスプライト (A1_W8 は鉄のおもり `props/falling_weight.png` (gpt-image-2 で描き直し済み, PendingChanges 35)。木箱の絵 `cargo_crate` は「壊せる木箱」の意味なので使わない, PendingChanges 30), `_size=(1.2,1.2)`, `_minX=-4`, `_maxX=4`, `_interval=1.8`)。
 
 ### TransportInteractable (`Assets/Scripts/Gimmick/TransportInteractable.cs`)
 インタラクトで別ステージへ運ぶ移動装置 (ジップライン=一方通行 / 非常用リフト=起動後は双方向 / 搬出エレベーター)。`StageLoader.Instance.TransitionTo(_sceneName, _entranceId)` を呼ぶ (StageLoader が無いテストシーンでは SceneManager.LoadScene)。
@@ -311,6 +315,8 @@ BossArena の複数ウェーブ版。入るとゲートを閉じ、ウェーブ�
 | `_hitFlashTime` | float | 0.1 | 被弾フラッシュ |
 | `_breakFadeTime` | float | 0.3 | 破壊演出時間 |
 
+**壊れると破片が飛び散る** (2026-10-04 (3), PendingChanges 36): `BreakDebris.Burst` (下の「BreakDebris」)。箱はその場で消え (縮小フェードの代わりに破片)、絵が無い時だけ従来の縮小フェード (`_breakFadeTime`)。`_debris` (`DebrisType`: Auto / None / Wood / Rock, 既定 Auto) = 絵の名前に crate/box を含めば木、それ以外 (ひび割れ壁) は岩。攻撃した側 (`DamageInfo.Source`) から離れる向きに飛ぶ。既存シーンの作り直しは不要 (既定 Auto)。
+
 配置例 (隠し壁): ビルダー `HiddenWall(x0,y0,x1,y1,"A1_Hidden_<部屋>", hp=1)` (セルごとの hp。以前の壁全体 HP3 から変更)。
 配置例 (木箱): ビルダー `Crate(x, floorY, coinId=null)` / `CrateStack(x, floorY, count, coinId, coinIndex)`。絵 = `Area1Gen/props/cargo_crate.png` (色は全部 `CrateColor`。コインの箱も見た目・手応えはふつうの箱と同じ = PendingChanges 20)、hp 1、Rigidbody2D (動的, 横と回転を固定) なので積むと乗り、下を壊すと上が落ちる。箱そのものは永続化しない。cargo_crate の絵は壊せる木箱専用で、飾り (`Prop`) には使わない (PendingChanges 28: 同じ絵の飾りが壊せず紛らわしかった)。
 
@@ -353,6 +359,11 @@ BossArena の複数ウェーブ版。入るとゲートを閉じ、ウェーブ�
 移動スキルの衝撃でのみ壊れるブロック (通常攻撃はヒントのみ)。必須: SpriteRenderer + 非トリガー Collider2D, **layer 10**。
 フィールド: `_requiredSkill` (PlayerSkill: `GroundSlam`=落下攻撃, `SuperJump`=大ジャンプ, `ChargeRush`=横突進), `_flagId` (例 `A1_Slam_<部屋>_<n>`, `A1_Super_<部屋>`, `A1_Rush_<部屋>`), `_lockedMessage` (空=自動)。色: 落下=橙 / 大ジャンプ=空色 / 突進=紫。
 2026-10-03〜: ビルダー `SkillBlock` は **1 セル = 1 個** (同じ `_flagId`)。スキルは当たったセルだけ砕く = 体の通る穴 (落下攻撃・大ジャンプ = 幅 1〜2 の縦穴、突進 = 高さ 2 の横穴) が開く。落下攻撃は着地しかけた時も足元のブロックを砕いて落下を続ける (`GroundSlamState`: 積んだ段を順に突き抜ける)。ヒント通知の連発防止は全ブロック共通 (2 秒) で、スキルで砕いた直後 1 秒は出さない。
+2026-10-04 (3) (PendingChanges 36): 砕けると破片が飛び散る (`BreakDebris`。落下 = 橙の金具と石の破片 `debris_slam_*` / 突進 = 岩の破片を紫 / 大ジャンプ = 岩の破片を空色に色付け)。`TryBreak(skill, impactFrom)` の `impactFrom` (スキルステートがプレイヤー位置を渡す) から離れる横向きに飛ぶ (下向きには寄せない)。
+
+### BreakDebris (`Gimmick/BreakDebris.cs` + `DebrisPiece.cs` + `BreakDebrisCatalog.cs`) — 壊れた時の破片 (見た目だけ)
+`BreakDebris.Burst(SpriteRenderer source, Kind, Vector2 away)`: source の bounds の中から破片を飛ばす。木箱 6 個 / セル 4 個。初速 = 中心からのずれ×4.5 + 横 ±1.6、上 3.8〜7、+ away 方向 1.5〜3。大きさ = 絵 (PPU 546) の 0.55〜0.8 倍 × source の大きさ。回転 ±360〜900 度/秒。`DebrisPiece` は Collider/Rigidbody なしの自前の簡易物理 (重力 24): 移動を Ground レイヤー (layer 10, トリガー除く) への線分キャストで調べ、床 (法線 y > 0.5, 下降中) で 0.38 倍に跳ね返り (横 0.55 倍・回転半分)、2 回まで跳ねたら止まる。壁は横に跳ね返す。プレイヤー・敵とは当たらない。1.0〜1.4 秒で消える (最後の 0.35 秒でフェード)。描画は source のソーティングレイヤー、順序 max(source+1, 4)。GameObject は DontDestroyOnLoad の `[BreakDebris]` の下で使い回す (プール)。時間は `Time.deltaTime` (スロー・ポーズに従う)。
+絵と色は `Assets/Resources/BreakDebrisCatalog.asset` (`Resources.Load`。シーン側の設定は不要): `Wood` = `Area1Gen/debris/debris_wood_01〜04` (箱の色 `CrateColor` も掛ける)、`Rock` = `debris_rock_01〜04` (明るい灰色。`WallTint` (0.62,0.26,0.44) = ひび割れ壁 / `RushTint` / `SuperTint` を掛ける)、`Slam` = `debris_slam_01〜04`。準備は `SceneScripts/prep_debris.cs` (インポート設定 + カタログ)。
 
 ### UpgradeWall (`Gimmick/UpgradeWall.cs`)
 指定のハサミ強化を持つ攻撃でのみ壊れる壁。必須: SpriteRenderer + Collider2D, layer 10。フィールド: `_required` (ScissorUpgrade, Red), `_flagId`, `_lockedMessage`。

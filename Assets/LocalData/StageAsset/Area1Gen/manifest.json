@@ -561,6 +561,150 @@
    1
   ],
   "pivot": "center",
-  "note": "TEMP ART (procedural PIL): falling iron counterweight for FallingObjectSpawner (A1_W8). replace later"
+  "note": "A1_W8 FallingObjectSpawner: iron counterweight with yellow/black warning stripe + lifting ring (gpt-image-2, green screen + chroma key, SceneScripts/chroma_slice.py single, 2026-10-04 PendingChanges 35)"
+ },
+ {
+  "file": "debris/debris_rock_01.png",
+  "kind": "debris",
+  "widthPx": 306,
+  "heightPx": 319,
+  "cells": [
+   0.56,
+   0.58
+  ],
+  "pivot": "center",
+  "note": "break debris part: light-grey stone chip, tinted in-game (hidden wall / rush / super blocks). BreakDebrisCatalog (Resources), drawn at 0.55-0.8x (gpt-image-2 sheet, green screen + chroma key, sliced by SceneScripts/chroma_slice.py sheet, 2026-10-04 PendingChanges 36)"
+ },
+ {
+  "file": "debris/debris_rock_02.png",
+  "kind": "debris",
+  "widthPx": 215,
+  "heightPx": 245,
+  "cells": [
+   0.39,
+   0.45
+  ],
+  "pivot": "center",
+  "note": "break debris part: light-grey stone chip, tinted in-game (hidden wall / rush / super blocks). BreakDebrisCatalog (Resources), drawn at 0.55-0.8x (gpt-image-2 sheet, green screen + chroma key, sliced by SceneScripts/chroma_slice.py sheet, 2026-10-04 PendingChanges 36)"
+ },
+ {
+  "file": "debris/debris_rock_03.png",
+  "kind": "debris",
+  "widthPx": 289,
+  "heightPx": 208,
+  "cells": [
+   0.53,
+   0.38
+  ],
+  "pivot": "center",
+  "note": "break debris part: light-grey stone chip, tinted in-game (hidden wall / rush / super blocks). BreakDebrisCatalog (Resources), drawn at 0.55-0.8x (gpt-image-2 sheet, green screen + chroma key, sliced by SceneScripts/chroma_slice.py sheet, 2026-10-04 PendingChanges 36)"
+ },
+ {
+  "file": "debris/debris_rock_04.png",
+  "kind": "debris",
+  "widthPx": 107,
+  "heightPx": 110,
+  "cells": [
+   0.2,
+   0.2
+  ],
+  "pivot": "center",
+  "note": "break debris part: light-grey stone chip, tinted in-game (hidden wall / rush / super blocks). BreakDebrisCatalog (Resources), drawn at 0.55-0.8x (gpt-image-2 sheet, green screen + chroma key, sliced by SceneScripts/chroma_slice.py sheet, 2026-10-04 PendingChanges 36)"
+ },
+ {
+  "file": "debris/debris_slam_01.png",
+  "kind": "debris",
+  "widthPx": 272,
+  "heightPx": 293,
+  "cells": [
+   0.5,
+   0.54
+  ],
+  "pivot": "center",
+  "note": "break debris part: orange riveted block shard (GroundSlam block). BreakDebrisCatalog (Resources), drawn at 0.55-0.8x (gpt-image-2 sheet, green screen + chroma key, sliced by SceneScripts/chroma_slice.py sheet, 2026-10-04 PendingChanges 36)"
+ },
+ {
+  "file": "debris/debris_slam_02.png",
+  "kind": "debris",
+  "widthPx": 290,
+  "heightPx": 278,
+  "cells": [
+   0.53,
+   0.51
+  ],
+  "pivot": "center",
+  "note": "break debris part: orange riveted block shard (GroundSlam block). BreakDebrisCatalog (Resources), drawn at 0.55-0.8x (gpt-image-2 sheet, green screen + chroma key, sliced by SceneScripts/chroma_slice.py sheet, 2026-10-04 PendingChanges 36)"
+ },
+ {
+  "file": "debris/debris_slam_03.png",
+  "kind": "debris",
+  "widthPx": 352,
+  "heightPx": 132,
+  "cells": [
+   0.64,
+   0.24
+  ],
+  "pivot": "center",
+  "note": "break debris part: orange riveted block shard (GroundSlam block). BreakDebrisCatalog (Resources), drawn at 0.55-0.8x (gpt-image-2 sheet, green screen + chroma key, sliced by SceneScripts/chroma_slice.py sheet, 2026-10-04 PendingChanges 36)"
+ },
+ {
+  "file": "debris/debris_slam_04.png",
+  "kind": "debris",
+  "widthPx": 137,
+  "heightPx": 131,
+  "cells": [
+   0.25,
+   0.24
+  ],
+  "pivot": "center",
+  "note": "break debris part: orange riveted block shard (GroundSlam block). BreakDebrisCatalog (Resources), drawn at 0.55-0.8x (gpt-image-2 sheet, green screen + chroma key, sliced by SceneScripts/chroma_slice.py sheet, 2026-10-04 PendingChanges 36)"
+ },
+ {
+  "file": "debris/debris_wood_01.png",
+  "kind": "debris",
+  "widthPx": 373,
+  "heightPx": 277,
+  "cells": [
+   0.68,
+   0.51
+  ],
+  "pivot": "center",
+  "note": "break debris part: wood plank/splinter shard (crate). BreakDebrisCatalog (Resources), drawn at 0.55-0.8x (gpt-image-2 sheet, green screen + chroma key, sliced by SceneScripts/chroma_slice.py sheet, 2026-10-04 PendingChanges 36)"
+ },
+ {
+  "file": "debris/debris_wood_02.png",
+  "kind": "debris",
+  "widthPx": 307,
+  "heightPx": 192,
+  "cells": [
+   0.56,
+   0.35
+  ],
+  "pivot": "center",
+  "note": "break debris part: wood plank/splinter shard (crate). BreakDebrisCatalog (Resources), drawn at 0.55-0.8x (gpt-image-2 sheet, green screen + chroma key, sliced by SceneScripts/chroma_slice.py sheet, 2026-10-04 PendingChanges 36)"
+ },
+ {
+  "file": "debris/debris_wood_03.png",
+  "kind": "debris",
+  "widthPx": 343,
+  "heightPx": 344,
+  "cells": [
+   0.63,
+   0.63
+  ],
+  "pivot": "center",
+  "note": "break debris part: wood plank/splinter shard (crate). BreakDebrisCatalog (Resources), drawn at 0.55-0.8x (gpt-image-2 sheet, green screen + chroma key, sliced by SceneScripts/chroma_slice.py sheet, 2026-10-04 PendingChanges 36)"
+ },
+ {
+  "file": "debris/debris_wood_04.png",
+  "kind": "debris",
+  "widthPx": 228,
+  "heightPx": 237,
+  "cells": [
+   0.42,
+   0.43
+  ],
+  "pivot": "center",
+  "note": "break debris part: wood plank/splinter shard (crate). BreakDebrisCatalog (Resources), drawn at 0.55-0.8x (gpt-image-2 sheet, green screen + chroma key, sliced by SceneScripts/chroma_slice.py sheet, 2026-10-04 PendingChanges 36)"
  }
 ]

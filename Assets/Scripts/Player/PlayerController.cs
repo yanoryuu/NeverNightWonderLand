@@ -128,6 +128,7 @@ public class PlayerController : MonoBehaviour
     private bool _isDead;
     private bool _isRunning;         // ダッシュ後に維持される走り状態
     private bool _airJumpUsed;       // 二段ジャンプ (赤ハサミ) を使用済みか。接地でリセット
+    private bool _glideBlocked;      // すり抜け床から降りた直後: ジャンプを一度離すまで滑空しない (PendingChanges 34)
     private bool _dashInvulnerable;  // 現在のダッシュが接触ダメージ無効 (回避) か
     private bool _skillInvulnerable; // スキル (横突進/大ジャンプ) 中の無敵。敵を貫通する
 
@@ -413,11 +414,14 @@ public class PlayerController : MonoBehaviour
         if (_dashCooldownTimer > 0f) _dashCooldownTimer -= dt;
         if (_specialCooldownTimer > 0f) _specialCooldownTimer -= dt;
 
-        // 降り抜け中のすり抜け床: 時間が経ったら衝突を戻す
+        // 降り抜け中のすり抜け床: 体が床と重ならなくなったら衝突を戻す
         for (var i = _dropThroughPlatforms.Count - 1; i >= 0; i--)
         {
-            _dropThroughTimers[i] -= dt;
-            if (_dropThroughTimers[i] > 0f)
+            _dropThroughTimers[i] += dt;
+            var platform = _dropThroughPlatforms[i];
+            if (platform != null && platform.enabled && platform.gameObject.activeInHierarchy
+                && (_dropThroughTimers[i] < DropThroughMinTime
+                    || (_dropThroughTimers[i] < DropThroughMaxTime && OverlapsBody(platform.bounds))))
                 continue;
 
             if (_dropThroughPlatforms[i] != null)
@@ -603,8 +607,11 @@ public class PlayerController : MonoBehaviour
     private readonly Collider2D[] _groundHits = new Collider2D[8];
     private readonly RaycastHit2D[] _groundCastHits = new RaycastHit2D[8];
 
-    // 降り抜け (下入力+ジャンプ) 中に衝突を無効化しているすり抜け床と残り時間
-    private const float DropThroughTime = 0.3f;
+    // 降り抜け (下入力+ジャンプ) 中に衝突を無効化しているすり抜け床と経過時間。
+    // 一定時間ではなく「体が床と重ならなくなる (床の下へ抜けた・横へ出た・床が下へ過ぎた)」まで無効のままにする。
+    // 降りていくゴンドラ等は落下の出だしで体と一緒に下がるので、固定 0.3 秒だと抜け切る前に衝突が戻って乗り直していた (PendingChanges 34)
+    private const float DropThroughMinTime = 0.1f;  // 最低でもこの時間は無効 (抜け始めの重なり判定のゆらぎ対策)
+    private const float DropThroughMaxTime = 2.5f;  // 保険: これを過ぎたら重なっていても戻す
     private Collider2D[] _ownColliders;
     private readonly System.Collections.Generic.List<Collider2D> _dropThroughPlatforms = new();
     private readonly System.Collections.Generic.List<float> _dropThroughTimers = new();
@@ -822,8 +829,12 @@ public class PlayerController : MonoBehaviour
         velocityY -= gravity * Time.fixedDeltaTime;
         velocityY = Mathf.Max(velocityY, -_consts.MaxFallSpeed * _maxFallSpeedMultiplier);
 
+        // すり抜け床から降りた時のジャンプ押しっぱなしでは滑空しない。一度離したら解除
+        if (!_jumpHeld)
+            _glideBlocked = false;
+
         // 滑空 (赤ハサミ): 落下中にジャンプ長押しで落下速度を抑える
-        if (velocityY < 0f && _jumpHeld && !_isGrounded
+        if (velocityY < 0f && _jumpHeld && !_glideBlocked && !_isGrounded
             && _progression != null && _progression.Has(ScissorUpgrade.Red))
         {
             velocityY = Mathf.Max(velocityY, -_consts.GlideFallSpeed);
@@ -975,13 +986,34 @@ public class PlayerController : MonoBehaviour
                 Physics2D.IgnoreCollision(own, platform, true);
 
             _dropThroughPlatforms.Add(platform);
-            _dropThroughTimers.Add(DropThroughTime);
+            _dropThroughTimers.Add(0f);
         }
 
         // 消費したジャンプ入力で跳ばないようにバッファを破棄する
         _jumpBufferTimer = 0f;
         _coyoteTimer = 0f;
+        // 降りるのに使ったジャンプの押しっぱなしで滑空しない (一度離して押し直すと滑空できる)
+        _glideBlocked = true;
+        ClearCarryMomentum();
         return true;
+    }
+
+    /// <summary>体 (自分のコライダー全体) が bounds と重なっているか (わずかな余白つき)。</summary>
+    private bool OverlapsBody(Bounds other)
+    {
+        const float margin = 0.02f;
+        foreach (var own in _ownColliders)
+        {
+            if (own == null || !own.enabled || own.isTrigger)
+                continue;
+
+            var b = own.bounds;
+            if (b.max.x > other.min.x - margin && b.min.x < other.max.x + margin
+                && b.max.y > other.min.y - margin && b.min.y < other.max.y + margin)
+                return true;
+        }
+
+        return false;
     }
 
     /// <summary>コヨーテタイムを回復する (グラップルで壁に張り付いた時など)。</summary>
@@ -994,6 +1026,11 @@ public class PlayerController : MonoBehaviour
     /// <summary>ジャンプ初速を与える(JumpState.Enter から呼ばれる)。</summary>
     public void Jump()
     {
+        // 地面からのジャンプ (コヨーテ中を含む。二段ジャンプは除く) なら、乗っていた動く足場の横の勢いを引き継ぐ
+        var fromGround = _isGrounded || _coyoteTimer > 0f;
+        if (fromGround)
+            StartCarryMomentum();
+
         LeaveGround();
         _rb.linearVelocity = new Vector2(_rb.linearVelocity.x, _consts.JumpVelocity * _jumpMultiplier);
         _jumpBufferTimer = 0f;
@@ -1073,6 +1110,7 @@ public class PlayerController : MonoBehaviour
         _rb.linearVelocity = Vector2.zero;
         _externalVelocity = Vector2.zero;
         _appliedExternalVelocity = Vector2.zero;
+        ClearCarryMomentum();
         Physics2D.SyncTransforms();
     }
 
@@ -1120,9 +1158,14 @@ public class PlayerController : MonoBehaviour
             if (body != null && body.bodyType == RigidbodyType2D.Kinematic)
             {
                 var feet = _groundCheck != null ? (Vector2)_groundCheck.position : _rb.position;
-                external += body.GetPointVelocity(feet);
+                var carry = body.GetPointVelocity(feet);
+                external += carry;
+                _lastPlatformCarryX = carry.x;
+                _lastPlatformCarryTime = Time.fixedTime;
             }
         }
+
+        external.x += UpdateCarryMomentum();
 
         if (external == Vector2.zero)
             return;
@@ -1130,6 +1173,72 @@ public class PlayerController : MonoBehaviour
         _preExternalVelocity = _rb.linearVelocity;
         _rb.linearVelocity += external;
         _appliedExternalVelocity = external;
+    }
+
+    // ---- 動く足場から跳んだ時の横の勢い (PendingChanges 33)
+    // 地面からジャンプした瞬間に乗っていた Kinematic の足場の「横」速度だけを、空中で自然に消える勢いとして外力に足す。
+    // 縦の速度は足さない (ジャンプの高さは常に 3.33 / 二段 6.63)。自前の空中移動 (入力) はそのまま効くので、勢いに乗りつつ操作できる。
+    // 減り方: 最初の CarryHoldTime は全量 → CarryDecayTime で 0 へ (直線)。逆方向へ入力している間は CarryOpposeRate 倍速く減る。
+    // 着地・壁に当たる・空中ジャンプ/空中攻撃以外のステート (ダッシュ・壁張り付き・被弾・スキル等) に移った時点で消す。
+    // コンベア・横風は引き継がない (乗っている間だけの「床の効果」。跳んだら素の空中移動に戻る = Hollow Knight の感触)。
+    private const float CarryHoldTime = 0.12f;
+    private const float CarryDecayTime = 0.38f;
+    private const float CarryOpposeRate = 3f;
+    private const float CarryMinSpeed = 0.2f; // これ未満の足場の横速度 (縦リフトのゆらぎ等) は引き継がない
+
+    private float _lastPlatformCarryX;          // 最後に運ばれた足場の横速度
+    private float _lastPlatformCarryTime = -1f; // それを記録した物理時刻
+    private float _carryMomentumX;              // 引き継いだ横の勢い (0 = なし)
+    private float _carryElapsed;
+
+    /// <summary>引き継ぎ中の横の勢い (デバッグ・テスト用。減衰後の値)。</summary>
+    public float CarryMomentumX => _carryMomentumX == 0f ? 0f : _carryMomentumX * CarryFactor();
+
+    private void StartCarryMomentum()
+    {
+        ClearCarryMomentum();
+        // 足場に運ばれていたのが直前 (コヨーテの猶予内) なら引き継ぐ
+        if (Time.fixedTime - _lastPlatformCarryTime > _consts.CoyoteTime + Time.fixedDeltaTime * 1.5f)
+            return;
+        if (Mathf.Abs(_lastPlatformCarryX) < CarryMinSpeed)
+            return;
+
+        _carryMomentumX = _lastPlatformCarryX;
+    }
+
+    private void ClearCarryMomentum()
+    {
+        _carryMomentumX = 0f;
+        _carryElapsed = 0f;
+    }
+
+    private float CarryFactor() =>
+        _carryElapsed <= CarryHoldTime ? 1f : Mathf.Clamp01(1f - (_carryElapsed - CarryHoldTime) / CarryDecayTime);
+
+    /// <summary>物理ステップごとに勢いを進め、このステップで足す横速度を返す。</summary>
+    private float UpdateCarryMomentum()
+    {
+        if (_carryMomentumX == 0f)
+            return 0f;
+
+        var dir = _carryMomentumX > 0f ? 1 : -1;
+        var state = _stateMachine.CurrentState;
+        var airborne = state is AirborneState || state is AttackState;
+        if (!airborne || IsSnappedToGround || IsTouchingWall(dir))
+        {
+            ClearCarryMomentum();
+            return 0f;
+        }
+
+        _carryElapsed += Time.fixedDeltaTime * (IsPressingToward(-dir) ? CarryOpposeRate : 1f);
+        var factor = CarryFactor();
+        if (factor <= 0f)
+        {
+            ClearCarryMomentum();
+            return 0f;
+        }
+
+        return _carryMomentumX * factor;
     }
 
     #endregion

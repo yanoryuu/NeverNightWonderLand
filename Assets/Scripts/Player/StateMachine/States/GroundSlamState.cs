@@ -58,7 +58,7 @@ public class GroundSlamState : PlayerState
             Player.Consts.GroundLayer);
         foreach (var hit in hits)
         {
-            if (hit.TryGetComponent<SkillBreakable>(out var breakable) && breakable.TryBreak(PlayerSkill.GroundSlam))
+            if (hit.TryGetComponent<SkillBreakable>(out var breakable) && breakable.TryBreak(PlayerSkill.GroundSlam, Player.transform.position))
                 broke = true;
         }
 

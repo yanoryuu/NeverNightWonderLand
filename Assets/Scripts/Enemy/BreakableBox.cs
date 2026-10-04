@@ -13,6 +13,7 @@ using UnityEngine;
 /// コインが箱のあった場所に置いてある (コインを失わない。休んだ後は箱が戻り、コインは中に戻る)。
 /// プレイヤーの攻撃の当たり判定に入った箱は全部壊れる (PendingChanges 29。1 回に 1 つだけの制限はやめた)。
 /// 隠し壁・積んだ箱は 1 セル = 1 個の BreakableBox (同じ _flagId を共有。1 個壊れるとフラグが立ち、再訪では全部消える)。
+/// 壊れると破片が飛び散る (<see cref="BreakDebris"/>, PendingChanges 36): 木箱 = 木の破片、隠し壁 (ひび割れタイル) = 岩の破片。
 /// </summary>
 [RequireComponent(typeof(SpriteRenderer))]
 public class BreakableBox : MonoBehaviour, IDamageable
@@ -32,8 +33,19 @@ public class BreakableBox : MonoBehaviour, IDamageable
     [Tooltip("被弾フラッシュの時間 (sec)")]
     [SerializeField] private float _hitFlashTime = 0.1f;
 
-    [Tooltip("破壊演出(縮小フェード)の時間 (sec)")]
+    [Tooltip("破壊演出(縮小フェード)の時間 (sec)。破片が出せない時 (絵が無い・None) だけ使う")]
     [SerializeField] private float _breakFadeTime = 0.3f;
+
+    [Tooltip("壊れた時の破片。Auto = 絵の名前から決める (crate → 木 / それ以外 (ひび割れ壁など) → 岩)")]
+    [SerializeField] private DebrisType _debris = DebrisType.Auto;
+
+    public enum DebrisType
+    {
+        Auto,
+        None,
+        Wood,
+        Rock,
+    }
 
     private SpriteRenderer _sprite;
     private Color _baseColor;
@@ -42,6 +54,9 @@ public class BreakableBox : MonoBehaviour, IDamageable
     private bool _broken;
     private string _crateId; // 壊れた記録の ID (シーン名+名前+初期位置)。_flagId のある箱 (隠し壁) は使わない
     private bool _spawnLeftCoin; // 壊れたままのコインの箱: Start でコインだけ置いて箱は消す
+
+    /// <summary>箱の元の色 (被弾フラッシュ前)。破片の色合わせに使う。</summary>
+    public Color BaseColor => _baseColor;
 
     /// <summary>破壊された時に発火する (チュートリアルの達成判定用)。</summary>
     public event Action OnBroken;
@@ -128,10 +143,10 @@ public class BreakableBox : MonoBehaviour, IDamageable
         _flashTimer = _hitFlashTime;
 
         if (_hp <= 0)
-            Break();
+            Break(info);
     }
 
-    private void Break()
+    private void Break(in DamageInfo info)
     {
         _broken = true;
 
@@ -149,6 +164,16 @@ public class BreakableBox : MonoBehaviour, IDamageable
 
         SpawnCoin(new Vector2(UnityEngine.Random.Range(-1.2f, 1.2f), 7.5f));
 
+        // 破片が飛び散る: 箱はその場で消える (破片が箱の代わり)。攻撃した側から離れる向きに飛ばす
+        var away = info.Source != null ? (Vector2)(transform.position - info.Source.transform.position) : Vector2.zero;
+        away.y = 0f;
+        if (TryBurstDebris(away))
+        {
+            _sprite.enabled = false;
+            Destroy(gameObject);
+            return;
+        }
+
         transform.DOScale(Vector3.zero, _breakFadeTime)
             .SetEase(Ease.InBack)
             .OnComplete(() => Destroy(gameObject));
@@ -157,6 +182,22 @@ public class BreakableBox : MonoBehaviour, IDamageable
     private void OnDestroy()
     {
         transform.DOKill();
+    }
+
+    private bool TryBurstDebris(Vector2 away)
+    {
+        var type = _debris;
+        if (type == DebrisType.Auto)
+        {
+            var spriteName = _sprite.sprite != null ? _sprite.sprite.name : "";
+            type = spriteName.Contains("crate") || spriteName.Contains("box") ? DebrisType.Wood : DebrisType.Rock;
+        }
+
+        if (type == DebrisType.None)
+            return false;
+
+        _sprite.color = _baseColor;
+        return BreakDebris.Burst(_sprite, type == DebrisType.Wood ? BreakDebris.Kind.Wood : BreakDebris.Kind.Rock, away);
     }
 
     /// <summary>コインの箱ならコインを velocity で飛び出させる (まだ取っていない時だけ。zero = その場に置く)。</summary>

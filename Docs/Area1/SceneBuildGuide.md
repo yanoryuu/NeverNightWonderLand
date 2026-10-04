@@ -582,7 +582,7 @@ UI ごとに専用プレハブ + 専用 UI シーン (`Assets/Scenes/UI/`, 名�
 
 **当たり判定内の箱は全部壊れる** (29): `PlayerController.PerformAttackHit` から「箱・ブロックは 1 回に一番近い 1 つだけ」(`NearestBlock` / `IsBlock`) を削除し、当たった物すべてにダメージ。隠し壁・能力ブロックのセル分け (1 セル = 1 個, 同じフラグ) と落下攻撃の突き抜け (`GroundSlamState`) はそのまま。この制限に頼っていた所は無い: ボットの `BotExecutor.BreakBlocker` は足元と頭の高さで壊せる物を探して叩くだけ、`SkillBreakable` のヒント通知は静的な 2 秒の間隔なので複数セルに当たっても 1 回。
 
-**W8 の落ちてくる物** (30): `build_A1_W8.cs` の `CargoDrop` の絵を `props/cargo_crate.png` → **`props/falling_weight.png`** (鉄のおもり: 台形の鋳鉄・黄と黒の警告の縞・上に吊り環・金のリベット。546×546 = 1 セル、pivot center、PPU 546)。image-gen が使えなかったので **PIL で描いた仮素材** (manifest.json の note に `TEMP ART`)。当たり・大きさ (1.2×1.2)・落ち方は変えていない。A1_W8 作り直し Validate 0 error / 0 warning、シーンに cargo_crate の参照は 0。
+**W8 の落ちてくる物** (30): `build_A1_W8.cs` の `CargoDrop` の絵を `props/cargo_crate.png` → **`props/falling_weight.png`** (鉄のおもり: 台形の鋳鉄・黄と黒の警告の縞・上に吊り環・金のリベット。546×546 = 1 セル、pivot center、PPU 546)。image-gen が使えなかったので **PIL で描いた仮素材** (manifest.json の note に `TEMP ART`) → 2026-10-04 (3) に gpt-image-2 の絵へ差し替え (PendingChanges 35)。当たり・大きさ (1.2×1.2)・落ち方は変えていない。A1_W8 作り直し Validate 0 error / 0 warning、シーンに cargo_crate の参照は 0。
 
 **木箱は休むとリセット** (31): `BrokenCrateRegistry` (新規, `Assets/Scripts/Common/`) に壊した木箱を記録 (`_flagId` の無い BreakableBox だけ。ID = シーン名:名前:初期位置)。部屋を出入りしても壊れたまま、拠点 (SavePoint) で休む (`HomeUIView.Open`, 倒した敵の記録と同じ所) か全リセット (`StageLoader.LoadWithPlayerScene`) で全部戻る。セーブファイルには入れない。隠し壁・能力ブロックは今まで通りフラグで永続。
 コインの箱: 取った後は二度と出ない (今まで通り)。壊したがコインを取らずに出た時は、次に来るとコインが箱のあった場所に置いてある (箱は壊れたまま) → コインは失われず、コインの箱だけが復活して目立つ事も無い。休んだ後は箱が戻り、コインは中に戻る。
@@ -592,3 +592,19 @@ UI ごとに専用プレハブ + 専用 UI シーン (`Assets/Scenes/UI/`, 名�
 - A1_C1 へ出て戻る → 壊した箱は壊れたまま (`crates2_h_reenter_still_broken`)。コインを取らなかった状態 (磁力で拾ってしまうので `PlayBox2.UnsetCoin` でフラグを戻して再現) → 戻るとコインが棚に置いてある (`crates2_coin_left_on_reenter`)。
 - セーブポイントでインタラクト → ホーム画面が開き記録 0 (`crates2_rest_savepoint`) → 出て戻ると 5 個全部が元どおり、コインの箱も戻る (`crates2_h_after_rest_back`)。コインを取ってから休んで戻る → コインの箱だけ無く、上の木箱が棚に落ちて残る。
 - A1_W8: 鉄のおもりが鉄骨の上に落ちる (`crates2_w8_weight`)。
+
+### §14 追補: 足場の勢い・すり抜け降り・W8 のおもりの絵・破片 (2026-10-04 (3), PendingChanges 33〜36)
+コードと素材だけの変更で、**シーンの作り直しは不要** (W8 のおもりは同じ PNG を上書き = GUID そのまま、破片は `Resources/BreakDebrisCatalog.asset` を実行時に読む、BreakableBox の新フィールド `_debris` は既定 Auto)。
+
+- **動く足場から跳ぶと横の勢いを引き継ぐ** (33): 足場の横速度だけ、0.12 秒全量 → 0.38 秒で 0。縦は足さない (3.33 / 6.63 のまま)。コンベア・横風は引き継がない。詳細は Gimmicks.md「初速を書く時の注意」の続き。
+- **すり抜け床から降りる** (34): 衝突は体が床と重ならなくなるまで戻さない (最低 0.1 / 最長 2.5 秒)。降りるのに使ったジャンプの押しっぱなしでは滑空しない (一度離すと解除)。
+- **W8 のおもり** (35): `props/falling_weight.png` を gpt-image-2 の絵に差し替え (グリーンバック → `SceneScripts/chroma_slice.py single <raw> <out> 546`)。
+- **破片** (36): `BreakDebris` (Gimmicks.md)。絵は `Area1Gen/debris/` (`chroma_slice.py sheet <raw> <prefix> 1.0` で部品ごとに切り出し) → `SceneScripts/prep_debris.cs` (`PrepDebris.Run`) でインポート設定 (PPU 546 / 中心 / FullRect / 非圧縮) とカタログ登録。
+
+素材の作り方 (image-gen が使える時): `mcp__image-gen__generate_image_gpt2` に「flat solid pure green (#00FF00) background, no green on the object」と書いて 1024² で生成 → `py Docs/Area1/SceneScripts/chroma_slice.py ...` (g − max(r,b) で抜き、g を max(r,b) までに抑えるデスピル + 縁の 1px 収縮。緑が残った画素数を数えて 0 を確認)。部品のシートは部品どうしを離して描かせ、連結成分で切る (scipy 不要)。
+
+再生で確認 (`SceneScripts/playtest_batch5.cs`、仮想入力。`Batch5.Isolate` で実パッドの入力を混ぜない — つながっているパッドの入力が混ざると勝手に歩いて部屋を出る事があった。`Assets/Screenshots/Area1/batch5_*.png`):
+- 足場の勢い: `Batch5.Carry` — A1_AB の NoteA (右 0.67 / 1.8) → 勢い 0.67 / 1.8 が約 0.5 秒で 0、rise 3.33。NoteB (左 0.53) で右入力 → 勢いは 3 倍速で消え空中移動 8.0。W5 ゴンドラ 3 回 rise 3.33 (`batch5_carry_W5_gondola`)。
+- すり抜け降り: `Batch5.Drop` — 降りていく W5 RingA_Gondola1 で ↓+ジャンプ長押し 7 回、押しっぱなしの間の滑空 0・乗り直し 0 (`batch5_drop_W5_noglide` = ゴンドラの下へ抜けた所)。
+- W8: スロー (`Batch5.TimeScale 0.4`) で予告 → 落下 → 鉄骨の上 (`batch5_w8_weight_warning` / `_falling` / `_landed`)。
+- 破片: `Batch5.SlowBreak(x, y, dir, slam, 0.12, 秒)` でスロー + 一時停止。A1_H の 2 段積みの木箱 (`batch5_debris_crate_midburst` / `_bounce` / `_landed`)、A1_H の落下攻撃ブロック (`batch5_debris_slam_midburst`)、A1_T2 のひび割れ壁 (`batch5_debris_wall_midburst` / `_landed`)。大ジャンプ・突進のブロックは同じ処理 (岩の破片の色違い) で、再生では未確認。

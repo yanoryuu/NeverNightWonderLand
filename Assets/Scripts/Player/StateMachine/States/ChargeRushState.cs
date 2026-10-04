@@ -52,7 +52,7 @@ public class ChargeRushState : PlayerState
         {
             if (hit.TryGetComponent<SkillBreakable>(out var breakable))
             {
-                breakable.TryBreak(PlayerSkill.ChargeRush);
+                breakable.TryBreak(PlayerSkill.ChargeRush, Player.transform.position);
                 continue;
             }
 
