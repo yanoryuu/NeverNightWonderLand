@@ -41,6 +41,9 @@ public class VirtualPlayerInput : IPlayerInputSource, IMenuInputSource
     /// <summary>-1..1 の垂直入力 (上 = +1)。</summary>
     public float Vertical;
 
+    /// <summary>-1..1 のカメラの上下見回し (右スティックの縦, 上 = +1)。</summary>
+    public float Look;
+
     /// <summary>true なら実デバイスの入力も重ねる。</summary>
     public bool MergeDevice;
 
@@ -95,6 +98,7 @@ public class VirtualPlayerInput : IPlayerInputSource, IMenuInputSource
     {
         Move = 0f;
         Vertical = 0f;
+        Look = 0f;
         _held = PlayerButton.None;
         _taps = PlayerButton.None;
         _itemTap = null;
@@ -125,6 +129,7 @@ public class VirtualPlayerInput : IPlayerInputSource, IMenuInputSource
         {
             Move = Mathf.Clamp(Move, -1f, 1f),
             Vertical = Mathf.Clamp(Vertical, -1f, 1f),
+            Look = Mathf.Clamp(Look, -1f, 1f),
             JumpHeld = (held & PlayerButton.Jump) != 0,
             DashHeld = (held & PlayerButton.Dash) != 0,
             JumpPressed = (pressed & PlayerButton.Jump) != 0,
@@ -166,6 +171,7 @@ public class VirtualPlayerInput : IPlayerInputSource, IMenuInputSource
         {
             Move = Mathf.Abs(b.Move) > Mathf.Abs(a.Move) ? b.Move : a.Move,
             Vertical = Mathf.Abs(b.Vertical) > Mathf.Abs(a.Vertical) ? b.Vertical : a.Vertical,
+            Look = Mathf.Abs(b.Look) > Mathf.Abs(a.Look) ? b.Look : a.Look,
             JumpHeld = a.JumpHeld || b.JumpHeld,
             JumpPressed = a.JumpPressed || b.JumpPressed,
             DashHeld = a.DashHeld || b.DashHeld,

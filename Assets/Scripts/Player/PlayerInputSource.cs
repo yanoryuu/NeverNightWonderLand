@@ -14,6 +14,9 @@ public struct PlayerInputFrame
     /// <summary>-1..1 の垂直入力 (上 = +1。グラップルの狙い・落下攻撃・溜めスキルの方向)。</summary>
     public float Vertical;
 
+    /// <summary>-1..1 のカメラの上下見回し (右スティックの縦, 上 = +1。アナログ。CameraFollow が読む)。</summary>
+    public float Look;
+
     public bool JumpHeld;
     public bool JumpPressed;
     public bool DashHeld;
@@ -57,6 +60,9 @@ public static class PlayerInputSource
 {
     // 慣性なしの移動に合わせ、スティックはデッドゾーンを超えたら最大入力として扱う
     private const float StickDeadZone = 0.3f;
+
+    // 右スティック (カメラの見回し) はアナログ: デッドゾーン〜この傾きで 0→1、ここから先は最大
+    private const float LookFullTilt = 0.7f;
 
     private static int _cachedFrame = -1;
     private static PlayerInputFrame _cached;
@@ -173,6 +179,11 @@ public static class PlayerInputSource
             var stickY = gamepad.leftStick.y.ReadValue();
             if (stickY > StickDeadZone || (!itemHeld && gamepad.dpad.up.isPressed)) f.Vertical = 1f;
             else if (stickY < -StickDeadZone || (!itemHeld && gamepad.dpad.down.isPressed)) f.Vertical = -1f;
+
+            // 右スティックの縦 = カメラの上下見回し (横は使わない)。デッドゾーンを除いて 0..1 に割り当て直す
+            var lookY = gamepad.rightStick.y.ReadValue();
+            f.Look = Mathf.Sign(lookY)
+                     * Mathf.Clamp01((Mathf.Abs(lookY) - StickDeadZone) / (LookFullTilt - StickDeadZone));
 
             if (itemHeld)
             {
