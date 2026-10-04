@@ -319,7 +319,16 @@ public class PlayerController : MonoBehaviour
 
         ReadInput();
         UpdateTimers();
+
+        var velocityBeforeLogic = _rb.linearVelocity;
         _stateMachine.CurrentState.LogicUpdate();
+
+        // ステートの Enter (Update 側) が速度を直接書き換えた (突進・道具ダッシュ・糸移動など) なら、
+        // その速度はもう「自前の速度 + 前ステップの外力」ではない。次の物理ステップで外力を差し引いて
+        // クランプすると書いた速度が潰れるので、上乗せ記録を捨てる (ジャンプ系は LeaveGround で処理済み)
+        if (_appliedExternalVelocity != Vector2.zero && _rb.linearVelocity != velocityBeforeLogic)
+            _appliedExternalVelocity = Vector2.zero;
+
         UpdateFacing();
         UpdateAnimatorParameters();
     }
@@ -724,6 +733,12 @@ public class PlayerController : MonoBehaviour
     /// </summary>
     public void LeaveGround()
     {
+        // 直前のステップで上乗せした外力 (動く足場の運搬・コンベア・風) をここで取り除いておく。
+        // ジャンプ等は Update 側 (ステートの Enter) で初速を書くため、取り除かずにおくと次の物理ステップ頭の
+        // RemoveAppliedExternalVelocity が「上乗せ前の速度 (接地中は張り付きの下向き) の範囲」へ y をクランプし、
+        // 初速が 0 に潰れる = 動く足場やコンベアの上でジャンプできない不具合になっていた (PendingChanges 32)
+        RemoveAppliedExternalVelocity();
+
         _isGrounded = false;
         _groundNormal = Vector2.up;
         _launchTimer = LaunchGraceTime;
