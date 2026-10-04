@@ -67,4 +67,10 @@ public class SaveData
     /// 復帰位置 (posX/posY) を使わずステージの入り口から始める (死亡リトライの引き継ぎ用。ファイルには書かない)。
     /// </summary>
     [NonSerialized] public bool useStageSpawn;
+
+    /// <summary>
+    /// このプレイの続き (つづきから・死亡リトライ) として適用するデータ。適用したプレイヤーは以後の進行を
+    /// このプレイのセーブへ自動で書き込む (テストプレイの記録の再生などは false = セーブに触れない。ファイルには書かない)。
+    /// </summary>
+    [NonSerialized] public bool continuesRun;
 }

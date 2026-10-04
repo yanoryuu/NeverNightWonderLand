@@ -51,6 +51,7 @@ public class HomeUIView : MonoBehaviour
         HealFull();
         DefeatedEnemyRegistry.Clear();
         BrokenCrateRegistry.Clear();
+        PlayerSaveBridge.RememberBench(savePoint); // 死亡リトライの復帰先 (PendingChanges 39)
 
         GamePause.Push();
         ShowMain();

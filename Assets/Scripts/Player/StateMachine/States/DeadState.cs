@@ -29,7 +29,7 @@ public class DeadState : PlayerState
             if (gameOver != null)
                 gameOver.Show();
             else
-                GameOverView.RetryCurrentStage(); // 能力・持ち物を引き継いで読み直す (PendingChanges 38)
+                GameOverView.RetryCurrentStage(); // 能力・持ち物を引き継いで最後に休んだ拠点から (PendingChanges 38/39)
         }
     }
 

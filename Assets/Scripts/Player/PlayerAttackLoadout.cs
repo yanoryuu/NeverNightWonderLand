@@ -42,6 +42,9 @@ public class PlayerAttackLoadout : MonoBehaviour
     /// <summary>ゲームに存在する全攻撃方法。</summary>
     public IReadOnlyList<AttackDefinition> Catalog => _model.Catalog;
 
+    /// <summary>装備・解放状況のどれかが変化した時に発火する (セーブへの自動書き込み用)。</summary>
+    public Observable<Unit> Changed => _model.Changed;
+
     [Inject]
     public void Construct(PlayerAttackLoadoutModel model)
     {

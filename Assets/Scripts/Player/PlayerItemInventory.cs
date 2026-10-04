@@ -30,6 +30,9 @@ public class PlayerItemInventory : MonoBehaviour
     /// <summary>入手できる全アイテム (メニューの一覧などに使う)。</summary>
     public IReadOnlyList<ItemDefinition> Catalog => _model.Catalog;
 
+    /// <summary>スロット・所持数のどれかが変化した時に発火する (セーブへの自動書き込み用)。</summary>
+    public Observable<Unit> Changed => _model.Changed;
+
     [Inject]
     public void Construct(PlayerItemInventoryModel model)
     {

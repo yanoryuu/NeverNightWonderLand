@@ -11,7 +11,12 @@
 //   Continue(slot)   : タイトルの「つづきから」と同じ
 //   SaveInfo(slot)   : スロットのセーブの中身 (シーン・位置・能力)
 //   DoubleJump / DJResult : 地上でジャンプ → 0.3 秒後に空中でもう一度ジャンプ、最高到達高さ (二段なら約 6.6, 一段なら約 3.3)
-// シーン移動は PlayBox.Go (playtest_boxfix.cs)。
+// 2026-10-04 PendingChanges 39 (最後に休んだ拠点から再開 + 永続する進行をその場でセーブへ) の追加:
+//   Rest             : 近くの拠点で休む (HomeUIView.Open → 閉じる。セーブはしない)
+//   Gain             : 部屋の拾える物を 1 つ拾う (あれば) + キーアイテム相当のフラグ DeathKeepKey・コイン +1 (A1_Coin_DeathKeep)・糸 +7
+//   SaveInfo(slot)   : ↑ のフラグ (key/coinFlag) も出す。Hash(slot) = ファイルの SHA1 (書き換わっていないかの確認)
+//   NewGame(slot, stage) : タイトルの「はじめから」と同じ (スロットに前のセーブが残っていても使わない)
+//   Go(scene, entrance) / Tp(x, y) / Respawn : シーン移動 / 瞬間移動 / 覚えている復帰先の拠点
 using System;
 using System.IO;
 using System.Linq;
@@ -86,7 +91,7 @@ public static class DeathKeep
         var sks = string.Join(",", Enum.GetValues(typeof(PlayerSkill)).Cast<PlayerSkill>().Where(pr.HasSkill));
         return $"stage={StageLoader.Instance?.CurrentStageName} pos=({p.transform.position.x:F2},{p.transform.position.y:F2}) state={StateName()} " +
                $"hp={hp.Hp.CurrentValue}/{hp.MaxHp} upgrades=[{ups}] skills=[{sks}] forge={pr.ForgeLevel} thread={inv.Thread.CurrentValue} coins={inv.Coins.CurrentValue} " +
-               $"flagTest={GameProgress.Has("DeathKeepTest")} flags={GameProgress.Collect().Length} saveBelongs={GameSession.SaveBelongsToRun} slot={SaveSystem.ActiveSlot + 1} " +
+               $"flagTest={GameProgress.Has("DeathKeepTest")} key={GameProgress.Has("DeathKeepKey")} flags={GameProgress.Collect().Length} saveBelongs={GameSession.SaveBelongsToRun} slot={SaveSystem.ActiveSlot + 1} " +
                $"gameOverOpen={GameOverOpen()} t={Time.time:F1}";
     }
 
@@ -103,8 +108,90 @@ public static class DeathKeep
         GameSession.PendingLoad = null;
         GameSession.SaveBelongsToRun = false;
         GameProgress.Clear();
+        GameSession.ClearRespawnBench();
         StageLoader.LoadWithPlayerScene(stage);
         return "start " + stage;
+    }
+
+    public static string NewGame(int slot, string stage)
+    {
+        // TitleScreen.StartNewGame と同じ
+        Application.runInBackground = true;
+        SaveSystem.ActiveSlot = slot - 1;
+        GameSession.PendingLoad = null;
+        GameSession.PlayTimeSeconds = 0;
+        GameSession.SaveBelongsToRun = false;
+        GameSession.ClearRespawnBench();
+        GameProgress.Clear();
+        StageLoader.LoadWithPlayerScene(stage);
+        return "new game slot" + slot + " " + stage;
+    }
+
+    // 本物のタイトル画面: Title() でタイトルシーンへ → TitlePick("ContinueGame" | "StartNewGame", slot) でスロットを選んだのと同じ
+    public static string Title()
+    {
+        GamePause.Reset();
+        SceneManager.LoadScene("TitleScene");
+        return "title";
+    }
+
+    public static string TitlePick(string method, int slot)
+    {
+        var title = UnityEngine.Object.FindFirstObjectByType<TitleScreen>();
+        var slots = UnityEngine.Object.FindFirstObjectByType<SaveSlotView>();
+        if (title == null || slots == null) return "no title/slots";
+        typeof(TitleScreen).GetMethod(method, F).Invoke(title, null);
+        var chosen = typeof(SaveSlotView).GetField("_onChosen", F).GetValue(slots) as Action<int>;
+        if (chosen == null) return "no callback";
+        chosen(slot - 1);
+        return $"{method} slot{slot}";
+    }
+
+    public static string Go(string scene, string entrance)
+    {
+        StageLoader.Instance.TransitionTo(scene, entrance);
+        return "go " + scene;
+    }
+
+    public static string Tp(float x, float y)
+    {
+        P.Teleport(new Vector2(x, y));
+        return "tp " + State();
+    }
+
+    public static string Respawn() =>
+        GameSession.HasRespawnBench ? $"respawn={GameSession.RespawnScene} ({GameSession.RespawnPosition.x:F2},{GameSession.RespawnPosition.y:F2})" : "respawn=none";
+
+    public static string Rest()
+    {
+        var sp = UnityEngine.Object.FindAnyObjectByType<SavePoint>();
+        var home = UnityEngine.Object.FindFirstObjectByType<HomeUIView>();
+        if (sp == null || home == null) return "no savepoint/home";
+        home.Open(P.gameObject, sp);
+        typeof(HomeUIView).GetMethod("CloseMenu", F).Invoke(home, null);
+        return "rested " + Respawn();
+    }
+
+    public static string Gain()
+    {
+        var p = P;
+        var picked = "none";
+        var pickup = UnityEngine.Object.FindObjectsByType<ItemPickup>(FindObjectsSortMode.None).FirstOrDefault(i => i.CanInteract);
+        if (pickup != null) { picked = pickup.GetType().Name + " " + pickup.name; pickup.Interact(p.gameObject); }
+        GameProgress.Set("DeathKeepKey"); // キーアイテム相当
+        GameProgress.Set("A1_Coin_DeathKeep");
+        var inv = p.GetComponent<PlayerItemInventory>();
+        inv.AddCoins(1);
+        inv.AddThread(7, false);
+        return $"gain picked={picked} " + State();
+    }
+
+    public static string Hash(int slot)
+    {
+        var path = SaveSystem.PathOf(slot - 1);
+        if (!File.Exists(path)) return "no file";
+        using var sha = System.Security.Cryptography.SHA1.Create();
+        return BitConverter.ToString(sha.ComputeHash(File.ReadAllBytes(path))).Replace("-", "").Substring(0, 12) + " " + File.GetLastWriteTime(path).ToString("HH:mm:ss.fff");
     }
 
     public static string Grant()
@@ -159,6 +246,7 @@ public static class DeathKeep
         SaveSystem.ActiveSlot = slot - 1;
         SaveSystem.Save(slot - 1, bridge.CollectAt(sp));
         GameSession.SaveBelongsToRun = true;
+        PlayerSaveBridge.RememberBench(sp);
         return $"saved slot{slot} at savepoint={(sp ? sp.name + " " + sp.transform.position : "none")} " + SaveInfo(slot);
     }
 
@@ -167,7 +255,8 @@ public static class DeathKeep
         var d = SaveSystem.TryLoad(slot - 1);
         if (d == null) return "no save";
         return $"save{slot}: scene={d.sceneName} pos=({d.posX:F2},{d.posY:F2}) upgrades=[{string.Join(",", (d.upgrades ?? new int[0]).Select(u => (ScissorUpgrade)u))}] " +
-               $"skills=[{string.Join(",", (d.skills ?? new int[0]).Select(s => (PlayerSkill)s))}] thread={d.thread} coins={d.coins} flagTest={d.progressFlags?.Contains("DeathKeepTest")}";
+               $"skills=[{string.Join(",", (d.skills ?? new int[0]).Select(s => (PlayerSkill)s))}] thread={d.thread} coins={d.coins} flagTest={d.progressFlags?.Contains("DeathKeepTest")} " +
+               $"key={d.progressFlags?.Contains("DeathKeepKey")} coinFlag={d.progressFlags?.Contains("A1_Coin_DeathKeep")} flags={d.progressFlags?.Length} place={d.placeName} savedAt={d.savedAt}";
     }
 
     public static string Continue(int slot)
@@ -175,8 +264,10 @@ public static class DeathKeep
         var save = SaveSystem.TryLoad(slot - 1);
         if (save == null) return "no save";
         SaveSystem.ActiveSlot = slot - 1;
+        save.continuesRun = true; // TitleScreen.ContinueGame と同じ
         GameSession.PendingLoad = save;
         GameSession.SaveBelongsToRun = true;
+        GameSession.SetRespawnBench(save.sceneName, new Vector2(save.posX, save.posY));
         GameSession.PlayTimeSeconds = save.playTimeSeconds;
         StageLoader.LoadWithPlayerScene(save.sceneName);
         return "continue slot" + slot;

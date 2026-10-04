@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// ゲームオーバー画面。DeadState から表示され、リトライ (セーブがあれば拠点から) かタイトルへ戻る。
+/// ゲームオーバー画面。DeadState から表示され、リトライ (最後に休んだ拠点から) かタイトルへ戻る。
 /// </summary>
 public class GameOverView : MonoBehaviour
 {
@@ -35,7 +35,7 @@ public class GameOverView : MonoBehaviour
             return;
 
         _menu.SetTitle("ゲームオーバー");
-        _menu.SetBody(GameSession.SaveBelongsToRun && SaveSystem.Exists() ? "セーブした拠点からやり直せる。" : "");
+        _menu.SetBody(GameSession.HasRespawnBench ? "最後に休んだ拠点からやり直せる。" : "");
         _menu.SetEntries(new List<MenuPanelView.Entry>
         {
             new("リトライ", Retry),
@@ -48,8 +48,8 @@ public class GameOverView : MonoBehaviour
 
     /// <summary>
     /// 死亡からのリトライ (DeadState のゲームオーバー画面が無い時もここ)。
-    /// このプレイのセーブが現在のステージのものなら拠点から再開し、そうでなければ今の状態を持ってステージの入り口から再開する。
-    /// どちらでも取得済みの能力は失わない (PlayerSaveBridge.CollectForRetry, PendingChanges 38)。
+    /// 最後に休んだ拠点のシーンを読み、拠点から再開する (死んだ部屋に関係なく。まだ休んでいなければ今のステージの入り口から)。
+    /// 状態は戻さない: 能力・持ち物・糸・コイン・進行フラグは今のまま (PlayerSaveBridge.CollectForRetry, PendingChanges 38/39)。
     /// </summary>
     public static void RetryCurrentStage()
     {
@@ -58,17 +58,19 @@ public class GameOverView : MonoBehaviour
             : SceneManager.GetActiveScene().name;
 
         var bridge = FindFirstObjectByType<PlayerSaveBridge>();
-        GameSession.PendingLoad = bridge != null ? bridge.CollectForRetry(stageName) : null;
+        var data = bridge != null ? bridge.CollectForRetry(stageName) : null;
+        GameSession.PendingLoad = data;
+        var targetStage = data != null ? data.sceneName : stageName;
 
         if (StageLoader.Instance != null)
         {
             // PlayerScene ごと読み直して HP・敵・木箱をリセットする (能力・持ち物は PendingLoad で戻す)
-            StageLoader.LoadWithPlayerScene(stageName);
+            StageLoader.LoadWithPlayerScene(targetStage);
         }
         else
         {
             GamePause.Reset();
-            SceneManager.LoadScene(stageName);
+            SceneManager.LoadScene(targetStage);
         }
     }
 
