@@ -35,7 +35,7 @@ public class GameOverView : MonoBehaviour
             return;
 
         _menu.SetTitle("ゲームオーバー");
-        _menu.SetBody(SaveSystem.Exists() ? "セーブした拠点からやり直せる。" : "");
+        _menu.SetBody(GameSession.SaveBelongsToRun && SaveSystem.Exists() ? "セーブした拠点からやり直せる。" : "");
         _menu.SetEntries(new List<MenuPanelView.Entry>
         {
             new("リトライ", Retry),
@@ -44,19 +44,25 @@ public class GameOverView : MonoBehaviour
         _menu.Open();
     }
 
-    private void Retry()
+    private void Retry() => RetryCurrentStage();
+
+    /// <summary>
+    /// 死亡からのリトライ (DeadState のゲームオーバー画面が無い時もここ)。
+    /// このプレイのセーブが現在のステージのものなら拠点から再開し、そうでなければ今の状態を持ってステージの入り口から再開する。
+    /// どちらでも取得済みの能力は失わない (PlayerSaveBridge.CollectForRetry, PendingChanges 38)。
+    /// </summary>
+    public static void RetryCurrentStage()
     {
         var stageName = StageLoader.Instance != null
             ? StageLoader.Instance.CurrentStageName
             : SceneManager.GetActiveScene().name;
 
-        // セーブが現在のステージのものなら拠点から再開する
-        var save = SaveSystem.TryLoad();
-        GameSession.PendingLoad = (save != null && save.sceneName == stageName) ? save : null;
+        var bridge = FindFirstObjectByType<PlayerSaveBridge>();
+        GameSession.PendingLoad = bridge != null ? bridge.CollectForRetry(stageName) : null;
 
         if (StageLoader.Instance != null)
         {
-            // PlayerScene ごと読み直して全リセットする
+            // PlayerScene ごと読み直して HP・敵・木箱をリセットする (能力・持ち物は PendingLoad で戻す)
             StageLoader.LoadWithPlayerScene(stageName);
         }
         else

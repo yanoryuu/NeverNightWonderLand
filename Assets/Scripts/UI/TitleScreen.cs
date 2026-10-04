@@ -93,6 +93,7 @@ public class TitleScreen : MonoBehaviour
             SaveSystem.ActiveSlot = slot;
             GameSession.PendingLoad = null;
             GameSession.PlayTimeSeconds = 0;
+            GameSession.SaveBelongsToRun = false; // スロットに前のプレイのセーブが残っていても使わない
             GameProgress.Clear();
             // PlayerScene を土台に開始ステージを Additive で重ねる (PlayerScene 未登録なら旧方式)
             StageLoader.LoadWithPlayerScene(_startSceneName);
@@ -115,6 +116,7 @@ public class TitleScreen : MonoBehaviour
 
             SaveSystem.ActiveSlot = slot;
             GameSession.PendingLoad = save;
+            GameSession.SaveBelongsToRun = true;
             GameSession.PlayTimeSeconds = save.playTimeSeconds;
             StageLoader.LoadWithPlayerScene(save.sceneName);
         }, () => ShowMenu(1), showBackground: false);

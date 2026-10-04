@@ -62,4 +62,9 @@ public class SaveData
 
     /// <summary>場所の表示名 (StageInfo の部屋名)。</summary>
     public string placeName;
+
+    /// <summary>
+    /// 復帰位置 (posX/posY) を使わずステージの入り口から始める (死亡リトライの引き継ぎ用。ファイルには書かない)。
+    /// </summary>
+    [NonSerialized] public bool useStageSpawn;
 }

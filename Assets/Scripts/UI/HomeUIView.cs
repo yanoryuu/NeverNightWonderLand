@@ -168,6 +168,7 @@ public class HomeUIView : MonoBehaviour
         {
             SaveSystem.ActiveSlot = slot;
             SaveSystem.Save(slot, _saveBridge.CollectAt(_savePoint)); // 復帰位置は拠点の位置
+            GameSession.SaveBelongsToRun = true;
             Notifier.Notify("セーブしました");
             ReopenMain();
         }, ReopenMain, showBackground: true);

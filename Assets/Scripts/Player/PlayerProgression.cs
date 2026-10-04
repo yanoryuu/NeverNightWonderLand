@@ -18,6 +18,9 @@ public class PlayerProgression : MonoBehaviour
     /// <summary>強化を取得した時に発火する (UI・演出用)。</summary>
     public event Action<ScissorUpgrade> OnUpgradeGranted;
 
+    /// <summary>スキルを取得した時に発火する (セーブへの書き足し用)。</summary>
+    public event Action<PlayerSkill> OnSkillGranted;
+
     public bool Has(ScissorUpgrade upgrade) => _upgrades.Contains(upgrade);
 
     public void Grant(ScissorUpgrade upgrade)
@@ -40,6 +43,7 @@ public class PlayerProgression : MonoBehaviour
             return;
 
         Notifier.Notify(WithControls($"スキル「{skill.DisplayName()}」を手に入れた!", ControlHint(skill)));
+        OnSkillGranted?.Invoke(skill);
     }
 
     #region 入手通知の操作説明 (Docs/UI/UIAssignment.md「3回目の決定」12)

@@ -1,3 +1,4 @@
+using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -5,6 +6,9 @@ using UnityEngine.SceneManagement;
 /// セーブデータとプレイヤーの橋渡し。
 /// - シーン開始時: GameSession.PendingLoad が現在シーンのものなら適用する (位置・強化・アイテム・糸)
 /// - セーブ時: SavePoint から Collect() でデータを組み立てる
+/// - 能力 (ハサミ強化・スキル) の取得時: このプレイのセーブがあれば、その場でセーブの能力にも書き足す
+///   (能力は一度取ったら死亡・終了でも失わない。PendingChanges 38)
+/// - 死亡リトライ: <see cref="CollectForRetry"/> で引き継ぐデータを作る
 /// </summary>
 [RequireComponent(typeof(PlayerController))]
 public class PlayerSaveBridge : MonoBehaviour
@@ -20,6 +24,76 @@ public class PlayerSaveBridge : MonoBehaviour
         _attackLoadout = GetComponent<PlayerAttackLoadout>();
     }
 
+    private void OnEnable()
+    {
+        if (_progression == null)
+            return;
+
+        _progression.OnUpgradeGranted += OnUpgradeGranted;
+        _progression.OnSkillGranted += OnSkillGranted;
+    }
+
+    private void OnDisable()
+    {
+        if (_progression == null)
+            return;
+
+        _progression.OnUpgradeGranted -= OnUpgradeGranted;
+        _progression.OnSkillGranted -= OnSkillGranted;
+    }
+
+    private void OnUpgradeGranted(ScissorUpgrade _) => PersistAbilities();
+
+    private void OnSkillGranted(PlayerSkill _) => PersistAbilities();
+
+    /// <summary>
+    /// 取得済みの能力をこのプレイのセーブに書き足す (位置・アイテム・フラグ等はセーブしたときのまま)。
+    /// 拠点でセーブする前に取った能力も、死亡リトライ・ゲームの終了で失わないようにする。
+    /// </summary>
+    private void PersistAbilities()
+    {
+        if (!GameSession.SaveBelongsToRun || _progression == null)
+            return;
+
+        var save = SaveSystem.TryLoad();
+        if (save == null)
+            return;
+
+        MergeAbilities(save);
+        SaveSystem.Save(save);
+    }
+
+    /// <summary>セーブデータの能力に、今の取得状況を足す (セーブ側にしか無い物も消さない)。</summary>
+    private void MergeAbilities(SaveData data)
+    {
+        if (_progression == null)
+            return;
+
+        data.upgrades = (data.upgrades ?? new int[0]).Union(_progression.CollectUpgrades()).ToArray();
+        data.skills = (data.skills ?? new int[0]).Union(_progression.CollectSkills()).ToArray();
+    }
+
+    /// <summary>
+    /// 死亡リトライ (PlayerScene ごと読み直す) で引き継ぐデータ。能力 (ハサミ強化・スキル) は死亡で失わない。
+    /// - このプレイのセーブが今のステージにあれば拠点から再開する (セーブの状態に戻す)。能力はセーブ後に取った物も残す
+    /// - 無ければ今の状態 (能力・アイテム・糸・コイン・装備・進行フラグ) をそのまま持って、ステージの入り口から再開する
+    ///   (以前はプレイヤーを作り直すだけで、能力・アイテム・糸などが初期状態に戻っていた)
+    /// </summary>
+    public SaveData CollectForRetry(string stageName)
+    {
+        var save = GameSession.SaveBelongsToRun ? SaveSystem.TryLoad() : null;
+        if (save != null && save.sceneName == stageName)
+        {
+            MergeAbilities(save);
+            return save;
+        }
+
+        var data = Collect();
+        data.sceneName = stageName;
+        data.useStageSpawn = true;
+        return data;
+    }
+
     private void Start()
     {
         // PlayerScene 方式ではステージのロード完了後に StageLoader が適用する
@@ -31,7 +105,8 @@ public class PlayerSaveBridge : MonoBehaviour
 
     /// <summary>
     /// PendingLoad が現在のステージのものなら適用する (位置・強化・アイテム・装備)。
-    /// 適用したら true (StageLoader がステージロード後に呼ぶ)。
+    /// 復帰位置へ置いたら true (StageLoader がステージロード後に呼ぶ)。
+    /// 死亡リトライの引き継ぎ (useStageSpawn) は位置を変えずに false を返し、StageLoader が入り口へ置く。
     /// </summary>
     public bool TryApplyPendingLoad()
     {
@@ -47,12 +122,13 @@ public class PlayerSaveBridge : MonoBehaviour
 
         GameSession.PendingLoad = null;
 
-        transform.position = new Vector3(data.posX, data.posY, transform.position.z);
+        if (!data.useStageSpawn)
+            transform.position = new Vector3(data.posX, data.posY, transform.position.z);
         _progression?.LoadFrom(data);
         _inventory?.LoadFrom(data);
         _attackLoadout?.LoadFrom(data);
         GameProgress.LoadFrom(data);
-        return true;
+        return !data.useStageSpawn;
     }
 
     /// <summary>拠点でセーブする時のデータ (復帰位置 = 拠点の位置)。</summary>

@@ -145,6 +145,7 @@ public class PauseMenuView : MonoBehaviour
         {
             SaveSystem.ActiveSlot = slot;
             SaveSystem.Save(slot, bridge.CollectAt(savePoint));
+            GameSession.SaveBelongsToRun = true;
             Notifier.Notify("セーブしました");
             ShowMain(SaveIndex);
         }, () => ShowMain(SaveIndex), showBackground: true);

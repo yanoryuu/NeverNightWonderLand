@@ -1,8 +1,6 @@
-using UnityEngine.SceneManagement;
-
 /// <summary>
 /// 死亡状態。入力を遮断して RespawnDelay 後にゲームオーバー画面を出す。
-/// ゲームオーバー画面が無いシーンでは従来通りシーンを再読込する。
+/// ゲームオーバー画面が無いシーンではそのままリトライ (GameOverView.RetryCurrentStage) する。
 /// ※ リスポーンにはシーンが Build Settings に登録されている必要がある。
 /// </summary>
 public class DeadState : PlayerState
@@ -30,10 +28,8 @@ public class DeadState : PlayerState
             var gameOver = UnityEngine.Object.FindFirstObjectByType<GameOverView>();
             if (gameOver != null)
                 gameOver.Show();
-            else if (StageLoader.Instance != null)
-                StageLoader.LoadWithPlayerScene(StageLoader.Instance.CurrentStageName);
             else
-                SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+                GameOverView.RetryCurrentStage(); // 能力・持ち物を引き継いで読み直す (PendingChanges 38)
         }
     }
 

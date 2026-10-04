@@ -25,6 +25,14 @@ public static class GameSession
     /// </summary>
     public static double PlayTimeSeconds;
 
+    /// <summary>
+    /// 現在のスロット (SaveSystem.ActiveSlot) のセーブがこのプレイのものか。つづきから・拠点でのセーブで true、
+    /// はじめからで false (選んだスロットに前のプレイのセーブが残っていても、拠点でセーブするまでは別のプレイのもの)。
+    /// エディタでステージを直接再生した時も false。
+    /// 死亡リトライで拠点から再開するのと、能力の取得をセーブへ書き足すのは true の時だけ (PendingChanges 38)。
+    /// </summary>
+    public static bool SaveBelongsToRun;
+
     /// <summary>エリア開始時にリザルト集計をリセットする。</summary>
     public static void ResetRun()
     {
