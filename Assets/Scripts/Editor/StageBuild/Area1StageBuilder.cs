@@ -1281,7 +1281,7 @@ namespace NeverNight.StageBuild
             string[] repeatLines = null, string talkedFlag = "", int rewardThread = 0, bool flipX = false)
         {
             var go = NewObject("Npc_" + speakerName, new Vector2(x, y), LayerInteractable, "Gimmicks");
-            var sr = AddSprite(go, Art(sprite), OrderGimmick);
+            var sr = AddSprite(go, Art(sprite), OrderProp); // キャラクターより奥 (プレイヤーは 0。PendingChanges 51)
             sr.flipX = flipX;
             var h = sr.sprite.bounds.size.y;
             Box(go, new Vector2(1.6f, Mathf.Max(2f, h)), true, new Vector2(0, Mathf.Max(2f, h) * 0.5f));
@@ -1299,7 +1299,7 @@ namespace NeverNight.StageBuild
             string repeatLabel = "", string talkedFlag = "", int rewardThread = 0, bool flipX = false)
         {
             var go = NewObject("Npc_" + name, new Vector2(x, y), LayerInteractable, "Gimmicks");
-            var sr = AddSprite(go, Art(sprite), OrderGimmick);
+            var sr = AddSprite(go, Art(sprite), OrderProp); // キャラクターより奥 (プレイヤーは 0。PendingChanges 51)
             sr.flipX = flipX;
             var h = sr.sprite.bounds.size.y;
             Box(go, new Vector2(1.6f, Mathf.Max(2f, h)), true, new Vector2(0, Mathf.Max(2f, h) * 0.5f));

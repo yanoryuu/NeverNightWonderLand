@@ -595,6 +595,40 @@ public static class BuildUI
         }
     }
 
+    const string HomePrefabPath = "Assets/Prefabs/HomeUI.prefab";
+
+    // 拠点 (ホーム画面) の説明文 (Body = 「糸: n」/ 入れ替えページの「装備中 □ … / △ …」, どちらも 1 行) と
+    // 行 (Rows) の位置 (窓 680x560 の上端からの距離, PendingChanges 51)。ショップ (26) と同じ直し方。
+    // 以前は Body が上から 92 (26pt 1 行 ≈ 127 まで) で Rows が 100 から始まり、1 行目に重なっていた。
+    public static float HomeBodyTop = 80f;     // 説明文の上端 (ショップと同じ。タイトル 24..84 の文字の下)
+    public static float HomeRowsTop = 130f;    // 1 行目の上端 (100 → 130。1 行の説明文の下に間を空ける。8 行まで入る)
+    public static float HomeRowsBottom = 30f;  // 行の範囲の下端の余白 (以前のまま)
+
+    /// <summary>
+    /// 拠点のホーム画面の説明文 (「糸: n」) と 1 行目の項目が重ならないように、説明文を少し上げ、行の範囲を下げる
+    /// (窓の大きさ・文字の大きさ・行の間隔 48 は変えない)。何度流してもよい。
+    /// </summary>
+    public static string HomeLayout()
+    {
+        var root = PrefabUtility.LoadPrefabContents(HomePrefabPath);
+        try
+        {
+            var window = root.GetComponentsInChildren<RectTransform>(true).FirstOrDefault(t => t.name == "Window") ?? throw new Exception("Window missing");
+            var body = window.Find("Body") as RectTransform ?? throw new Exception("Body missing");
+            var rows = window.Find("Rows") as RectTransform ?? throw new Exception("Rows missing");
+            body.anchoredPosition = new Vector2(body.anchoredPosition.x, -HomeBodyTop);
+            // Rows は窓いっぱいに伸ばした矩形: 上の余白 = -size.y/2 - pos.y, 下の余白 = -size.y/2 + pos.y
+            rows.sizeDelta = new Vector2(rows.sizeDelta.x, -(HomeRowsTop + HomeRowsBottom));
+            rows.anchoredPosition = new Vector2(rows.anchoredPosition.x, (HomeRowsBottom - HomeRowsTop) * 0.5f);
+            PrefabUtility.SaveAsPrefabAsset(root, HomePrefabPath);
+            return $"HomeUI: Body top {HomeBodyTop}, Rows top {HomeRowsTop} (pos {rows.anchoredPosition}, size {rows.sizeDelta})";
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+    }
+
     /// <summary>
     /// ショップ (ShopUI.prefab) の各行の左に品物の絵 (ItemDefinition のアイコン) を置く (PendingChanges 23)。何度流してもよい。
     /// 見た目の素材が来るまでの最小限: 既存の行 (Row0..9) に子 Icon (Image) を足して MenuPanelView._rowIcons に繋ぐだけ。
