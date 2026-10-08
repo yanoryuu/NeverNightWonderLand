@@ -245,6 +245,7 @@ GameObject:
   - component: {fileID: 643932579543092333}
   - component: {fileID: 4951286625531776819}
   - component: {fileID: 2698254697732654049}
+  - component: {fileID: 1402558603948684230}
   m_Layer: 8
   m_Name: Player
   m_TagString: Untagged
@@ -589,3 +590,35 @@ MonoBehaviour:
   _scalePerValue: 0.15
   _burstX: 3.2
   _burstY: {x: 5, y: 8.5}
+  _bossPiecesPerThread: 0.6
+  _bossMinPieces: 12
+  _bossMaxPieces: 30
+  _bossMaxSpeedX: 16
+  _bossBurstY: {x: 8, y: 12.5}
+  _bossPiecesPerFrame: 3
+  _bossEdgeMargin: 1.5
+--- !u!114 &1402558603948684230
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6311746777100379849}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3375a30f62cddf94da583045d5cc2b88, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _badge: {fileID: 21300000, guid: 977b3bbb50a54eaa93ca74d6c34d1839, type: 3}
+  _font: {fileID: 11400000, guid: e4036604c4556bc408dfe7a1bf316733, type: 2}
+  _keyboardGlyph: E
+  _gamepadGlyph: "\u2191"
+  _size: 0.5
+  _fontSize: 3.2
+  _textColor: {r: 1, g: 0.9, b: 0.68, a: 1}
+  _heightAboveFeet: 1.7
+  _offsetX: 0
+  _fadeTime: 0.12
+  _bobAmplitude: 0.035
+  _bobPeriod: 1.4
+  _sortingOrder: 120

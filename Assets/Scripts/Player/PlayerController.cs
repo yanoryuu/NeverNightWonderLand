@@ -1094,6 +1094,12 @@ public class PlayerController : MonoBehaviour
     /// <summary>梯子に掴まっているか。</summary>
     public bool IsOnLadder => _ladder != null;
 
+    /// <summary>見た目の体の中心の x (Spine の骨格の原点はルートからずれている。向きで反転)。</summary>
+    public float BodyCenterX => _rb.position.x + _consts.VisualBodyOffsetX * _facing.Value;
+
+    /// <summary>梯子に掴まっている時のルートの x (見た目の体の中心が梯子の中心に来る位置)。</summary>
+    private float LadderRootX(ClimbableLadder ladder) => ladder.CenterX - _consts.VisualBodyOffsetX * _facing.Value;
+
     /// <summary>足元の高さ (体のカプセルの下端)。</summary>
     public float FeetY => _capsule != null
         ? _rb.position.y + (_capsule.offset.y - _capsule.size.y * 0.5f) * Mathf.Abs(transform.lossyScale.y)
@@ -1111,7 +1117,7 @@ public class PlayerController : MonoBehaviour
         if (_ladderGrabTimer <= 0f || _isDead)
             return false;
 
-        var x = _rb.position.x;
+        var x = BodyCenterX; // 梯子との位置合わせは見た目の体の中心で
         var feet = FeetY;
         if (_verticalInput > 0.5f)
         {
@@ -1155,7 +1161,8 @@ public class PlayerController : MonoBehaviour
 
         var pos = (Vector2)transform.position;
         _rb.position = pos;
-        var ladder = ClimbableLadder.FindGrabbable(pos.x, FeetY);
+        // 入り口の位置は操作で合わせたものではないので、横の範囲を少し広く見る (ルートと体の中心のずれのぶん)
+        var ladder = ClimbableLadder.FindGrabbable(BodyCenterX, FeetY, 0.5f);
         if (ladder == null)
         {
             if (stale)
@@ -1191,7 +1198,7 @@ public class PlayerController : MonoBehaviour
         RemoveAppliedExternalVelocity();
 
         var pos = _rb.position;
-        pos.x = ladder.CenterX;
+        pos.x = LadderRootX(ladder);
         if (fromTop)
         {
             pos.y += ladder.Top - 0.35f - FeetY; // 上端の床の少し下へ (体は梯子に掛かる)
@@ -1250,8 +1257,9 @@ public class PlayerController : MonoBehaviour
         if (vy < 0f && _isGrounded)
             vy = 0f;
 
-        if (ladder != null && Mathf.Abs(_rb.position.x - ladder.CenterX) > 0.001f)
-            _rb.position = new Vector2(ladder.CenterX, _rb.position.y);
+        var x = LadderRootX(ladder);
+        if (Mathf.Abs(_rb.position.x - x) > 0.001f)
+            _rb.position = new Vector2(x, _rb.position.y);
 
         _rb.linearVelocity = new Vector2(0f, vy);
     }
@@ -1267,15 +1275,6 @@ public class PlayerController : MonoBehaviour
         _coyoteTimer = 0f;
         _ladderGrabTimer = 0f;
         return true;
-    }
-
-    /// <summary>梯子から方向なしで離れる時の小ジャンプ。</summary>
-    public void LadderHop()
-    {
-        LeaveGround();
-        _rb.linearVelocity = new Vector2(0f, _consts.JumpVelocity * _consts.LadderHopRatio);
-        _jumpBufferTimer = 0f;
-        _coyoteTimer = 0f;
     }
 
     /// <summary>登り切って上端の床に立つ。床との衝突をすぐ戻して、足元を床の上面に合わせる。</summary>

@@ -186,8 +186,9 @@ public class PlayerConsts : ScriptableObject
     [Tooltip("上入力とジャンプ (梯子の上では下入力とジャンプ) を「同時」とみなす猶予 (sec)。どちらを先に押してもよい")]
     [SerializeField] private float _ladderGrabWindow = 0.1f;
 
-    [Tooltip("梯子から方向なしでジャンプした時の小ジャンプの初速 (通常ジャンプの初速に対する倍率)")]
-    [SerializeField] private float _ladderHopRatio = 0.5f;
+    [Tooltip("見た目の体の中心の横のずれ (units, 右向きの時。左向きでは反転)。ルート (= 物理の位置) から見た Spine の体の中心。" +
+             "梯子では体の中心が梯子の中心に来るようにルートをこのぶん逆へずらす。インタラクトのボタン表示もここを中心にする")]
+    [SerializeField] private float _visualBodyOffsetX = -0.3f;
 
     [Tooltip("インタラクト (会話・拠点・扉など) を受け付ける水平速度の上限 (units/sec)。走りながら上を押しても会話に入らない")]
     [SerializeField] private float _interactMaxSpeed = 0.5f;
@@ -312,7 +313,7 @@ public class PlayerConsts : ScriptableObject
     public float InteractMaxSpeed => _interactMaxSpeed;
     public float LadderClimbSpeed => _ladderClimbSpeed;
     public float LadderGrabWindow => _ladderGrabWindow;
-    public float LadderHopRatio => _ladderHopRatio;
+    public float VisualBodyOffsetX => _visualBodyOffsetX;
     public LayerMask InteractableLayer => _interactableLayer;
 
     public int RefillThreadCost => _refillThreadCost;

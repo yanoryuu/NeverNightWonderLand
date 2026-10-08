@@ -948,11 +948,14 @@ namespace NeverNight.StageBuild
         public static GameObject Ladder(int x, int y0, int y1)
         {
             var go = NewObject("Ladder", new Vector2(x + 0.5f, (y0 + y1) * 0.5f), LayerDefault, "Gimmicks");
-            AddSprite(go, Art("tiles/tile_ladder.png"), OrderDeco, new Vector2(1f, y1 - y0));
+            // 見た目は 1 マス幅ちょうど (横木の間隔 = 1/3 マス。元の ladder タイルは絵が 0.27 幅しか無かったので
+            // 中身を切り出して 1 マスに合わせた tile_ladder_1cell。PendingChanges 50)
+            // 描画順はプレイヤー (0) の後ろ (-1): 掴まっている体の手前に横木が掛からないように
+            AddSprite(go, Art("tiles/tile_ladder_1cell.png"), -1, new Vector2(1f, y1 - y0));
             var top = new GameObject("Top") { layer = LayerGround };
             top.transform.SetParent(go.transform, false);
             top.transform.position = new Vector3(x + 0.5f, y1 - 0.125f, 0);
-            var c = Box(top, new Vector2(1.8f, 0.25f), false);
+            var c = Box(top, new Vector2(1f, 0.25f), false); // 梯子と同じ 1 マス幅
             c.usedByEffector = true;
             var e = top.AddComponent<PlatformEffector2D>();
             e.useOneWay = true;
@@ -2810,7 +2813,7 @@ namespace NeverNight.StageBuild
                     continue;
                 }
                 // 梯子の途中の入り口: 着くと梯子に掴まる (PlayerController.AttachToLadderOnArrival, PendingChanges 44)
-                var onLadder = ladders.FirstOrDefault(l => l.CanGrabAt(p.x, p.y - 0.9f));
+                var onLadder = ladders.FirstOrDefault(l => l.CanGrabAt(p.x, p.y - 0.9f, 0.5f));
                 if (onLadder != null)
                 {
                     Ok($"{s.name} {p}: 梯子の途中 (着くと掴まる。梯子 y{onLadder.Bottom:F0}..{onLadder.Top:F0})");

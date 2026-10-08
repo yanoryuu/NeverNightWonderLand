@@ -1,6 +1,7 @@
 /// <summary>
 /// 梯子に掴まっている状態。上下入力で上り下り (重力なし・横入力では動かない)。
-/// ジャンプ: 方向なし = その場で小さく跳んで離れる / 横入力あり = その向きへ通常のジャンプ / 下入力あり = 手を離して落ちる。
+/// ジャンプ: 方向なし (上を押しながらも) = 真上へ通常のジャンプ / 横入力あり = その向きへ通常のジャンプ / 下入力あり = 手を離して落ちる。
+/// どれも二段ジャンプ (赤ハサミ) は残る (掴まった時に回復する)。長押しで高く跳べるのも地上と同じ。
 /// 上端まで登ると上端のすり抜け床に立つ。下りて地面に着くと降りる。梯子の下端より下へ出たら落下。
 /// 攻撃・ダッシュ・アイテム・回復は受け付けない (梯子の上では両手がふさがっている)。被弾すると HurtState が割り込んで落ちる。
 /// </summary>
@@ -47,16 +48,10 @@ public class LadderState : PlayerState
                 // 下 + ジャンプ = 手を離して落ちる
                 StateMachine.ChangeState(Player.FallState);
             }
-            else if (UnityEngine.Mathf.Abs(Player.MoveInput) > 0.01f)
-            {
-                // 横入力あり = その向きへ通常のジャンプ
-                StateMachine.ChangeState(Player.JumpState);
-            }
             else
             {
-                // 方向なし = 小さく跳んで離れる
-                Player.LadderHop();
-                StateMachine.ChangeState(Player.FallState);
+                // 方向なし = 真上へ / 横入力あり = その向きへ。どちらも通常のジャンプ (横の勢いは空中の操作でつく)
+                StateMachine.ChangeState(Player.JumpState);
             }
 
             return;

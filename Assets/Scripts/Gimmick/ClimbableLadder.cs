@@ -15,7 +15,7 @@ public class ClimbableLadder : MonoBehaviour
     [SerializeField] private float _halfHeight = 5f;
 
     [Tooltip("掴める横の範囲 (梯子の中心から左右へ, units)")]
-    [SerializeField] private float _grabHalfWidth = 0.6f;
+    [SerializeField] private float _grabHalfWidth = 0.45f;
 
     [Tooltip("上端のすり抜け床 (登り切って立つ所)。掴まっている間はプレイヤーとの衝突を切る")]
     [SerializeField] private Collider2D _topPlatform;
@@ -35,22 +35,25 @@ public class ClimbableLadder : MonoBehaviour
 
     private void OnDisable() => _active.Remove(this);
 
-    /// <summary>体 (中心 x・足元の高さ) が梯子の途中にあって掴めるか。上端に立っている時は含めない。</summary>
-    public bool CanGrabAt(float x, float feetY) =>
-        Mathf.Abs(x - CenterX) <= _grabHalfWidth && feetY >= Bottom - 0.1f && feetY < Top - 0.15f;
+    /// <summary>
+    /// 体 (見た目の体の中心 x・足元の高さ) が梯子の途中にあって掴めるか。上端に立っている時は含めない。
+    /// extraHalfWidth = 横の範囲の上乗せ (入り口に着いた時の掴まりなど、操作で合わせない場合)。
+    /// </summary>
+    public bool CanGrabAt(float x, float feetY, float extraHalfWidth = 0f) =>
+        Mathf.Abs(x - CenterX) <= _grabHalfWidth + extraHalfWidth && feetY >= Bottom - 0.1f && feetY < Top - 0.15f;
 
     /// <summary>上端の近く (足元が上端から below 下 〜 above 上) にいるか。上端から掴まって降りる判定。</summary>
     public bool IsNearTop(float x, float feetY, float below, float above) =>
         Mathf.Abs(x - CenterX) <= _grabHalfWidth && feetY >= Top - below && feetY <= Top + above;
 
     /// <summary>途中を掴める梯子 (最も中心に近いもの)。無ければ null。</summary>
-    public static ClimbableLadder FindGrabbable(float x, float feetY)
+    public static ClimbableLadder FindGrabbable(float x, float feetY, float extraHalfWidth = 0f)
     {
         ClimbableLadder best = null;
         var bestDx = float.MaxValue;
         foreach (var ladder in _active)
         {
-            if (ladder == null || !ladder.CanGrabAt(x, feetY))
+            if (ladder == null || !ladder.CanGrabAt(x, feetY, extraHalfWidth))
                 continue;
 
             var dx = Mathf.Abs(x - ladder.CenterX);
