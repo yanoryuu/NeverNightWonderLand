@@ -8,6 +8,7 @@ using UnityEngine;
 /// 同シーン内でフラグが立った場合はスライド演出つきで開く。
 /// _additionalFlags を設定すると、_flagId と合わせて全てのフラグが立った時だけ開く
 /// (スピーカー3つで開く大扉など。空なら従来どおり _flagId だけで開く)。
+/// 開き戸の絵 (_swingRenderer + _swingFrames) を設定した扉はスライドせず、その場でコマ送りして開いた扉を残す (<see cref="DoorSwing"/>)。
 /// </summary>
 public class FlagDoor : MonoBehaviour
 {
@@ -22,6 +23,12 @@ public class FlagDoor : MonoBehaviour
 
     [Tooltip("スライドにかける時間 (sec)")]
     [SerializeField] private float _slideDuration = 0.8f;
+
+    [Tooltip("開き戸の絵を描く SpriteRenderer (任意)。_swingFrames と組で使う")]
+    [SerializeField] private SpriteRenderer _swingRenderer;
+
+    [Tooltip("開き戸のコマ (閉 → 開 の順)。設定するとスライドせず、_slideDuration 秒でコマ送りして開く")]
+    [SerializeField] private Sprite[] _swingFrames = new Sprite[0];
 
     private bool _isOpen;
 
@@ -92,6 +99,15 @@ public class FlagDoor : MonoBehaviour
 
         foreach (var col in GetComponentsInChildren<Collider2D>())
             col.enabled = false;
+
+        if (DoorSwing.Has(_swingRenderer, _swingFrames))
+        {
+            if (instant)
+                DoorSwing.ShowOpen(_swingRenderer, _swingFrames);
+            else
+                DoorSwing.Play(_swingRenderer, _swingFrames, _slideDuration);
+            return;
+        }
 
         if (instant)
         {

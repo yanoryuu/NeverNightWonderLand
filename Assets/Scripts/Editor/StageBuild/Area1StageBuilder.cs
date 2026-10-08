@@ -49,6 +49,9 @@ namespace NeverNight.StageBuild
         // Drive「プロップス素材」(2026-10-03 PendingChanges 14): コイン・糸巻き・ミシン針・まち針・布カッター (1024px, PPU 1024 = 1 単位, 中心ピボット)
         public const string PropsRoot = "Assets/LocalData/StageAsset/Props";
         public const string CoinPrefabPath = "Assets/Prefabs/CoinPiece.prefab";
+        // Drive の新素材 (2026-10-08 PendingChanges 42。インポートは SceneScripts/prep_newart.cs)
+        public const string GimmickRoot = "Assets/LocalData/StageAsset/gimmick";
+        public const string CharacterRoot = "Assets/LocalData/Character";
 
         // 現在組み立て中のシーン Id (BuildBase で設定。Finish/Validate が使う)
         private static string _sceneId;
@@ -1102,15 +1105,27 @@ namespace NeverNight.StageBuild
             return go;
         }
 
-        /// <summary>壊せるスピーカー (speaker_intact)。y = 床面。</summary>
-        public static GameObject SpeakerAt(float x, float y, string flagId)
+        /// <summary>
+        /// 壊せるスピーカー。y = 床面。design = Drive「speaker」の絵 1〜3 (gimmick/speaker/speaker_0N_a/_b を交互に = 鳴っている、
+        /// 2026-10-08 PendingChanges 42)。当たりは絵の大きさから (幅 0.75・高さ 0.9)。壊れた絵は <see cref="SpeakerBrokenArt"/>。
+        /// </summary>
+        public static GameObject SpeakerAt(float x, float y, string flagId, int design = 1)
         {
             var go = NewObject("Speaker_" + flagId, new Vector2(x, y), LayerGround, "Gimmicks");
-            AddSprite(go, Art("props/speaker_intact.png"), OrderGimmick);
-            Box(go, new Vector2(2.4f, 3.6f), false, new Vector2(0, 1.8f));
+            var a = Art(SpeakerArt(design, "a"));
+            var sr = AddSprite(go, a, OrderGimmick);
+            var size = sr.sprite.bounds.size;
+            Box(go, new Vector2(size.x * 0.75f, size.y * 0.9f), false, new Vector2(sr.sprite.bounds.center.x, size.y * 0.45f));
+            AddComp<SpriteFlipbook>(go, ("_frames", new Object[] { a, Art(SpeakerArt(design, "b")) }), ("_fps", 3f), ("_phase", x * 0.37f));
             AddComp<BreakableSpeaker>(go, ("_flagId", flagId));
             return go;
         }
+
+        /// <summary>スピーカーの絵のパス (design 1〜3, state = a / b / broken)。</summary>
+        public static string SpeakerArt(int design, string state) => $"{GimmickRoot}/speaker/speaker_0{design}_{state}.png";
+
+        /// <summary>壊れたスピーカーの絵 (Prop に渡す。pivot = 床の中心)。</summary>
+        public static string SpeakerBrokenArt(int design) => SpeakerArt(design, "broken");
 
         /// <summary>
         /// ボス部屋: arena = [x0,x1)×[y0,y1) のトリガー + BossArena、ボス (仮ボス: 2 倍 + Heavy)、
@@ -1124,6 +1139,8 @@ namespace NeverNight.StageBuild
             var go = NewObject("BossArena_" + flagId, arena.center, LayerIgnoreRaycast, "Gimmicks");
             Box(go, arena.size, true);
             var boss = Enemy(bossPos.x, bossPos.y, flying, 2f, true, "Boss_" + flagId);
+            if (!flying)
+                KeepPlaceholderLook(boss);
             if (threadDrop > 0)
                 Set(boss.GetComponent<EnemyController>(), "_threadDropOverride", threadDrop);
             var gateObjs = new List<GameObject>();
@@ -1138,6 +1155,82 @@ namespace NeverNight.StageBuild
                 ("_followUpMessage", followUpMessage ?? ""), ("_followUpUnlessUpgrade", followUpUnlessRed),
                 ("_followUpUpgrade", ScissorUpgrade.Red));
             return go;
+        }
+
+        /// <summary>
+        /// 地上の仮ボスは雑魚 (Enemy.prefab = 野良ウマ, 2026-10-08 PendingChanges 42) と同じ見た目にしない: 子 Visual を隠し、
+        /// ルートの仮の四角 (SpriteRenderer) を有効に戻してそれに色・向き・フラッシュをかける。ボスの絵が決まるまでの措置。
+        /// </summary>
+        public static void KeepPlaceholderLook(GameObject enemy)
+        {
+            var ec = enemy.GetComponent<EnemyController>();
+            var root = enemy.GetComponent<SpriteRenderer>();
+            root.enabled = true;
+            Set(ec, "_visual", root);
+            Set(ec, "_visualFacesLeft", false);
+            Set(ec, "_hitFlashColor", Color.white);
+            var vis = enemy.transform.Find("Visual");
+            if (vis != null)
+                vis.gameObject.SetActive(false);
+            var anim = enemy.GetComponent<EnemyAnimator>();
+            if (anim != null)
+                Object.DestroyImmediate(anim);
+        }
+
+        /// <summary>
+        /// 開き戸 (Drive「door」, gimmick/door/door_01..04 = 閉 → 開。2026-10-08 PendingChanges 42) で通路 r を塞ぐ FlagDoor。
+        /// 扉は元絵の縦横比のまま高さ doorHeight (既定 4 = 元絵 3.48 の ×1.15) で、r の下端の中央に立てる。
+        /// 当たり = 幅 r.width × 高さ doorHeight (layer 10)。扉より上 (r.yMin + doorHeight 〜 r.yMax) は岩 (Solid) で塞いで、
+        /// 通路の高さを扉に合わせる (以前は扉の絵を通路の高さいっぱいに引き伸ばしていた)。
+        /// フラグが立つと上へスライドせず、その場でコマ送りして開き、開いた扉の絵が残る (当たりは消える)。
+        /// flip = 扉が左へ開く (蝶番が右)。order は既定で岩 (0) の裏。
+        /// </summary>
+        public static GameObject FlagSwingDoor(string name, RectInt r, string flagId, int order = -1, bool flip = false,
+            float duration = 0.6f, int doorHeight = 4, string group = "Gimmicks")
+        {
+            var h = Mathf.Min(doorHeight, r.height);
+            if (h < r.height)
+                Solid(r.xMin, r.yMin + h, r.xMax, r.yMax);
+            var door = NewObject(name, new Vector2(r.center.x, r.yMin), LayerGround, group);
+            Box(door, new Vector2(r.width, h), false, new Vector2(0, h * 0.5f));
+            var frames = new[] { "01", "02", "03", "04" }.Select(n => (Object)Art($"{GimmickRoot}/door/door_{n}.png")).ToArray();
+            var sp = new GameObject("Sprite");
+            sp.transform.SetParent(door.transform, false);
+            var first = (Sprite)frames[0];
+            var k = h / first.bounds.size.y;
+            sp.transform.localScale = new Vector3(k, k, 1);
+            var sr = AddSprite(sp, first, order);
+            sr.flipX = flip;
+            AddComp<FlagDoor>(door, ("_flagId", flagId), ("_swingRenderer", sr), ("_swingFrames", frames), ("_slideDuration", duration));
+            return door;
+        }
+
+        /// <summary>
+        /// レバー (Drive「lever」: 台座 lever_02 + 傾く柄 lever_01, 2026-10-08 PendingChanges 42)。(x, floorY) = 床の上の中心。
+        /// ルート = 柄の回転の中心 (台座の半円の中心, 床 + 0.11×scale)。ルートの SpriteRenderer = 台座、子 "Handle" = 柄 (台座の後ろ)。
+        /// 高さ ≈ 3.42×scale (既定 0.6 → 2.05)。handle = 柄の絵のファイル名 (lever_01 / lever_01_red / lever_01_teal)。
+        /// LeverSwitch は呼び出し側で付ける (_handle は付けてから SetLeverHandle で渡す)。
+        /// </summary>
+        public static GameObject LeverAt(string name, float x, float floorY, float scale = 0.6f, string handle = "lever_01.png")
+        {
+            var lever = NewObject(name, new Vector2(x, floorY + 60f / 546f * scale), LayerInteractable, "Gimmicks");
+            lever.transform.localScale = new Vector3(scale, scale, 1);
+            AddSprite(lever, Art($"{GimmickRoot}/lever/lever_02.png"), OrderGimmick);
+            var h = new GameObject("Handle");
+            h.transform.SetParent(lever.transform, false);
+            h.transform.localRotation = Quaternion.Euler(0, 0, 30f); // LeverSwitch._handleOffAngle と同じ (作動前は左へ倒れている)
+            AddSprite(h, Art($"{GimmickRoot}/lever/{handle}"), OrderGimmick - 1);
+            // 当たり (トリガー) は台座と柄を覆う (ワールドで 1.44×2.04 相当 at 0.6)
+            Box(lever, new Vector2(2.4f, 3.4f), true, new Vector2(0, 1.6f));
+            return lever;
+        }
+
+        /// <summary>LeverAt の柄を LeverSwitch に渡す (作動で柄だけが傾く)。</summary>
+        public static LeverSwitch SetLeverHandle(GameObject lever)
+        {
+            var sw = lever.GetComponent<LeverSwitch>();
+            Set(sw, "_handle", lever.transform.Find("Handle"));
+            return sw;
         }
 
         /// <summary>

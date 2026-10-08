@@ -46,6 +46,16 @@ public class EnemyController : MonoBehaviour, IDamageable
     [Tooltip("撃破時の糸の数の上書き (0 以下なら定数アセットの ThreadDrop)。ボス部屋のボスだけ増やす用 (2026-10-03 PendingChanges 18)")]
     [SerializeField] private int _threadDropOverride;
 
+    [Tooltip("見た目の SpriteRenderer (色・向き・被弾フラッシュをかける先)。未設定なら自身の SpriteRenderer。" +
+             "絵を子 (Visual) に置いてアニメーションさせる敵 (野良ウマ) 用")]
+    [SerializeField] private SpriteRenderer _visual;
+
+    [Tooltip("絵が左向きに描かれているか。true なら右へ進む時に反転する")]
+    [SerializeField] private bool _visualFacesLeft;
+
+    [Tooltip("被弾フラッシュの色 (白い絵は白では光って見えないので赤みを付ける)")]
+    [SerializeField] private Color _hitFlashColor = Color.white;
+
     private Rigidbody2D _rb;
     private SpriteRenderer _sprite;
     private Collider2D _collider;
@@ -125,7 +135,7 @@ public class EnemyController : MonoBehaviour, IDamageable
         }
 
         _rb = GetComponent<Rigidbody2D>();
-        _sprite = GetComponent<SpriteRenderer>();
+        _sprite = _visual != null ? _visual : GetComponent<SpriteRenderer>();
         _collider = GetComponent<Collider2D>();
         _baseColor = _sprite.color;
         _rb.freezeRotation = true;
@@ -295,7 +305,7 @@ public class EnemyController : MonoBehaviour, IDamageable
     {
         _rb.linearVelocity = new Vector2(horizontalVelocity, _rb.linearVelocity.y);
         if (Mathf.Abs(horizontalVelocity) > 0.01f)
-            _sprite.flipX = horizontalVelocity < 0f;
+            _sprite.flipX = (horizontalVelocity < 0f) != _visualFacesLeft;
         _wasMovingLastPhysicsStep = Mathf.Abs(horizontalVelocity) > 0.01f;
     }
 
@@ -417,7 +427,7 @@ public class EnemyController : MonoBehaviour, IDamageable
 
     private void Flash()
     {
-        _sprite.color = Color.white;
+        _sprite.color = _hitFlashColor;
         _flashTimer = _consts.HitFlashTime;
     }
 

@@ -112,12 +112,10 @@ public static class BuildW6
             "乗る", "非常用リフトは止まっている…… 横のレバーで動かせそうだ", name: "EmergencyLift");
         Spawn("FromA1_W1", new Vector2(38.5f, 250.5f));
         // レバー (LeverSwitch → A1_LiftWheel)
-        var lever = NewObject("LiftLever", new Vector2(41.6f, 250.05f), LayerInteractable, "Gimmicks");
-        lever.transform.localScale = Vector3.one * 0.6f;
-        AddSprite(lever, AssetDatabase.LoadAssetAtPath<Sprite>("Assets/LocalData/StageAsset/gimmick/lever/lever_01.png"), OrderGimmick);
-        Box(lever, new Vector2(2.4f, 3.4f), true);
+        var lever = LeverAt("LiftLever", 41.6f, 249f);   // 台座 + 傾く柄 (Drive「lever」, PendingChanges 42)
         AddComp<LeverSwitch>(lever, ("_progressFlag", "A1_LiftWheel"),
             ("_activatedMessage", "非常用リフトが動き出した! 地上の乗り場と行き来できる"), ("_promptOffset", new Vector3(0, 2.4f, 0)));
+        SetLeverHandle(lever);
         // リフトのランプ: 止まっている間は赤、動くと緑
         var red = Prop("props/boss_door_lamp_on.png", 35.6f, 255.2f, 0.55f, OrderProp, false, new Color(1f, 0.35f, 0.4f));
         var green = Prop("props/boss_door_lamp_on.png", 35.6f, 255.2f, 0.55f, OrderProp, false, new Color(0.45f, 1f, 0.6f));

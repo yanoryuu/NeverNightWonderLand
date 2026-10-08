@@ -129,16 +129,15 @@ public static class BuildMB2
         }
 
         // ---- 東の扉 (撃破で上へ) → S3
-        var door = GateObject("S3Door", new RectInt(438, -195, 3, 9), -1);
-        AddComp<FlagDoor>(door, ("_flagId", "A1_MidBossLower"), ("_slideDistance", 9.5f), ("_slideDuration", 1.2f));
+        FlagSwingDoor("S3Door", new RectInt(438, -195, 3, 9), "A1_MidBossLower", -1);   // 開き戸 (PendingChanges 42)
 
         // ================= S3 第3スピーカー (床 y-195, 天井 y-184)
         Solid(441, -201, 462, -195);
         Solid(441, -184, 462, -180);
-        var speaker = SpeakerAt(455f, -195f, "A1_Speaker3");
+        var speaker = SpeakerAt(455f, -195f, "A1_Speaker3", 3);
         Set(speaker.GetComponent<BreakableSpeaker>(), "_breakMessage",
             "スピーカー③を壊した! 地下の音楽が止んだ…… ゴウン、と搬出エレベーターが動き出した (3/3)");
-        var broken = Prop("props/speaker_broken.png", 455f, -195f, 1f, OrderProp);
+        var broken = Prop(SpeakerBrokenArt(3), 455f, -195f, 1f, OrderProp);
         broken.SetActive(false);
         var brokenAct = NewObject("SpeakerBrokenFlag", new Vector2(455f, -193f), LayerDefault, "Gimmicks");
         AddComp<FlagActivator>(brokenAct, ("_flags", new[] { "A1_Speaker3" }), ("_showWhenSet", new Object[] { broken }));

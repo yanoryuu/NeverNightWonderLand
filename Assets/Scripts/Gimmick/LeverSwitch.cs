@@ -25,6 +25,15 @@ public class LeverSwitch : MonoBehaviour, IInteractable
     [Tooltip("プロンプト表示位置のオフセット (ワールド座標)")]
     [SerializeField] private Vector3 _promptOffset = new Vector3(0f, 1f, 0f);
 
+    [Tooltip("レバーの柄 (任意)。設定すると本体ではなく柄だけを傾け (_handleOffAngle → _handleOnAngle)、色は変えない")]
+    [SerializeField] private Transform _handle;
+
+    [Tooltip("作動前の柄の傾き (度, 反時計回りが正)")]
+    [SerializeField] private float _handleOffAngle = 30f;
+
+    [Tooltip("作動後の柄の傾き (度)")]
+    [SerializeField] private float _handleOnAngle = -30f;
+
     private SpriteRenderer _sprite;
     private bool _activated;
 
@@ -38,13 +47,14 @@ public class LeverSwitch : MonoBehaviour, IInteractable
     private void Awake()
     {
         _sprite = GetComponent<SpriteRenderer>();
+        if (_handle != null)
+            _handle.localRotation = Quaternion.Euler(0f, 0f, _handleOffAngle);
 
         // フラグ永続化レバーは、作動済みなら最初から作動状態で表示し、ドアも開けておく
         if (!string.IsNullOrEmpty(_progressFlag) && GameProgress.Has(_progressFlag))
         {
             _activated = true;
-            transform.rotation = Quaternion.Euler(0f, 0f, -40f);
-            _sprite.color = new Color(0.5f, 0.5f, 0.5f);
+            ShowActivated(instant: true);
 
             if (_targetDoor != null)
                 _targetDoor.Open(instant: true);
@@ -58,9 +68,7 @@ public class LeverSwitch : MonoBehaviour, IInteractable
 
         _activated = true;
 
-        // 作動の見た目: 傾けて色を落とす (仮素材)
-        transform.DORotate(new Vector3(0f, 0f, -40f), 0.2f);
-        _sprite.color = new Color(0.5f, 0.5f, 0.5f);
+        ShowActivated(instant: false);
 
         if (!string.IsNullOrEmpty(_progressFlag))
             GameProgress.Set(_progressFlag);
@@ -72,5 +80,25 @@ public class LeverSwitch : MonoBehaviour, IInteractable
             _targetDoor.Open();
 
         OnActivated?.Invoke();
+    }
+
+    /// <summary>作動の見た目。柄があれば柄を傾ける。無ければ本体を傾けて色を落とす (仮素材)。</summary>
+    private void ShowActivated(bool instant)
+    {
+        if (_handle != null)
+        {
+            var rot = new Vector3(0f, 0f, _handleOnAngle);
+            if (instant)
+                _handle.localRotation = Quaternion.Euler(rot);
+            else
+                _handle.DOLocalRotate(rot, 0.25f).SetEase(Ease.OutBack).SetLink(_handle.gameObject);
+            return;
+        }
+
+        if (instant)
+            transform.rotation = Quaternion.Euler(0f, 0f, -40f);
+        else
+            transform.DORotate(new Vector3(0f, 0f, -40f), 0.2f);
+        _sprite.color = new Color(0.5f, 0.5f, 0.5f);
     }
 }

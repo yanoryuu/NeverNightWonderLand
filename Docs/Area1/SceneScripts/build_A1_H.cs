@@ -78,7 +78,8 @@ public static class BuildH
         Box(stall, new Vector2(3.6f, 3f), true, new Vector2(0, 1.5f));
         AddComp<ShopKeeper>(stall, ("_promptOffset", new Vector3(0, 4.4f, 0)));
         var smith = NewObject("Blacksmith", new Vector2(237.6f, -54f), LayerInteractable, "Gimmicks");
-        AddSprite(smith, Art("props/anvil_smith.png"), OrderProp);
+        // 絵 = Drive「アニメーション用」の 鍛冶屋_バッタ (金床に乗ったバッタの鍛冶師, 2026-10-08 PendingChanges 42。以前は props/anvil_smith)
+        AddSprite(smith, Art(CharacterRoot + "/blacksmith_batta.png"), OrderProp);
         Box(smith, new Vector2(2.4f, 2.4f), true, new Vector2(0, 1.2f));
         // 最初のハサミ = 赤 (二段ジャンプ・滑空)。中ボス 2 体 (観覧車のてっぺん / 地下の歯車の重馬) のどちらかを倒すと渡す。
         // セリフは Utage (Dialogue.xls の A1_Smith_*, 2026-10-03 PendingChanges 9/11)。解禁前は案内 (2 回目以降は短い版) に続けて

@@ -78,12 +78,11 @@ public static class BuildFP
         AddSprite(fs, Art("props/fence_gate.png"), OrderGimmick);
         AddComp<FlagDoor>(fence, ("_flagId", "A1_FenceOpen"), ("_slideDistance", 8f), ("_slideDuration", 1f));
 
-        var lever = NewObject("FenceLever", new Vector2(317f, 4.05f), LayerInteractable, "Gimmicks");
-        lever.transform.localScale = Vector3.one * 0.6f;
-        AddSprite(lever, AssetDatabase.LoadAssetAtPath<Sprite>("Assets/LocalData/StageAsset/gimmick/lever/lever_01.png"), OrderGimmick);
-        Box(lever, new Vector2(2.4f, 3.4f), true);
+        // レバー = 台座 + 傾く柄 (Drive「lever」, PendingChanges 42)
+        var lever = LeverAt("FenceLever", 317f, 3f);
         AddComp<LeverSwitch>(lever, ("_progressFlag", "A1_FenceOpen"), ("_promptText", "閂を外す"),
             ("_activatedMessage", "柵の閂が外れた! 月明かりの遊歩道へ戻れる (拠点へ近道)"), ("_promptOffset", new Vector3(0, 2.4f, 0)));
+        SetLeverHandle(lever);
         // 閂の表示灯 (レバーの柱の上): 閉 = 赤 / 開 = 緑
         var red = LampPost(318.9f, 3f, 1.8f, new Color(1f, 0.35f, 0.4f), OrderProp);
         var green = LampPost(318.9f, 3f, 1.8f, new Color(0.45f, 1f, 0.6f), OrderProp);
@@ -92,7 +91,7 @@ public static class BuildFP
             ("_hideWhenSet", new Object[] { red }));
 
         // ================= FP: 噴水
-        // polish B: 噴水は部品 (Area1Gen/polish/fountain_*) で組む (Fountain)。小噴水は A1_U1 の柵越しの予告と同じ値 (SmallFountain*)
+        // 噴水はビルダーの Fountain (Drive「fountain」の 1 枚絵 2 コマ, PendingChanges 42。以前は polish B の部品)。小噴水は A1_U1 の柵越しの予告と同じ値 (SmallFountain*)
         // 柵の脇の小噴水 (A1_U1 から柵越しに見えていた物と同じ位置・大きさ)
         Fountain(SmallFountainX, 3f, SmallFountainScale, SmallFountainTint, -9, "FountainSmall");
         Glow(309.2f, 6.8f, 2.6f, new Color(0.75f, 0.85f, 1f, 0.25f), -10);

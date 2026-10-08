@@ -41,8 +41,8 @@ public static class BuildB1
             threadDrop: 20);   // ボスの糸 20 本 → 12 粒 (PendingChanges 18。Heavy の定数は普通の敵と共用なので上書き)
 
         // 撃破でスピーカー室への扉 (シャッター) が開く
-        var door = GateObject("S1Door", new RectInt(207, -54, 3, 9), -1); // 岩 (0) の裏へスライドして消える
-        AddComp<FlagDoor>(door, ("_flagId", "A1_Boss1"), ("_slideDistance", 9.5f), ("_slideDuration", 1.2f));
+        // 開き戸 (Drive「door」, PendingChanges 42): その場で開いて開いた扉が残る (岩 (0) の裏)
+        FlagSwingDoor("S1Door", new RectInt(207, -54, 3, 9), "A1_Boss1", -1);
 
         // ================= S1 (x210..228, y-57..-36): 第1スピーカー室。床 y-54
         Ground(210, 228, -54);
@@ -50,10 +50,10 @@ public static class BuildB1
         OneWay(211, 215, -51);
         OneWay(216, 220, -48);
         OneWay(213, 226, -45);
-        var speaker = SpeakerAt(221.5f, -45f, "A1_Speaker1");
+        var speaker = SpeakerAt(221.5f, -45f, "A1_Speaker1", 1);
         Set(speaker.GetComponent<BreakableSpeaker>(), "_breakMessage",
             "スピーカー①を壊した! 音楽の一部が止んだ…… 拠点の奥の大扉に灯がひとつ点いた (1/3)");
-        var broken = Prop("props/speaker_broken.png", 221.5f, -45f, 1f, OrderProp);
+        var broken = Prop(SpeakerBrokenArt(1), 221.5f, -45f, 1f, OrderProp);
         broken.SetActive(false);
         var act = NewObject("SpeakerBrokenFlag", new Vector2(221.5f, -43f), LayerDefault, "Gimmicks");
         AddComp<FlagActivator>(act, ("_flags", new[] { "A1_Speaker1" }), ("_showWhenSet", new Object[] { broken }));

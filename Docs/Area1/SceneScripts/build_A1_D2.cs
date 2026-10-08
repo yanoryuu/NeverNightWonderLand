@@ -13,7 +13,7 @@ using static NeverNight.StageBuild.Area1StageBuilder;
 // 先に別の呼び出しで OpenOrCreate("A1_D2") を実行しておくこと。
 public static class BuildD2
 {
-    static readonly Color BeltTint = new Color(1f, 0.5f, 0.42f);     // レバー① ベルト = 赤 (柄 lever_handle_red)
+    static readonly Color BeltTint = new Color(1f, 0.5f, 0.42f);     // レバー① ベルト = 赤 (柄 gimmick/lever/lever_01_red)
     static readonly Color HatchTint = new Color(0.5f, 0.95f, 0.88f);  // レバー② 跳ね上げ戸 = 青緑
     static readonly Color Rust = new Color(0.95f, 0.88f, 0.95f);
     static readonly Color BgPipe = new Color(0.42f, 0.37f, 0.5f);
@@ -85,16 +85,14 @@ public static class BuildD2
                 PipeRun(cx, y1, cx, -105f, 0.18f, -7, new Color(0.3f, 0.26f, 0.34f));
     }
 
-    // polish B: レバーの柄は専用の絵 (Area1Gen/polish/lever_handle_red / _teal, lever_01 と同じ形, pivot bottom)。root = 床の上の根元
+    // レバー = 台座 + 傾く柄 (Drive「lever」, 2026-10-08 PendingChanges 42)。柄の色で役目を分ける (gimmick/lever/lever_01_red / _teal =
+    // polish B の色違いの柄を新しい台座の位置に合わせた物)。高さ ≈2.05
     static GameObject Lever(string name, float x, float floorY, string flag, string message, string handle, string prompt)
     {
-        const float k = 0.95f;   // 高さ 1.9
-        var lever = NewObject(name, new Vector2(x, floorY), LayerInteractable, "Gimmicks");
-        lever.transform.localScale = Vector3.one * k;
-        AddSprite(lever, Art("polish/" + handle), OrderGimmick);
-        Box(lever, new Vector2(1.44f, 2.04f) / k, true, new Vector2(0, 1.05f / k));
+        var lever = LeverAt(name, x, floorY, 0.6f, handle);
         AddComp<LeverSwitch>(lever, ("_progressFlag", flag), ("_activatedMessage", message), ("_promptText", prompt),
             ("_promptOffset", new Vector3(0, 3.45f, 0)));
+        SetLeverHandle(lever);
         return lever;
     }
 
@@ -153,7 +151,7 @@ public static class BuildD2
         KeyItemAt(143.6f, -117f, "日誌「閉園しなかった夜」その3", "A1_Lore_Journal3", "A1_Pickup_D2w_2");
 
         // レバー①: 配電盤 (ベルトの向き)。盤の上にベルトの向きの表示 (矢印の帯が流れる)
-        Lever("BeltLever", 157.6f, -123f, "A1_BeltReversed", "ゴウン…… 搬送ベルトが逆向きに回りはじめた!", "lever_handle_red.png", "ベルトの向きを変える");
+        Lever("BeltLever", 157.6f, -123f, "A1_BeltReversed", "ゴウン…… 搬送ベルトが逆向きに回りはじめた!", "lever_01_red.png", "ベルトの向きを変える");
         LeverPlaque(157.6f, -118.75f, BeltTint, "sign_belt", "ベルト");
         StatusLamp("BeltLamp", 157.6f, -116.4f, "A1_BeltReversed");
         Cabinet(155.2f, -123f, 160.4f, -117.6f, 1);
@@ -162,7 +160,7 @@ public static class BuildD2
         Object.DestroyImmediate(mini.GetComponent<BoxCollider2D>());
 
         // レバー②: 跳ね上げ戸 (梯子を下ろす → A1_T3 の楽屋裏へ。開くまでは T3 側から降りられない)
-        Lever("LadderLever", 154.2f, -123f, "A1_LadderBackstage", "ガラガラ…… 天井の跳ね上げ戸が開いて梯子が下りてきた!", "lever_handle_teal.png", "跳ね上げ戸を開ける");
+        Lever("LadderLever", 154.2f, -123f, "A1_LadderBackstage", "ガラガラ…… 天井の跳ね上げ戸が開いて梯子が下りてきた!", "lever_01_teal.png", "跳ね上げ戸を開ける");
         LeverPlaque(154.2f, -118.75f, HatchTint, "sign_ladder", "はね戸");
         // レバー②から天井の跳ね上げ戸へ引き綱 (作用先が見える)
         PipeRun(153.85f, -118.8f, 153.85f, -105.4f, 0.12f, OrderProp - 1, HatchTint * new Color(0.75f, 0.75f, 0.75f, 1f));

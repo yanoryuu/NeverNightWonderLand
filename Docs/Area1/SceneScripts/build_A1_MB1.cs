@@ -91,13 +91,14 @@ public static class BuildMB1
         // ================= 東の扉 (撃破で開く) と S2 (床 y349)
         Clear(84, 349, 108, 357);
         Ground(84, 108, 349, 3);
-        var door = GateObject("S2Door", new RectInt(84, 349, 3, 12), -1);
-        AddComp<FlagDoor>(door, ("_flagId", "A1_MidBossUpper"), ("_slideDistance", 12.5f), ("_slideDuration", 1.4f));
+        // 開き戸 (PendingChanges 42): 扉は高さ 4、その上 (353..361) は FlagSwingDoor が壁で塞ぐ
+        // (= 闘技場の東の壁 (361 より上) が扉の上まで下りてきて、壁に扉が付いた形になる)
+        FlagSwingDoor("S2Door", new RectInt(84, 349, 3, 12), "A1_MidBossUpper", -1);
 
-        var speaker = SpeakerAt(93.5f, 349f, "A1_Speaker2");
+        var speaker = SpeakerAt(93.5f, 349f, "A1_Speaker2", 2);
         Set(speaker.GetComponent<BreakableSpeaker>(), "_breakMessage",
             "スピーカー②を壊した! 音楽の一部が止んだ…… 拠点の奥の大扉に灯がもうひとつ (2/3)。ジップラインに動力が戻った");
-        var broken = Prop("props/speaker_broken.png", 93.5f, 349f, 1f, OrderProp);
+        var broken = Prop(SpeakerBrokenArt(2), 93.5f, 349f, 1f, OrderProp);
         broken.SetActive(false);
         var act = NewObject("Speaker2Flag", new Vector2(93.5f, 351f), LayerDefault, "Gimmicks");
         AddComp<FlagActivator>(act, ("_flags", new[] { "A1_Speaker2" }), ("_showWhenSet", new Object[] { broken }),

@@ -113,7 +113,10 @@ unity command capture_scene_view --caller plugin --skill unity-cli --width 1600 
 | `Lift(pos, offsets[], speed, wait, requiredFlag)` | 往復リフト (MovingPlatform) |
 | `Enemy(x, y, flying, scale, heavy, name)` | Enemy/FlyingEnemy プレハブ。y = 床+1 |
 | `BossRoom(arenaRect, flag, bossPos, flying, gateRects[], msg, followUpMessage="", followUpUnlessRed=false)` | BossArena + 仮ボス (2倍+Heavy) + 非アクティブのゲート。followUp = 撃破通知の後の一文 (赤ハサミ未入手時だけ等) |
-| `SpeakerAt(x, floorY, flag)` / `SavePointAt(x, floorY)` | スピーカー / セーブ (ベンチの絵) |
+| `SpeakerAt(x, floorY, flag, design=1)` / `SavePointAt(x, floorY)` | スピーカー (Drive「speaker」の絵 1〜3 = `gimmick/speaker/speaker_0N_a/_b` を交互 (SpriteFlipbook)、壊れた絵は `Prop(SpeakerBrokenArt(N), ...)`。2026-10-08 PendingChanges 42) / セーブ (ベンチの絵) |
+| `BossRoom` の地上の仮ボス | `KeepPlaceholderLook` で仮の四角に戻す (雑魚の Enemy.prefab = 野良ウマの絵と分ける。PendingChanges 42) |
+| `FlagSwingDoor(name, rect, flagId, order=-1, flip=false, duration=0.6, doorHeight=4)` | 開き戸 (Drive「door」, `gimmick/door/door_01..04` = 閉 → 開) で通路 rect を塞ぐ FlagDoor。扉は元絵の縦横比で高さ doorHeight、その上の rect は岩 (Solid) で塞ぐ (通路の高さを扉に合わせる)。フラグでその場でコマ送りして開き、開いた扉が残る (スライドしない)。S1/S2/S3 のスピーカー室の扉 (PendingChanges 42) |
+| `LeverAt(name, x, floorY, scale=0.6, handle="lever_01.png")` + `SetLeverHandle(lever)` | レバー (Drive「lever」: 台座 `lever_02` + 傾く柄 `lever_01` / `_red` / `_teal`)。ルート = 柄の回転の中心。LeverSwitch を付けた後に SetLeverHandle で柄を渡すと、作動で柄だけが +30° → -30° に傾く (PendingChanges 42) |
 | `ThreadPickupAt(x, y, amount, pickupId)` / `KeyItemAt(x, floorY, name, flag, pickupId)` / `ConsumablePickupAt(...)` | ピックアップ。Id は `A1_Pickup_<部屋>_<n>`。糸の絵は Drive の糸巻き `PropsRoot + "/thread_spool.png"` (100 以上は ×1.25)。`Art()` は "Assets/" で始まるパスをそのまま読む (`PropsRoot` = `Assets/LocalData/StageAsset/Props`) |
 | `Hint(x0,y0,x1,y1, keyboard, gamepad, name)` | TutorialHintZone (layer 2) |
 | `Prop(relPath, x, y, scale, order, flipX)` | Area1Gen の飾り (当たり無し) |
@@ -400,7 +403,7 @@ public static class PlayT {
 
 | # | 内容 | 変更した所 |
 |---|---|---|
-| 1 | **噴水**: ぼやけた拡大絵 (prop/fountain ×2) をやめ、部品で組む `Fountain(x, floorY, s, tint, order, name, jets)` (受け皿 + 中段の鉢 + 頂部の馬 + 鉢の縁と小鉢の縁からの水の幕 (かすかに伸び縮み) + 受け皿の左右から上へ噴く水 (加算・流れる) + しぶき (揺らぎ) + もや)。A1_FP の大噴水は s=1.6 (幅 9.6・高さ ≈9.8 = カメラ下限 4.5 で画面に全部入る)、柵の脇の小噴水と **A1_U1 の柵越しの予告は同じ値** (x309.2 / 床 y3 / s=0.8 / 色 (0.86,0.82,0.98))。FP の池の水も `WaterVisual` | ビルダー `Fountain` / `WaterVisual`、`build_A1_FP.cs` / `build_A1_U1.cs` |
+| 1 | **噴水** (→ 2026-10-08 PendingChanges 42 で Drive「fountain」の 1 枚絵 2 コマ (`prop/fountain_01/_02`) に差し替え済み): ぼやけた拡大絵 (prop/fountain ×2) をやめ、部品で組む `Fountain(x, floorY, s, tint, order, name, jets)` (受け皿 + 中段の鉢 + 頂部の馬 + 鉢の縁と小鉢の縁からの水の幕 (かすかに伸び縮み) + 受け皿の左右から上へ噴く水 (加算・流れる) + しぶき (揺らぎ) + もや)。A1_FP の大噴水は s=1.6 (幅 9.6・高さ ≈9.8 = カメラ下限 4.5 で画面に全部入る)、柵の脇の小噴水と **A1_U1 の柵越しの予告は同じ値** (x309.2 / 床 y3 / s=0.8 / 色 (0.86,0.82,0.98))。FP の池の水も `WaterVisual` | ビルダー `Fountain` / `WaterVisual`、`build_A1_FP.cs` / `build_A1_U1.cs` |
 | 2 | **水・油**: 平らな不透明の青をやめ `WaterVisual` (半透明の模様 + 手前の薄い水 + 流れる水面の帯)。D5/D6 の水 (地下は少し暗く)、D4s の油 (`WaterLook.Oil`) | ビルダー `WaterBody` (引数 `look` を追加)、`build_A1_D4.cs` |
 | 3 | **蒸気**: 部品 (ふき出し + 流れる柱 + 綿雲/先端のふき出し)。周期・予兆・当たりは変更なし | ビルダー `SteamVent` |
 | 4 | **A1_AB 大音楽堂の奥の壁**: 格子に見えた鉄板をやめ `HallBackdrop()` = 壁紙 `hall_wall_panel` (Tiled) + 腰板 `hall_wainscot_plum` + 付け柱 `hall_pilaster` (8 ごと、梯子に見えないよう暗く) + 柱の間の桟敷席 `hall_balcony_box` ×3 (手すりが足場に見えないよう沈める) + 左右の壁灯 `hall_light_sconce` (対) + 天井際の飾り幕 `hall_curtain_valance`。全部 order -62..-56 で乗算で暗く (壁紙 0.5 / 縁 0.62 / 柱 0.42)、足場 (音符・昇降台, order 2〜3) と分離。シャンデリアは柱の線 (x334.5/342.5) へ | `build_A1_AB.cs` |

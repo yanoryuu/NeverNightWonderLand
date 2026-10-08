@@ -41,10 +41,11 @@ namespace NeverNight.StageBuild
         // ================================================================== 噴水
 
         /// <summary>
-        /// 部品で組んだ噴水 (飾り, 当たり無し, Props)。(x, floorY) = 受け皿の底の中心。s = 部品の倍率 (1 = manifest のセル寸法:
-        /// 受け皿 6×2 / 中段の鉢 4×1.5 / 頂部 2×3 → 全体 幅 6s・高さ ≈6.1s)。
-        /// 水: 中段の鉢の縁と頂部の小鉢の縁から水の幕 (water_sheet_fall, かすかに伸び縮み) + 受け皿の左右から上へ噴く水 (water_jet_column, 加算)
-        /// + 落ちた所のしぶき (water_splash, 揺らぎ) + 白いもや (加算)。描画順は order (中段) 〜 order+5。
+        /// 噴水 (飾り, 当たり無し, Props)。(x, floorY) = 受け皿の底の中心。s = 倍率 (1 = 幅 6・高さ ≈6.5)。
+        /// 絵は Drive「fountain」の 1 枚絵 2 コマ (prop/fountain_01 / _02 = 水の幕だけが違う) を交互に流す (SpriteFlipbook)
+        /// + 受け皿の上の白いもや (加算)。tint は絵に乗算 (A1_U1 の柵越しの予告は薄紫)。描画順は order 〜 order+1。
+        /// 2026-10-08 PendingChanges 42 で部品 (polish/fountain_* + 水の幕・噴き上げ・しぶき) の組み立てから差し替えた。
+        /// jets は互換のために残した引数 (今は使わない: 新しい絵には左右の噴き上げの口が無い)。
         /// A1_FP の大噴水と柵の脇の小噴水、A1_U1 の柵越しの予告 (小噴水と同じ値で呼ぶ) に使う。
         /// </summary>
         public static GameObject Fountain(float x, float floorY, float s, Color? tint = null, int order = -9, string name = "Fountain",
@@ -53,62 +54,23 @@ namespace NeverNight.StageBuild
             var c = tint ?? Color.white;
             var root = NewObject(name, new Vector2(x, floorY), LayerDefault, "Props");
             var t = root.transform;
-            const string P = "polish/";
-            // 組み上げ (manifest の pivot = bottom)。段の高さは絵の実測: 受け皿の台座の上端 1.66、鉢の上の台座 1.50 (少し重ねる)
-            var tierY = 1.62f * s;
-            var topY = tierY + 1.46f * s;
-            PartSprite(t, "Tier", P + "fountain_tier.png", new Vector2(0, tierY), s, order, c);
-            PartSprite(t, "Top", P + "fountain_top.png", new Vector2(0, topY), s, order + 1, c);
-            PartSprite(t, "Basin", P + "fountain_basin.png", Vector2.zero, s, order + 3, c);
-
-            var water = new Color(0.85f * c.r + 0.15f, 0.95f * c.g + 0.05f, 1f * c.b, 0.85f);
-            // 水の幕: 中段の鉢の縁 (鉢の上端から 0.2 下, 幅 2.6s) → 受け皿の縁 (1.2s)。
-            var rimY = tierY + 1.5f * s * 0.80f;
-            var basinRimY = 1.2f * s;
-            var fallH = rimY - basinRimY;
-            // 水の幕は流さない (絵の上端の縁の線と筋の先の滴が縦に繋がらないので、流すと 2 本目の縁が下りてくる)。かすかに伸び縮みさせる
-            var sheet = PartSprite(t, "SheetTier", P + "water_sheet_fall.png", new Vector2(0, rimY), s, order + 2, water,
-                new Vector2(2.55f, fallH / s));
-            AddComp<SpriteWobble>(sheet.gameObject, ("_scaleAmplitude", new Vector2(0.01f, 0.035f)), ("_speed", 6f), ("_phase", x));
-            // 頂部の小鉢の縁 (頂部の底から 0.75s, 幅 1.25s) → 中段の鉢の水面
-            var topRimY = topY + 0.72f * s;
-            var sheetTop = PartSprite(t, "SheetTop", P + "water_sheet_fall.png", new Vector2(0, topRimY), s, order + 2, water,
-                new Vector2(1.25f, (topRimY - rimY) / s));
-            AddComp<SpriteWobble>(sheetTop.gameObject, ("_scaleAmplitude", new Vector2(0.01f, 0.04f)), ("_speed", 7f), ("_phase", x + 2f));
-            // 受け皿に落ちた所のしぶき (左右) と、鉢に落ちた所の小さなしぶき
-            for (var i = -1; i <= 1; i += 2)
-            {
-                var sp = PartSprite(t, i < 0 ? "SplashL" : "SplashR", P + "water_splash.png", new Vector2(i * 1.0f * s, basinRimY - 0.32f * s),
-                    0.62f * s, order + 4, new Color(water.r, water.g, water.b, 0.75f), null, "A1_Additive");
-                AddComp<SpriteWobble>(sp.gameObject, ("_scaleAmplitude", new Vector2(0.08f, 0.18f)), ("_speed", 7f + i), ("_phase", x + i));
-            }
-            var spT = PartSprite(t, "SplashTier", P + "water_splash.png", new Vector2(0, rimY - 0.2f * s), 0.42f * s, order + 2,
-                new Color(water.r, water.g, water.b, 0.6f), null, "A1_Additive");
-            AddComp<SpriteWobble>(spT.gameObject, ("_scaleAmplitude", new Vector2(0.06f, 0.2f)), ("_speed", 8.5f), ("_phase", x));
-            if (jets)
-            {
-                // 受け皿の左右の口から上へ噴く水 (加算の柱 + 先端のしぶき)
-                for (var i = -1; i <= 1; i += 2)
-                {
-                    var jx = i * 2.25f * s;
-                    var jetH = 1.35f * s;
-                    var jet = PartSprite(t, i < 0 ? "JetL" : "JetR", P + "water_jet_column.png", new Vector2(jx, basinRimY + jetH), 0.36f * s,
-                        order + 4, new Color(water.r, water.g, water.b, 0.42f), new Vector2(1f, jetH / (0.36f * s)), "A1_WaterJet");
-                    jet.transform.localRotation = Quaternion.Euler(0, 0, -i * 3f);   // 少し外へ開く
-                    var cap = PartSprite(t, i < 0 ? "JetCapL" : "JetCapR", P + "water_splash.png",
-                        new Vector2(jx + i * 0.1f * s, basinRimY + jetH - 0.3f * s), 0.4f * s, order + 4,
-                        new Color(water.r, water.g, water.b, 0.6f), null, "A1_Additive");
-                    AddComp<SpriteWobble>(cap.gameObject, ("_scaleAmplitude", new Vector2(0.12f, 0.25f)), ("_speed", 9f), ("_phase", i * 2f));
-                    AddComp<SpriteWobble>(jet.gameObject, ("_scaleAmplitude", new Vector2(0.06f, 0f)), ("_speed", 11f), ("_phase", i * 1.3f));
-                }
-            }
-            // 白いもや (加算)
-            var mist = PartSprite(t, "Mist", "fx/glow.png", new Vector2(0, basinRimY + 0.2f * s), 1f, order + 5,
-                new Color(0.75f, 0.88f, 1f, 0.22f), null, "A1_Additive");
+            var f1 = Art(FountainArt + "fountain_01.png");
+            var f2 = Art(FountainArt + "fountain_02.png");
+            // 絵の幅 3394px (PPU 546 → 6.22) を 6s に合わせる
+            var k = 6f * s / f1.bounds.size.x;
+            var body = PartSprite(t, "Body", FountainArt + "fountain_01.png", Vector2.zero, k, order, c);
+            AddComp<SpriteFlipbook>(body.gameObject, ("_frames", new Object[] { f1, f2 }), ("_fps", 3f), ("_phase", x * 0.29f));
+            // 受け皿 (絵の下から 0.36) の上の白いもや (加算)
+            var basinRimY = 0.36f * f1.bounds.size.y * k;
+            var mist = PartSprite(t, "Mist", "fx/glow.png", new Vector2(0, basinRimY), 1f, order + 1,
+                new Color(0.75f, 0.88f, 1f, 0.18f), null, "A1_Additive");
             mist.transform.localScale = new Vector3(5.2f * s / (256f / Area1AssetPrep.PixelsPerUnit) * 0.5f,
                 1.6f * s / (256f / Area1AssetPrep.PixelsPerUnit) * 0.5f, 1f);
             return root;
         }
+
+        /// <summary>噴水の絵のフォルダ (Drive「fountain」, PendingChanges 42)。</summary>
+        public const string FountainArt = "Assets/LocalData/StageAsset/prop/";
 
         // ================================================================== 水・油
 
