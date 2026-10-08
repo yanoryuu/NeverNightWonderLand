@@ -3,7 +3,8 @@ using TMPro;
 using UnityEngine;
 
 /// <summary>
-/// ホーム画面 (拠点で開く)。SavePoint のインタラクトから開かれ、開いた時点で HP は自動で全回復する。
+/// ホーム画面 (拠点で開く)。SavePoint のインタラクトから開かれ、開いた時点で HP は自動で全回復し、
+/// このプレイのセーブを拠点の位置で更新する (休んだ時のセーブ, PendingChanges 47)。
 /// アイテム補充 (糸を消費して再生成) / 攻撃方法の入れ替え / セーブ (セーブスロット画面で記録先を選ぶ) を行う。
 /// HomeUI シーン (Additive) に置かれ、UI はプレハブ上で事前配置した MenuPanelView を参照する。
 /// </summary>
@@ -52,6 +53,9 @@ public class HomeUIView : MonoBehaviour
         DefeatedEnemyRegistry.Clear();
         BrokenCrateRegistry.Clear();
         PlayerSaveBridge.RememberBench(savePoint); // 死亡リトライの復帰先 (PendingChanges 39)
+        // 休んだらこのプレイのセーブを拠点の位置で更新する (PendingChanges 47。メニューの「セーブ」は別のスロットへ記録したい時用)
+        if (_saveBridge != null && _saveBridge.SaveOnRest(savePoint))
+            Notifier.Notify("セーブしました");
 
         GamePause.Push();
         ShowMain();

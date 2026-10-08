@@ -5,7 +5,9 @@ using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Utage を使った会話シーン (DialogueScene, Additive) の静的な入口。
-/// 初回呼び出しでシーンを Additive ロードし、以後は常駐させて使い回す。
+/// ゲーム起動時 (最初のシーンのロード直後) に先読みして宴のエンジンまで起動しておき (<see cref="Preload"/>)、
+/// 中身を DontDestroyOnLoad へ移して常駐させる (死亡リトライの PlayerScene 読み直し・タイトルへ戻るでも消えない)。
+/// 会話を始める時にロード待ちが無い (PendingChanges 46)。先読みが間に合わない・無効な場合は従来どおり初回の呼び出しでロードする。
 /// 呼び出し側は <see cref="Play"/> にシナリオラベルを渡すだけでよい。
 /// 会話は同時に 1 つだけ: 再生中 (<see cref="IsPlaying"/>) とシーンのロード中 (<see cref="IsLoading"/>) は
 /// 新しい再生要求を無視し、DialogueScene を二重にロードしない (2026-10-03 バグ修正, Docs/DialogueSystem.md §7)。
@@ -42,15 +44,39 @@ public static class DialogueService
     public static bool CanStartFromInteract =>
         !IsBusy && Time.unscaledTime - _lastEndTime >= ReopenCooldown;
 
+    /// <summary>ゲーム起動時に先読みするか (テスト等で止めたい時に false。プレイモードごとに true へ戻る)。</summary>
+    public static bool PreloadOnBoot = true;
+
+    /// <summary>宴のエンジンの起動 (シナリオ・設定の読み込み) まで済んでいるか。</summary>
+    public static bool IsReady => _controller != null && _controller.IsBooted;
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
     {
+        PreloadOnBoot = true;
         _controller = null;
         _loadOp = null;
         _playRequestedWhileLoading = false;
         _pending.Clear();
         _lastEndTime = float.NegativeInfinity;
         StartedFrame = -1;
+    }
+
+    // ゲーム起動時 (最初のシーンの Awake 後) に会話シーンを先読みする
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void PreloadAtBoot()
+    {
+        if (PreloadOnBoot)
+            Preload();
+    }
+
+    /// <summary>
+    /// DialogueScene をロードして宴のエンジンを起動しておく (未ロード時のみ。表示はしない)。
+    /// 何度呼んでもよい。ロード中・起動済みなら何もしない。
+    /// </summary>
+    public static void Preload()
+    {
+        WithController(controller => controller.Boot());
     }
 
     /// <summary>直近の会話を始めたフレーム (Time.frameCount)。会話を開いたボタンでそのまま 1 ページ目を送らないために使う。</summary>
@@ -156,10 +182,32 @@ public static class DialogueService
         if (op != _loadOp)
             return; // プレイモードをまたいだ古いロード
         _loadOp = null;
+        MakeResident();
         var actions = _pending.ToArray();
         _pending.Clear();
         foreach (var action in actions)
             FindControllerAndRun(action);
+    }
+
+    /// <summary>
+    /// 自分でロードした DialogueScene の中身を DontDestroyOnLoad へ移し、空になったシーンは降ろす。
+    /// PlayerScene の読み直し (死亡リトライ・タイトルからの開始) やタイトルへ戻る LoadScene (Single) で消えないように。
+    /// </summary>
+    private static void MakeResident()
+    {
+        var scene = SceneManager.GetSceneByName(SceneName);
+        if (!scene.IsValid() || !scene.isLoaded)
+            return;
+
+        var controller = UnityEngine.Object.FindFirstObjectByType<UtageDialogueScene>(FindObjectsInactive.Include);
+        if (controller == null || controller.gameObject.scene != scene)
+            return;
+
+        controller.RememberOwnRoots(scene.GetRootGameObjects());
+        foreach (var root in scene.GetRootGameObjects())
+            UnityEngine.Object.DontDestroyOnLoad(root);
+        SceneManager.UnloadSceneAsync(scene);
+        _controller = controller;
     }
 
     private static void FindControllerAndRun(Action<UtageDialogueScene> action)

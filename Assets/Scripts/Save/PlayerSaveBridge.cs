@@ -214,6 +214,25 @@ public class PlayerSaveBridge : MonoBehaviour
         return data;
     }
 
+    /// <summary>
+    /// 拠点で休んだ時の自動セーブ (PendingChanges 47): このプレイのセーブを拠点の位置で丸ごと更新する
+    /// (ポーズ・拠点メニューの「セーブ」と同じ内容 = 位置・シーン・場所/章の表示・日時・プレイ時間も)。
+    /// はじめから (まだセーブしていない) なら、タイトルで選んだスロットへ書いてこのプレイのセーブにする
+    /// (データのあるスロットはタイトルのスロット画面で上書きを確認済み)。
+    /// 書かないのは: スロットを選んでいない (エディタの直接再生)・セーブがある状態で生まれて続きのデータを適用していない
+    /// (ゲームクリア後の「もう一度」・テストプレイの記録の再生) 時。書いたら true。
+    /// </summary>
+    public bool SaveOnRest(SavePoint savePoint)
+    {
+        if (GameSession.SaveBelongsToRun ? !LinkedToRunSave : !GameSession.RunSlotChosen)
+            return false;
+
+        _autosaveDirty = false;
+        SaveSystem.Save(SaveSystem.ActiveSlot, CollectAt(savePoint));
+        GameSession.SaveBelongsToRun = true;
+        return true;
+    }
+
     /// <summary>拠点での復帰位置 (拠点の少し上)。</summary>
     private static Vector2 BenchPosition(SavePoint savePoint) =>
         (Vector2)savePoint.transform.position + new Vector2(0f, 0.5f);

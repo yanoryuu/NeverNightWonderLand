@@ -179,6 +179,19 @@ public class PlayerConsts : ScriptableObject
     [Tooltip("落下速度の上限 (units/sec)")]
     [SerializeField] private float _maxFallSpeed = 20f;
 
+    [Header("梯子")]
+    [Tooltip("梯子を上り下りする速度 (units/sec)")]
+    [SerializeField] private float _ladderClimbSpeed = 4.5f;
+
+    [Tooltip("上入力とジャンプ (梯子の上では下入力とジャンプ) を「同時」とみなす猶予 (sec)。どちらを先に押してもよい")]
+    [SerializeField] private float _ladderGrabWindow = 0.1f;
+
+    [Tooltip("梯子から方向なしでジャンプした時の小ジャンプの初速 (通常ジャンプの初速に対する倍率)")]
+    [SerializeField] private float _ladderHopRatio = 0.5f;
+
+    [Tooltip("インタラクト (会話・拠点・扉など) を受け付ける水平速度の上限 (units/sec)。走りながら上を押しても会話に入らない")]
+    [SerializeField] private float _interactMaxSpeed = 0.5f;
+
     [Header("ジャンプ補助")]
     [Tooltip("地面を離れてからジャンプ入力を受け付ける猶予 (sec)")]
     [SerializeField] private float _coyoteTime = 0.1f;
@@ -296,6 +309,10 @@ public class PlayerConsts : ScriptableObject
     public float HealDuration => _healDuration;
 
     public float InteractRadius => _interactRadius;
+    public float InteractMaxSpeed => _interactMaxSpeed;
+    public float LadderClimbSpeed => _ladderClimbSpeed;
+    public float LadderGrabWindow => _ladderGrabWindow;
+    public float LadderHopRatio => _ladderHopRatio;
     public LayerMask InteractableLayer => _interactableLayer;
 
     public int RefillThreadCost => _refillThreadCost;

@@ -941,24 +941,23 @@ namespace NeverNight.StageBuild
         }
 
         /// <summary>
-        /// 梯子 (x = 左端の整数、幅 1、[y0,y1))。見た目は ladder タイル、当たりは 2.5 間隔のすり抜け横木
-        /// (layer 10 + PlatformEffector2D、ジャンプで登る・↓+ジャンプで降りる)。最上段は y1。
+        /// 梯子 (x = 左端の整数、幅 1、[y0,y1))。見た目は ladder タイル、上り下りは <see cref="ClimbableLadder"/>
+        /// (範囲内で上 + ジャンプで掴まる、上端で下 + ジャンプで掴まって降りる)。
+        /// 当たりは上端 y1 のすり抜け床 1 枚だけ (登り切ってそこに立つ。横木を跳んで登る形はやめた: PendingChanges 44)。
         /// </summary>
         public static GameObject Ladder(int x, int y0, int y1)
         {
             var go = NewObject("Ladder", new Vector2(x + 0.5f, (y0 + y1) * 0.5f), LayerDefault, "Gimmicks");
             AddSprite(go, Art("tiles/tile_ladder.png"), OrderDeco, new Vector2(1f, y1 - y0));
-            for (float y = y1; y > y0 + 0.5f; y -= 2.5f)
-            {
-                var rung = new GameObject("Rung") { layer = LayerGround };
-                rung.transform.SetParent(go.transform, false);
-                rung.transform.position = new Vector3(x + 0.5f, y - 0.125f, 0);
-                var c = Box(rung, new Vector2(1.8f, 0.25f), false);
-                c.usedByEffector = true;
-                var e = rung.AddComponent<PlatformEffector2D>();
-                e.useOneWay = true;
-                e.surfaceArc = 180f;
-            }
+            var top = new GameObject("Top") { layer = LayerGround };
+            top.transform.SetParent(go.transform, false);
+            top.transform.position = new Vector3(x + 0.5f, y1 - 0.125f, 0);
+            var c = Box(top, new Vector2(1.8f, 0.25f), false);
+            c.usedByEffector = true;
+            var e = top.AddComponent<PlatformEffector2D>();
+            e.useOneWay = true;
+            e.surfaceArc = 180f;
+            AddComp<ClimbableLadder>(go, ("_halfHeight", (y1 - y0) * 0.5f), ("_topPlatform", c));
             return go;
         }
 
@@ -1132,15 +1131,19 @@ namespace NeverNight.StageBuild
         /// gates = 閉じる壁の矩形 (layer 10, 非アクティブ, fence_gate の絵)。
         /// threadDrop = ボスが落とす糸 (EnemyController._threadDropOverride。0 なら定数アセットのまま)。
         /// Heavy は普通の重装甲の敵にも使うので、ボスの糸はここで上書きする (2026-10-03 PendingChanges 18: 20〜30 本 → 12 粒)。
+        /// groundBossArt = 地上ボスの絵 (Sprite のパス。子 Visual の野良ウマの代わりに使い、アニメは野良ウマと同じ)。
+        /// 空なら仮の四角のまま (<see cref="KeepPlaceholderLook"/>)。
         /// </summary>
         public static GameObject BossRoom(RectInt arena, string flagId, Vector2 bossPos, bool flying, RectInt[] gates, string defeatMessage,
-            string followUpMessage = "", bool followUpUnlessRed = false, int threadDrop = 20)
+            string followUpMessage = "", bool followUpUnlessRed = false, int threadDrop = 20, string groundBossArt = null)
         {
             var go = NewObject("BossArena_" + flagId, arena.center, LayerIgnoreRaycast, "Gimmicks");
             Box(go, arena.size, true);
             var boss = Enemy(bossPos.x, bossPos.y, flying, 2f, true, "Boss_" + flagId);
-            if (!flying)
+            if (!flying && string.IsNullOrEmpty(groundBossArt))
                 KeepPlaceholderLook(boss);
+            else if (!flying)
+                UseGroundBossArt(boss, groundBossArt);
             if (threadDrop > 0)
                 Set(boss.GetComponent<EnemyController>(), "_threadDropOverride", threadDrop);
             var gateObjs = new List<GameObject>();
@@ -1175,6 +1178,24 @@ namespace NeverNight.StageBuild
             var anim = enemy.GetComponent<EnemyAnimator>();
             if (anim != null)
                 Object.DestroyImmediate(anim);
+        }
+
+        /// <summary>
+        /// 地上ボスの絵: 子 Visual (野良ウマと同じ Animator = 弾む・駆ける・被弾・撃破) の絵だけを差し替える。
+        /// 大きさとピボットは絵の取り込み設定で当たり (Enemy 1x1, ボスは ×2) に合わせておく
+        /// (歯車の重馬 = bigHorse, Docs/Area1/SceneScripts/prep_newart.cs, PendingChanges 43)。絵は左向き。
+        /// </summary>
+        public static void UseGroundBossArt(GameObject enemy, string spritePath)
+        {
+            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(spritePath)
+                         ?? throw new ArgumentException("sprite not found: " + spritePath);
+            var vis = enemy.transform.Find("Visual") ?? throw new ArgumentException("Visual が無い: " + enemy.name);
+            var sr = vis.GetComponent<SpriteRenderer>();
+            sr.sprite = sprite;
+            EditorUtility.SetDirty(sr);
+            var ec = enemy.GetComponent<EnemyController>();
+            Set(ec, "_visual", sr);
+            Set(ec, "_visualFacesLeft", true);
         }
 
         /// <summary>
@@ -2773,6 +2794,7 @@ namespace NeverNight.StageBuild
 
             // 一方通行の受け側・双方向の入口ごとにスポーンがあるか
             var spawns = Object.FindObjectsByType<PlayerSpawnPoint>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var ladders = Object.FindObjectsByType<ClimbableLadder>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             foreach (var e in exits.Where(e => e.CanArrive))
                 if (spawns.All(s => s.Id != "From" + e.OtherScene))
                     Err($"入口 From{e.OtherScene} のスポーンが無い");
@@ -2785,6 +2807,13 @@ namespace NeverNight.StageBuild
                 if (SolidAt(p.x, p.y) || SolidAt(p.x, p.y + 0.6f) || SolidAt(p.x, p.y - 0.5f))
                 {
                     Err($"{s.name} {p}: 岩/床に埋まっている");
+                    continue;
+                }
+                // 梯子の途中の入り口: 着くと梯子に掴まる (PlayerController.AttachToLadderOnArrival, PendingChanges 44)
+                var onLadder = ladders.FirstOrDefault(l => l.CanGrabAt(p.x, p.y - 0.9f));
+                if (onLadder != null)
+                {
+                    Ok($"{s.name} {p}: 梯子の途中 (着くと掴まる。梯子 y{onLadder.Bottom:F0}..{onLadder.Top:F0})");
                     continue;
                 }
                 var ground = float.NaN;

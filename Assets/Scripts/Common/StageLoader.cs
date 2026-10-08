@@ -226,7 +226,11 @@ public class StageLoader : MonoBehaviour
 
         var spawn = FindSpawnPoint(stageScene, entranceId);
         if (spawn != null)
+        {
             player.transform.position = spawn.transform.position;
+            // 入り口が梯子の途中 (縦の移動で梯子を伝って来た) なら掴まった状態で始める
+            player.AttachToLadderOnArrival();
+        }
     }
 
     /// <summary>

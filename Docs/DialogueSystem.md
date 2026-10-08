@@ -100,7 +100,8 @@ bool canTalk = DialogueService.CanStartFromInteract;       // NPC の CanInterac
 - 会話の終わりのコールバックから続けて `Play` するのは可 (鍛冶師の 解禁前の会話 → 鍛冶強化の申し出)。クールダウンはインタラクトだけに掛かる
 - 会話中はゲーム側の Screen Space - Overlay の UI (HUD・StageUI など、sortingOrder 100 未満) を隠し、終わったら戻す (§7)
 
-- DialogueScene が未ロードでも自動で Additive ロードされる (Build Settings 登録済みが前提)
+- DialogueScene は**ゲーム起動時に先読みして常駐**する (2026-10-08, §7 末尾)。会話を始める時にロード待ちは無い。
+  先読みが無効・間に合わない時は従来どおり初回の `Play` で Additive ロードされる (Build Settings 登録済みが前提)
 - 再生中は GamePause で時間停止、終了で自動解除
 - 会話を開いたフレームには、ゲームのボタンでは文字送りしない (開いたインタラクトの E / 上入力で 1 ページ目が飛ばないように)
 - 文字送り・改ページは **マウスクリック** に加えて、キーボード **Enter / テンキー Enter / Space / J / E**、パッド **South (×/A) / West (□/X) / 上入力** (= ゲームの決定・ジャンプ・攻撃・インタラクト) (2026-10-03)。
@@ -267,3 +268,22 @@ E を 2 フレームに 1 回連打 → 閉じてから 0.35 秒は開き直さ�
 
 (付記・未修正) 会話中に遷移すると、遷移先のステージ (StageInfo / SceneTransitionZone) が `GamePause.Reset` するため会話中なのにポーズが外れる。
 通常は会話中に遷移できない (時間が止まっている) ので実害は小さいが、テスト用の強制遷移では起きる。
+
+### 2026-10-08: 起動時の先読みと常駐 (PendingChanges 46)
+
+ユーザー指示「会話の Utage はゲーム起動時に読み込んでおくように」。
+
+- `DialogueService.PreloadAtBoot` (`[RuntimeInitializeOnLoadMethod(AfterSceneLoad)]` = 最初のシーン (タイトル / エディタで開いたステージ) の Awake の後) が
+  `Preload()` を呼び、DialogueScene を Additive ロード → `UtageDialogueScene.Boot()` で宴のエンジン (AdvEngine) を起動しておく (シナリオ・設定の読み込み)。
+  タイトルから起動して約 0.2 秒 (3 フレーム目) で起動済み (`DialogueService.IsReady`)。止めたい時は `DialogueService.PreloadOnBoot = false` (プレイごとに true に戻る)。
+- ロードが終わったら中身 (ルート) を **DontDestroyOnLoad へ移し、空になった DialogueScene は降ろす** (`DialogueService.MakeResident`)。
+  死亡リトライ・はじめから/つづきからの PlayerScene の読み直し (`LoadScene` Single)・タイトルへ戻るでも消えない (以前はこれらで消えて、次の会話で読み直していた)。
+- 待機中は何も描かれず入力も取らない: 宴のカメラはメインカメラのスタックに載せた時 (会話中) しか描かれない。宴の入力の差し替え (`DialogueInputStrategy`) は会話中だけ効く。
+  以前の「初回の会話の後は常駐」と同じ待機状態を起動時から作っているだけ。
+- 常駐中に別のシーンがロードされたら (`SceneManager.sceneLoaded`)、新しいゲーム側カメラから Utage/UtageUI レイヤーを外し、
+  ゲーム側に EventSystem があれば宴の EventSystem を止める (今は DialogueScene にしか EventSystem が無いので、宴のものが 1 つだけ有効)。
+- 「自分の物」の判定 (カメラのレイヤーを外さない・会話中に隠さないキャンバス) は、シーンではなく覚えたルート (`RememberOwnRoots`) で見る (DontDestroyOnLoad へ移った後も正しく判定するため)。
+- 以前の修正はそのまま: 二重ロードの防止 (常駐中は `_controller` を使い、2 つ目の DialogueScene は Awake で止めて降ろす)・宴カメラの Overlay 接続・会話中の Overlay UI の非表示・0.35 秒の再オープン待ち・ゲームのボタンでの文字送り。
+- 確認 (プレイモード, `Docs/Area1/SceneScripts/playtest_batch6.cs`): タイトルの直後に DontDestroyOnLoad に常駐・起動済み、タイトル画面に何も出ない (`batch6_title_preloaded`)。
+  A1_H の人形に立ち止まって話しかけると 0.05 秒後には再生中 (ロード無し, `batch6_talk_opened_instantly`)、死亡 → リトライ後 (`batch6_talk_after_retry`)・タイトルへ戻って開始し直した後も同じ常駐のまま即座に開く。EventSystem は常に 1 つ。
+

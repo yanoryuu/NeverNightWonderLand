@@ -116,15 +116,16 @@ public static class BuildMB2
             "歯車の重馬を倒した! 奥の扉が開いた……",
             // 赤ハサミを未入手なら拠点の鍛冶屋への誘導の一文 (PendingChanges 11b, 呼びかけ調にしない)
             "ハサミがかすかに震えた。……拠点の鍛冶屋なら、何か分かるかもしれない", followUpUnlessRed: true,
-            threadDrop: 25);   // 中ボスの糸 25 本 → 12 粒 (PendingChanges 18)
+            threadDrop: 25,    // 中ボスの糸 25 本 → 12 粒 (PendingChanges 18)
+            groundBossArt: "Assets/LocalData/Character/bigHorse.png");   // 絵 = bigHorse (大きな馬。PendingChanges 43。取り込み設定は prep_newart.cs)
         var boss = GameObject.Find("Boss_A1_MidBossLower");
         if (boss != null)
         {
-            boss.GetComponent<SpriteRenderer>().color = new Color(1f, 0.82f, 0.62f);
+            // 脇腹の歯車 (「歯車の重馬」の印)。Visual の子にして弾み・傾きに付いていく
             var bg = new GameObject("BellyGear");
-            bg.transform.SetParent(boss.transform, false);
-            bg.transform.localPosition = new Vector3(0f, -0.05f, 0f);
-            bg.transform.localScale = Vector3.one * 0.13f;
+            bg.transform.SetParent(boss.transform.Find("Visual"), false);
+            bg.transform.localPosition = new Vector3(0.12f, 0.2f, 0f);
+            bg.transform.localScale = Vector3.one * 0.09f;
             AddSprite(bg, Art("platforms/gear_platform.png"), 6, null, new Color(1f, 0.85f, 0.6f));
         }
 

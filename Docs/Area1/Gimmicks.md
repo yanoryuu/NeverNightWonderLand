@@ -281,6 +281,26 @@ BossArena の複数ウェーブ版。入るとゲートを閉じ、ウェーブ�
 
 公開: `InPhase2`。配置例 (A1_AB): `_phase1=[Phase1_Notes (浮遊する音符の MovingPlatform の親)]`, `_phase2=[Phase2_FloorLifts (上向き Piston の親)]`。
 
+
+### ClimbableLadder (`Assets/Scripts/Gimmick/ClimbableLadder.cs`) + LadderState (2026-10-08 新規, PendingChanges 44)
+上り下りできる梯子 (悪魔城・Bloodstained 型)。以前は 2.5 間隔のすり抜け横木をジャンプで登る形だった。
+- **掴まる**: 梯子の範囲 (中心 ±`_grabHalfWidth`、足元が下端〜上端の少し下) で **上 + ジャンプ** (押す順は問わず `PlayerConsts.LadderGrabWindow` 0.1 秒以内なら同時とみなす。ジャンプが先なら跳び上がった直後に掴まる)。空中でも掴める。**上だけでは掴まない** (上はインタラクト・狙い)。
+  上端に立って **下 + ジャンプ** で掴まって降り始める (すり抜け床から降りるより優先。ジャンプが先で直後に下を押した場合も拾う)。大ジャンプ (上 + ジャンプの溜め) より優先。
+- **掴まっている間** (`LadderState`): 上下で上り下り (`LadderClimbSpeed` 4.5, アナログ可)、重力なし、横入力では動かず梯子の中心に固定。外力 (コンベア・風・足場) は受けない。攻撃・ダッシュ・アイテム・回復・インタラクトは受け付けない。
+  ジャンプ: 方向なし = 小ジャンプ (`LadderHopRatio` 0.5) で離れる / 横入力あり = その向きへ通常のジャンプ / 下入力あり = 手を離して落ちる。被弾するとノックバックで落ちる。
+  上端まで登ると上端のすり抜け床に立つ。下りて地面に着くと降りる。下端より下へ出たら落下。上り下りの専用の絵は無い (立ちの絵のまま)。
+- 上端のすり抜け床 (`_topPlatform`, layer 10 + PlatformEffector2D) は掴まっている間だけプレイヤーとの衝突を切る (降り抜けの一覧に入れて接地判定からも外す。離れたら体が床から抜けた所で戻る)。
+- 入り口 (PlayerSpawnPoint) が梯子の途中なら、着いた時に掴まった状態で始まる (`PlayerController.AttachToLadderOnArrival`, StageLoader が呼ぶ。A1_T3 の戸の穴 → A1_D2 の梯子の途中)。梯子を登ったまま遷移した時は前のステージの梯子を離す。
+- 有効な梯子は `ClimbableLadder.Active` (OnEnable/OnDisable) で座標で調べる (FlagActivator で梯子ごと出し入れしてよい)。
+- ビルダー `Ladder(x, y0, y1)` が見た目 (ladder タイル) + これ + 上端の床を置く。使っている所: A1_D2 (跳ね上げ戸の梯子)・A1_U3 (闘技場のご褒美)・A1_W4 (外周をくぐる)・A1_W8 (4 本)。
+- ボット: `BotWorld.AddLadderEdges` (上端の床 ⇔ 梯子の列の下の床, `BotMove.Ladder`) → `BotActionKind.Climb` (梯子の列へ歩く → 上/下 + ジャンプ → 押し続ける)。
+
+| フィールド | 型 | 既定 | 意味 |
+|---|---|---|---|
+| `_halfHeight` | float | 5 | 高さの半分 (中心 = Transform) |
+| `_grabHalfWidth` | float | 0.6 | 掴める横の範囲 |
+| `_topPlatform` | Collider2D | null | 上端のすり抜け床 |
+
 ---
 
 ## 2. 拡張した既存コンポーネント (後方互換)

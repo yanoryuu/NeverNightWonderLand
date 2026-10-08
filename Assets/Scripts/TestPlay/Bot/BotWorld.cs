@@ -61,6 +61,7 @@ public struct BotEdge
     public int To;              // -1 = ゴール
     public float Cost;          // 秒の目安
     public BotMove Move;
+    public ClimbableLadder Ladder; // Move == Ladder の時の梯子
 }
 
 public enum BotMove
@@ -72,6 +73,7 @@ public enum BotMove
     Drop,       // 端から落ちる
     DropThrough,
     Platform,   // 動く足場へ / から (待ちが要る)
+    Ladder,     // 梯子を上り下りする (上/下 + ジャンプで掴まる, PendingChanges 44)
 }
 
 /// <summary>ボットが見る物 (敵・壊せる物・出口など)。</summary>
@@ -696,6 +698,8 @@ public class BotWorld
             }
         }
 
+        AddLadderEdges();
+
         GraphMilliseconds = (Time.realtimeSinceStartup - started) * 1000f;
     }
 
@@ -890,6 +894,40 @@ public class BotWorld
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// 梯子の辺: 上端のすり抜け床のセグメント ⇔ 梯子の列に立てる下のセグメント (梯子の範囲内の高さ)。
+    /// 横木を跳んで登る形はやめたので (PendingChanges 44)、梯子はこの辺でだけ上り下りできる。
+    /// </summary>
+    private void AddLadderEdges()
+    {
+        foreach (var ladder in ClimbableLadder.Active)
+        {
+            if (ladder == null || ladder.gameObject.scene.name != SceneName)
+                continue;
+
+            var x = ladder.CenterX;
+            BotSegment top = null;
+            foreach (var s in Segments)
+            {
+                if (s.Moving || x < s.XMin - 0.4f || x > s.XMax + 0.4f) continue;
+                if (Mathf.Abs(s.YAt(s.ClampX(x)) - ladder.Top) < 0.35f) { top = s; break; }
+            }
+
+            if (top == null)
+                continue;
+
+            foreach (var s in Segments)
+            {
+                if (s == top || s.Moving || x < s.XMin - 0.2f || x > s.XMax + 0.2f) continue;
+                var y = s.YAt(s.ClampX(x));
+                if (y < ladder.Bottom - 0.4f || y > ladder.Top - 1f) continue;
+                var cost = 0.6f + (ladder.Top - y) / 4.5f;
+                _segmentEdges.Add(new BotEdge { From = s.Id, To = top.Id, Move = BotMove.Ladder, Cost = cost, Ladder = ladder });
+                _segmentEdges.Add(new BotEdge { From = top.Id, To = s.Id, Move = BotMove.Ladder, Cost = cost, Ladder = ladder });
+            }
+        }
     }
 
     private bool TryGoalEdge(BotSegment a, Rect goal, out BotEdge edge)

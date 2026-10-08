@@ -35,6 +35,12 @@ public static class PrepNewArt
     // 野良ウマ: ルート (当たり 1x1 の中心) = 柱の中心付近 x900 / 柱の下端 (y1400 = 地面) から 0.5 単位上 (PPU 850 → 425px)
     const float HorsePpu = 850f;
     static readonly Vector2 HorsePivot = new Vector2(900f / 2047f, 1f - 975f / 1447f);
+    // 歯車の重馬 (地上の中ボス A1_MB2, PendingChanges 43): bigHorse.png (4093x2894, 左向き, 絵の範囲 x426..4001 y61..2793)。
+    // ボスは Enemy.prefab ×2 (当たり 1x1 → 2x2)。絵の高さ 2732px を 1.3 単位 (×2 = 2.6) に = PPU 2100 → 胴 (x1023..3069) ≈ 当たりの幅 2。
+    // ピボット = 胴の中心 x2046 / 蹄の下端 (下から 101px) から 0.5 単位 (1050px) 上 = 当たりの中心
+    public const string BigHorsePath = Chara + "/bigHorse.png";
+    const float BigHorsePpu = 2100f;
+    static readonly Vector2 BigHorsePivot = new Vector2(2046f / 4093f, (101f + 1050f) / 2894f);
 
     public static string Run()
     {
@@ -52,8 +58,9 @@ public static class PrepNewArt
         Import($"{Prop}/fountain_02.png", 546f, new Vector2(0.5f, 0f), log);
         Import(HorsePath, HorsePpu, HorsePivot, log);
         Import($"{Chara}/blacksmith_batta.png", 450f, new Vector2(0.5f, 0f), log);
-        // まだ割り当てていない素材 (ボス候補の bigHorse / popduck / popbomb / オリゼ) はふつうの中心ピボットで取り込むだけ
-        foreach (var p in new[] { "bigHorse", "popduck", "oryze" })
+        Import(BigHorsePath, BigHorsePpu, BigHorsePivot, log);
+        // まだ割り当てていない素材 (popduck / popbomb / オリゼ) はふつうの中心ピボットで取り込むだけ
+        foreach (var p in new[] { "popduck", "oryze" })
             Import($"{Chara}/{p}.png", 546f, new Vector2(0.5f, 0.5f), log);
         for (var i = 1; i <= 5; i++)
             Import($"{Chara}/popbomb/popbomb_{i}.png", 546f, new Vector2(0.5f, 0.5f), log);
@@ -65,6 +72,14 @@ public static class PrepNewArt
         PatchDoorPrefab(log);
         PatchLeverPrefab(log);
         AssetDatabase.SaveAssets();
+        return log.ToString();
+    }
+
+    /// <summary>bigHorse (歯車の重馬) の取り込み設定だけを流す (PendingChanges 43)。</summary>
+    public static string ImportBigHorse()
+    {
+        var log = new System.Text.StringBuilder();
+        Import(BigHorsePath, BigHorsePpu, BigHorsePivot, log);
         return log.ToString();
     }
 

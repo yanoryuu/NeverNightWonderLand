@@ -35,6 +35,12 @@ public static class GameSession
     public static bool SaveBelongsToRun;
 
     /// <summary>
+    /// このプレイの記録先スロット (SaveSystem.ActiveSlot) をプレイヤーが選んだか。タイトルの はじめから・つづきから で true。
+    /// エディタでステージを直接再生した時は false (拠点で休んでも勝手にスロットへ書かない。PendingChanges 47)。
+    /// </summary>
+    public static bool RunSlotChosen;
+
+    /// <summary>
     /// 最後に休んだ拠点 (死亡リトライの復帰先) のステージ名。空なら未設定 (はじめから後にまだ休んでいない / エディタの直接再生)。
     /// 拠点で休んだ時・セーブした時・つづきからで設定され、はじめからで消える (PendingChanges 39)。
     /// </summary>

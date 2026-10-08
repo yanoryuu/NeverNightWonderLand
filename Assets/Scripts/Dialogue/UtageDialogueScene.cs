@@ -28,6 +28,12 @@ public class UtageDialogueScene : MonoBehaviour
     /// <summary>会話を再生中か。</summary>
     public bool IsPlaying { get; private set; }
 
+    /// <summary>宴のエンジンの起動 (シナリオ・設定の読み込み) が済んでいるか。</summary>
+    public bool IsBooted => _advEngine != null && _advEngine.gameObject.activeSelf && !_advEngine.IsWaitBootLoading;
+
+    // この会話シーンのルート (DontDestroyOnLoad へ移した後も「自分の物」を見分けるため。カメラ・キャンバスの判定に使う)
+    private readonly List<GameObject> _ownRoots = new();
+
     /// <summary>
     /// 会話中に隠すゲーム側 UI の Screen Space - Overlay キャンバスの sortingOrder の上限 (これ未満を隠す)。
     /// Overlay キャンバスは全カメラ (宴のカメラスタックを含む) の後に描かれるため、
@@ -80,7 +86,58 @@ public class UtageDialogueScene : MonoBehaviour
             }
         }
 
+        RememberOwnRoots(gameObject.scene.GetRootGameObjects());
         StripUtageLayersFromGameCameras();
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    /// <summary>この会話シーンのルートを覚える (DialogueService が DontDestroyOnLoad へ移す前に呼ぶ)。</summary>
+    public void RememberOwnRoots(GameObject[] roots)
+    {
+        _ownRoots.Clear();
+        _ownRoots.AddRange(roots);
+    }
+
+    private bool IsOwn(GameObject go) => go.scene == gameObject.scene || _ownRoots.Contains(go.transform.root.gameObject);
+
+    /// <summary>
+    /// 常駐中に別のシーンがロードされた (ステージ遷移・死亡リトライ・タイトル)。
+    /// 新しいゲーム側カメラから宴のレイヤーを外し、EventSystem が 2 つにならないようにする。
+    /// </summary>
+    private void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
+    {
+        if (_isDuplicate || this == null)
+            return;
+
+        StripUtageLayersFromGameCameras();
+        if (_eventSystem != null)
+        {
+            var other = false;
+            foreach (var es in FindObjectsByType<EventSystem>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            {
+                if (es != _eventSystem && !IsOwn(es.gameObject))
+                {
+                    other = true;
+                    break;
+                }
+            }
+
+            // ゲーム側に無い時だけ自分の EventSystem を使う (宴の UI のクリック送り用)
+            _eventSystem.gameObject.SetActive(!other);
+        }
+    }
+
+    /// <summary>
+    /// 宴のエンジンを起動しておく (先読み)。表示はしない (宴のカメラはメインカメラのスタックに載せない限り描かれない)。
+    /// 起動済み・再生中なら何もしない。
+    /// </summary>
+    public void Boot()
+    {
+        if (_isDuplicate || _advEngine == null || IsPlaying)
+            return;
+
+        if (!_advEngine.gameObject.activeSelf)
+            _advEngine.gameObject.SetActive(true);
     }
 
     /// <summary>
@@ -97,7 +154,7 @@ public class UtageDialogueScene : MonoBehaviour
         {
             // 宴のシーン (DialogueScene) のカメラは除外しない。自分の _overlayCameras だけを見て判定すると、
             // DialogueScene が 2 つある時に互いの宴カメラの cullingMask を 0 にして会話が見えなくなる (2026-10-03 のバグ)
-            if (cam.gameObject.scene == gameObject.scene || System.Array.IndexOf(_overlayCameras, cam) >= 0)
+            if (IsOwn(cam.gameObject) || System.Array.IndexOf(_overlayCameras, cam) >= 0)
                 continue;
             if (cam.gameObject.scene.name == DialogueService.SceneName)
                 continue;
@@ -226,6 +283,7 @@ public class UtageDialogueScene : MonoBehaviour
 
     private void OnDestroy()
     {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
         // 会話中に DialogueScene がアンロードされてもポーズ・カメラスタック・UI を残さない
         if (IsPlaying)
             EndPlaying();
@@ -242,7 +300,7 @@ public class UtageDialogueScene : MonoBehaviour
         {
             if (!canvas.isRootCanvas || !canvas.enabled || canvas.renderMode != RenderMode.ScreenSpaceOverlay)
                 continue;
-            if (canvas.gameObject.scene == gameObject.scene || canvas.sortingOrder >= HideOverlaySortingOrderBelow)
+            if (IsOwn(canvas.gameObject) || canvas.sortingOrder >= HideOverlaySortingOrderBelow)
                 continue;
             canvas.enabled = false;
             _hiddenCanvases.Add(canvas);

@@ -731,7 +731,8 @@ public class TestPlayBot : MonoBehaviour
 
     private string FailureKey(BotAction a)
     {
-        if (a.Kind != BotActionKind.JumpTo && a.Kind != BotActionKind.WalkTo && a.Kind != BotActionKind.WaitForPlatform && a.Kind != BotActionKind.RideTo)
+        if (a.Kind != BotActionKind.JumpTo && a.Kind != BotActionKind.WalkTo && a.Kind != BotActionKind.WaitForPlatform && a.Kind != BotActionKind.RideTo
+            && a.Kind != BotActionKind.Climb)
             return null;
         var from = _decisionSegment;
         if (from == null) return null;
@@ -1450,6 +1451,11 @@ public class TestPlayBot : MonoBehaviour
             action = new BotAction { Kind = BotActionKind.RideTo, Target = target };
             physics = "checked while riding";
         }
+        else if (e.Move == BotMove.Ladder && e.Ladder != null)
+        {
+            key = "climb_ladder:" + b.Name;
+            action = new BotAction { Kind = BotActionKind.Climb, Target = target, WalkX = e.Ladder.CenterX, Ladder = e.Ladder };
+        }
         else if (e.Move == BotMove.Walk)
         {
             key = "walk_to:" + b.Name;
@@ -1506,6 +1512,7 @@ public class TestPlayBot : MonoBehaviour
         key.StartsWith("drop_to") ? "walk off the edge down to" :
         key.StartsWith("dash_jump") ? "dash then jump to" :
         key.StartsWith("walk_to") ? "walk onto" :
+        key.StartsWith("climb_ladder") ? "climb the ladder to" :
         key.StartsWith("wait_for_platform") ? "wait for and jump onto" :
         key.StartsWith("ride_to") ? "ride, then jump to" : "jump to";
 

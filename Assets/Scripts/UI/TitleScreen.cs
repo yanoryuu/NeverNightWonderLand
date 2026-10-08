@@ -94,6 +94,7 @@ public class TitleScreen : MonoBehaviour
             GameSession.PendingLoad = null;
             GameSession.PlayTimeSeconds = 0;
             GameSession.SaveBelongsToRun = false; // スロットに前のプレイのセーブが残っていても使わない
+            GameSession.RunSlotChosen = true;     // 拠点で休んだ時にこのスロットへ書く (上書きはスロット画面で確認済み)
             GameSession.ClearRespawnBench();      // 拠点で休むまで、死亡リトライは部屋の入り口から
             GameProgress.Clear();
             // PlayerScene を土台に開始ステージを Additive で重ねる (PlayerScene 未登録なら旧方式)
@@ -119,6 +120,7 @@ public class TitleScreen : MonoBehaviour
             save.continuesRun = true; // 以後の進行はこのスロットへ自動で書き込む
             GameSession.PendingLoad = save;
             GameSession.SaveBelongsToRun = true;
+            GameSession.RunSlotChosen = true;
             GameSession.SetRespawnBench(save.sceneName, new Vector2(save.posX, save.posY)); // セーブした拠点
             GameSession.PlayTimeSeconds = save.playTimeSeconds;
             StageLoader.LoadWithPlayerScene(save.sceneName);

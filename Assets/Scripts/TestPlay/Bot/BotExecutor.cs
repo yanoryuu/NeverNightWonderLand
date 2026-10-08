@@ -14,6 +14,7 @@ public enum BotActionKind
     Heal,
     Interact,
     SuperJump,
+    Climb,           // 梯子を上り下りして Target のセグメントへ (climb_ladder)
     Wait,
 }
 
@@ -29,6 +30,7 @@ public class BotAction
     public BotEntity Entity;
     public float WalkX;
     public bool GoalAction;     // 成功 = ゴールに触れる (遷移が始まる)
+    public ClimbableLadder Ladder; // Climb の梯子
     public string Summary;      // Jev に見せる説明
 
     public override string ToString() => Key;
@@ -55,6 +57,7 @@ public class BotExecutor
     private float _t0, _phaseT0, _takeoffT;
     private float _lastProgressX, _lastProgressT;
     private bool _dashed, _airJumpUsed, _airDashUsed, _wasAirborne;
+    private bool _climbUp;
     private int _attackTaps;
     private float _nextTap;
     private float _replanAt;
@@ -147,6 +150,7 @@ public class BotExecutor
             case BotActionKind.Heal: TickSimple(player, PlayerButton.Heal, 1.1f); break;
             case BotActionKind.Interact: TickInteract(player); break;
             case BotActionKind.SuperJump: TickSuperJump(player); break;
+            case BotActionKind.Climb: TickClimb(player); break;
             case BotActionKind.Wait:
                 _input.Move = 0f;
                 // 待っている間に敵が間合いに入ったら斬る
@@ -180,6 +184,8 @@ public class BotExecutor
         BotActionKind.RideTo => 10f,
         BotActionKind.Attack => 3.5f + (Action.Entity != null ? Mathf.Abs(Action.Entity.Rect.center.x - _startPos.x) / 6f : 0f),
         BotActionKind.Interact => 6f,
+        BotActionKind.Climb => 4f + Mathf.Abs(Action.WalkX - _startPos.x) / 5f
+                                  + (Action.Ladder != null ? (Action.Ladder.Top - Action.Ladder.Bottom) / 3f : 0f),
         _ => 4f,
     };
 
@@ -598,6 +604,69 @@ public class BotExecutor
         {
             Finish(BotStatus.Succeeded, "interacted");
         }
+    }
+
+    /// <summary>
+    /// 梯子: 梯子の列まで歩く → 上 (上端からは下) + ジャンプで掴まる → 上下を押し続ける →
+    /// 目的のセグメントに立ったら成功 (上は登り切って上端の床に立つ、下は下りて地面に着く)。
+    /// </summary>
+    private void TickClimb(PlayerController player)
+    {
+        var ladder = Action.Ladder;
+        var target = Action.Target?.Segment;
+        if (ladder == null || target == null || !ladder.isActiveAndEnabled)
+        {
+            Finish(BotStatus.Failed, "no ladder");
+            return;
+        }
+
+        // 上るか下りるかは始めに決める (上端の近くで毎フレーム決め直すと上下に揺れて止まる)
+        if (_phase == Phase.Start)
+        {
+            _climbUp = target.YAt(target.ClampX(ladder.CenterX)) > player.FeetY + 0.5f;
+            _phase = Phase.Approach;
+        }
+
+        var up = _climbUp;
+        if (!player.IsOnLadder)
+        {
+            if (_phase == Phase.Air)
+            {
+                // 掴まった後に離れた: 着いたか
+                if (player.IsGrounded)
+                {
+                    var seg = _world.SegmentUnder(player);
+                    Finish(seg == target ? BotStatus.Succeeded : BotStatus.Failed, LandedText(player));
+                }
+
+                _input.Vertical = 0f;
+                return;
+            }
+
+            // 梯子の列まで歩く
+            var dx = ladder.CenterX - player.transform.position.x;
+            _input.Vertical = 0f;
+            _input.Release(PlayerButton.Jump);
+            if (Mathf.Abs(dx) > 0.3f)
+            {
+                _input.Move = Approach(dx);
+                return;
+            }
+
+            _input.Move = 0f;
+            if (player.IsGrounded && Time.time > _nextTap)
+            {
+                _input.Vertical = up ? 1f : -1f;
+                _input.Tap(PlayerButton.Jump);
+                _nextTap = Time.time + 0.4f;
+            }
+
+            return;
+        }
+
+        _phase = Phase.Air;
+        _input.Move = 0f;
+        _input.Vertical = up ? 1f : -1f;
     }
 
     private void TickSuperJump(PlayerController player)
