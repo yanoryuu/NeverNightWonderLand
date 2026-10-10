@@ -51,8 +51,10 @@ public static class BreakDebris
     /// 破片を飛ばす。source = 壊れた物の SpriteRenderer (位置・大きさ・描画順・色の基準)。
     /// away = 飛ばす向きの偏り (攻撃した側から離れる向き。zero なら上へ均等)。
     /// 絵が無ければ何もせず false (呼び出し側は従来の縮小フェードにする)。
+    /// tintOverride = 種類ごとの色の代わりに使う色、countOverride = 破片の数 (0 なら種類ごとの既定)。
     /// </summary>
-    public static bool Burst(SpriteRenderer source, Kind kind, Vector2 away)
+    public static bool Burst(SpriteRenderer source, Kind kind, Vector2 away, Color? tintOverride = null,
+        int countOverride = 0)
     {
         var catalog = Catalog;
         if (catalog == null || source == null)
@@ -77,11 +79,13 @@ public static class BreakDebris
         // 木箱は箱の色 (CrateColor) も掛ける。被弾フラッシュ中の白は使わない
         if (kind == Kind.Wood && source.TryGetComponent<BreakableBox>(out var box))
             tint *= box.BaseColor;
+        if (tintOverride.HasValue)
+            tint = tintOverride.Value;
 
         var bounds = source.bounds;
         var center = (Vector2)bounds.center;
         var size = Mathf.Max(0.5f, Mathf.Min(bounds.size.x, bounds.size.y));
-        var count = kind == Kind.Wood ? catalog.CrateCount : catalog.CellCount;
+        var count = countOverride > 0 ? countOverride : kind == Kind.Wood ? catalog.CrateCount : catalog.CellCount;
         var order = Mathf.Max(source.sortingOrder + 1, 4);
         var awayDir = away.sqrMagnitude > 0.0001f ? away.normalized : Vector2.zero;
 

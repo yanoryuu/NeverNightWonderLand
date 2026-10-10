@@ -50,12 +50,13 @@ public static class TestPlayActions
         }
     }
 
-    private static readonly string[] AfterBoss1 = { "A1_Boss1" };
-    private static readonly string[] AfterMidBosses = { "A1_Boss1", "A1_MidBossUpper", "A1_MidBossLower" };
+    // B1 のグラミネ 1 戦目は撤退の瞬間に流れ弾でスピーカー①も壊す (2026-10-10)。戦闘前の会話も済み
+    private static readonly string[] AfterBoss1 = { "A1_Boss1", "A1_Gramine_Met", "A1_Speaker1" };
+    private static readonly string[] AfterMidBosses = AfterBoss1.Concat(new[] { "A1_MidBossUpper", "A1_MidBossLower" }).ToArray();
 
     private static readonly string[] AllSpeakers =
     {
-        "A1_Boss1", "A1_MidBossUpper", "A1_MidBossLower",
+        "A1_Boss1", "A1_Gramine_Met", "A1_MidBossUpper", "A1_MidBossLower",
         "A1_Speaker1", "A1_Speaker2", "A1_Speaker3", "A1_ZiplineReady", "A1_ElevatorDeep",
     };
 
@@ -65,7 +66,7 @@ public static class TestPlayActions
     /// </summary>
     public static readonly FlagPreset[] FlagPresets =
     {
-        new("B1 改札の番人 撃破後", AfterBoss1),
+        new("B1 グラミネ (1戦目) 撃破後", AfterBoss1),
         new("中ボス 2 体 撃破後", AfterMidBosses),
         new("スピーカー 3 つ 破壊後", AllSpeakers),
         new("エリアボス 撃破後", AllSpeakers.Concat(new[] { "A1_AreaBoss", "A1_Pickup_AB_1" }).ToArray(),

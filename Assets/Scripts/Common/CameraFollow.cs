@@ -39,6 +39,16 @@ public class CameraFollow : MonoBehaviour
     private float _lookVelocity;
     private PlayerController _player;
 
+    // 揺れ (CameraShake) を足す前の追従位置。揺れを追従の SmoothDamp に混ぜないため分けて持つ
+    private Vector3 _followPosition;
+    private Vector3 _lastWrittenPosition;
+    private bool _hasFollowPosition;
+
+    // 寄せ (CameraFocus) のズーム。寄せている間だけ orthographicSize を変え、終わったら元の値に戻す
+    private Camera _camera;
+    private float _baseOrthoSize;
+    private bool _zoomed;
+
     /// <summary>
     /// ターゲット位置へ即座に移動する (ステージ遷移でプレイヤーがワープした時用。
     /// 暗転中に呼ぶことで、カメラが移動していく様子を見せない)。
@@ -55,6 +65,10 @@ public class CameraFollow : MonoBehaviour
         desired.y = Mathf.Max(desired.y, EffectiveMinY);
         transform.position = desired;
         _velocity = Vector3.zero;
+        _hasFollowPosition = false;
+        CameraShake.Stop();
+        CameraFocus.Stop();
+        ApplyZoom(1f);
 
         // ステージ遷移・ワープでは見回しも解除する
         _lookOffset = 0f;
@@ -72,7 +86,49 @@ public class CameraFollow : MonoBehaviour
         desired.y += _lookOffset; // 見回しはクランプの前に足す (下限で見下ろしてもそれ以上は下がらない)
         desired.y = Mathf.Max(desired.y, EffectiveMinY);
 
-        transform.position = Vector3.SmoothDamp(transform.position, desired, ref _velocity, _smoothTime);
+        // 他所から位置を書き換えられていたら (ワープ等) そこを追従の起点にし直す
+        if (!_hasFollowPosition || transform.position != _lastWrittenPosition)
+        {
+            _followPosition = transform.position;
+            _hasFollowPosition = true;
+        }
+
+        _followPosition = Vector3.SmoothDamp(_followPosition, desired, ref _velocity, _smoothTime);
+        var shake = GamePause.IsPaused ? Vector2.zero : CameraShake.Evaluate(Time.unscaledDeltaTime);
+
+        // 寄せ (スピーカー破壊などの見せ場): 追従位置と寄せ先を寄せ具合で混ぜ、表示範囲を狭める
+        var position = _followPosition;
+        var focus = CameraFocus.Evaluate(Time.unscaledDeltaTime, GamePause.IsPaused, out var zoomScale);
+        if (focus > 0f)
+        {
+            var point = CameraFocus.Point;
+            position = Vector3.Lerp(position, new Vector3(point.x, point.y, _followPosition.z), focus);
+        }
+        ApplyZoom(zoomScale);
+
+        transform.position = position + (Vector3)shake;
+        _lastWrittenPosition = transform.position;
+    }
+
+    /// <summary>表示範囲を寄せる前の scale 倍にする (1 で元に戻す)。正投影のカメラだけ。</summary>
+    private void ApplyZoom(float scale)
+    {
+        if (_camera == null)
+            _camera = GetComponent<Camera>();
+        if (_camera == null || !_camera.orthographic)
+            return;
+
+        if (!_zoomed)
+        {
+            if (Mathf.Approximately(scale, 1f))
+                return;
+            _baseOrthoSize = _camera.orthographicSize;
+            _zoomed = true;
+        }
+
+        _camera.orthographicSize = _baseOrthoSize * scale;
+        if (Mathf.Approximately(scale, 1f))
+            _zoomed = false;
     }
 
     /// <summary>右スティックの縦の入力から見回しのずらし量を更新する。</summary>

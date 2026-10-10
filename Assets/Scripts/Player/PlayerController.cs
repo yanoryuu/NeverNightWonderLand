@@ -319,7 +319,17 @@ public class PlayerController : MonoBehaviour
         InputDeviceTracker.Poll();
 
         if (GamePause.IsPaused)
+        {
+            PlayerInputSource.ClearLatchedPresses();
             return;
+        }
+
+        // ヒットストップ中は入力を読まない。止まっている間の押下は溜めておき、解除後の最初のフレームで読む
+        if (GamePause.IsHitStopped)
+        {
+            PlayerInputSource.LatchPresses();
+            return;
+        }
 
         ReadInput();
         UpdateTimers();

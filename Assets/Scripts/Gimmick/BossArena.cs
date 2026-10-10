@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// 中ボス戦エリア。プレイヤーがトリガーに入るとゲート (壁) を閉じてエリアから出られなくし、
-/// ボスの撃破でゲートを開放する。撃破は GameProgress のフラグで永続化されるため、
+/// ボスの撃破 (または撤退 = EnemyController.OnRetreated) でゲートを開放する。撃破は GameProgress のフラグで永続化されるため、
 /// 再訪時 (拠点で休んだ後も) はボスが出現せずゲートも開いたまま。
 /// トリガーの Collider2D はゲートより内側のエリアを覆うように配置する。
 /// ゲートは非アクティブで配置しておき、入場時に有効化される。
@@ -57,6 +57,8 @@ public class BossArena : MonoBehaviour
             return;
 
         _boss.OnDied += OnBossDied;
+        // 撤退 (倒れずに飛び去る。グラミネ第1のボスの 1 戦目) も撃破と同じく勝ち扱いにする
+        _boss.OnRetreated += OnBossDied;
 
         // ボスの糸は闘技場 (このトリガーの範囲) いっぱいに散らす (PendingChanges 25)
         var b = GetComponent<Collider2D>().bounds;

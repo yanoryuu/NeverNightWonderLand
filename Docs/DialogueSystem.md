@@ -81,6 +81,10 @@ xls を保存 → メニュー **NeverNight > 会話シナリオを再インポ�
 | `A1_Smith_Forge` | 木馬の鍛冶師 | 有償の鍛冶強化 (糸 30) の申し出。会話の後に糸を払って強化 |
 | `A1_Smith_Grant` | 木馬の鍛冶師 | 赤ハサミを渡す時。会話の後に取得通知 |
 | `A1_Smith_After` | 木馬の鍛冶師 | 赤ハサミも鍛冶強化も済んだ後 |
+| `A1_Gramine_Meet` | ？？？ / 慈 / グラミネ | A1_B1 グラミネ 1 戦目: 闘技場に入ってゲートが閉まった直後、戦闘前。一度きり (会話の後にフラグ `A1_Gramine_Met`)。終わるまでボスは攻撃しない (2026-10-10) |
+| `A1_Gramine_Retreat` | グラミネ / 慈 / シネレア | A1_B1: HP 半分 → 流れ弾がスピーカー①を壊した後。会話の後にグラミネが飛び去る (= 勝ち扱い・扉開放) (2026-10-10) |
+
+ボスの会話は `GramineBossBehaviour` の `_introDialogueLabel` / `_introDialogueFlag` (一度きり) / `_retreatDialogueLabel` で流す (会話中は GamePause で FixedUpdate が止まるのでボスの行動も止まる。別の会話の再生中・ロード中は空くまで待ってから流す)。
 
 ラベル名はシーン (ビルダーのレシピ `Docs/Area1/SceneScripts/build_A1_*.cs`) が参照しているので、名前を変える時はレシピも直してシーンを作り直す。
 

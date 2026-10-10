@@ -241,8 +241,9 @@ public class SaveSlotView : MonoBehaviour
             SetActive(w.Place, has);
             SetActive(w.Date, has);
             SetActive(w.PlayTime, has);
+            // 場所の無いセーブ (名前を付けない部屋・旧データ) は場所のアイコンも出さない
             if (w.PlaceIcon != null)
-                w.PlaceIcon.SetActive(has);
+                w.PlaceIcon.SetActive(has && !string.IsNullOrEmpty(data.placeName));
             if (w.Empty != null)
             {
                 w.Empty.gameObject.SetActive(!has);

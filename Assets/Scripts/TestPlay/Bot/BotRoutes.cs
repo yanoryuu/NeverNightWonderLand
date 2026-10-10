@@ -26,7 +26,7 @@ public static class BotRoutes
 
     /// <summary>
     /// エリア1 のクリティカルパス:
-    /// T1→T2→T3→T4→B1 (番人+スピーカー①)→S1→H→U1→U2→U3→U4→W1→W2→W3→W4→W5→W6(W7)→W8→MB1 (中ボス上+S2 スピーカー②)→ジップライン→U1
+    /// T1→T2→T3→T4→B1 (グラミネ 1 戦目+スピーカー①)→S1→H→U1→U2→U3→U4→W1→W2→W3→W4→W5→W6(W7)→W8→MB1 (中ボス上+S2 スピーカー②)→ジップライン→U1
     /// →H→D1→D2→D5→D3→D4→MB2 (中ボス下+S3 スピーカー③)→エレベーター→C1→大扉→AB (エリアボス+赤ハサミ)→ST→FP→FP2。
     /// </summary>
     public static readonly BotRouteStep[] Area1Critical =
@@ -35,7 +35,7 @@ public static class BotRoutes
         S("A1_T2", "A1_T3", "T2→T3"),
         S("A1_T3", "A1_T4", "T3→T4"),
         S("A1_T4", "A1_B1", "T4→B1"),
-        S("A1_B1", "A1_H", "B1 番人+スピーカー①→S1→H", "boss:A1_Boss1", "speaker:A1_Speaker1"),
+        S("A1_B1", "A1_H", "B1 グラミネ+スピーカー①→S1→H", "boss:A1_Boss1", "speaker:A1_Speaker1"),
         S("A1_H", "A1_U1", "H→U1"),
         S("A1_U1", "A1_U2", "U1→U2"),
         S("A1_U2", "A1_U3", "U2→U3"),

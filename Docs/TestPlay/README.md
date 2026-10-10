@@ -56,7 +56,7 @@
 ### 進行フラグのプリセット (エリア1)
 | 名前 | 立てるフラグ |
 |---|---|
-| B1 改札の番人 撃破後 | A1_Boss1 |
+| B1 グラミネ (1戦目) 撃破後 | A1_Boss1, A1_Gramine_Met, A1_Speaker1 (撤退時に流れ弾でスピーカー①が壊れるため) |
 | 中ボス 2 体 撃破後 | + A1_MidBossUpper, A1_MidBossLower |
 | スピーカー 3 つ 破壊後 | + A1_Speaker1..3, A1_ZiplineReady, A1_ElevatorDeep |
 | エリアボス 撃破後 | + A1_AreaBoss, A1_Pickup_AB_1 (+ 赤ハサミを付与) |

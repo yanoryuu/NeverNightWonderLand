@@ -56,6 +56,10 @@ public class EnemyController : MonoBehaviour, IDamageable
     [Tooltip("被弾フラッシュの色 (白い絵は白では光って見えないので赤みを付ける)")]
     [SerializeField] private Color _hitFlashColor = Color.white;
 
+    [Tooltip("スーパーアーマー。true なら通常の被弾で怯まない (硬直・ノックバック・行動中断なし)。" +
+             "ブレイクと糸玉拘束は効く。ボス用")]
+    [SerializeField] private bool _superArmor;
+
     private Rigidbody2D _rb;
     private SpriteRenderer _sprite;
     private Collider2D _collider;
@@ -109,6 +113,23 @@ public class EnemyController : MonoBehaviour, IDamageable
 
     /// <summary>撃破時に発火する (チュートリアルの達成判定用)。</summary>
     public event Action<EnemyController> OnDied;
+
+    /// <summary>
+    /// 撤退 (倒れずに飛び去る) 時に発火する。ボス 1 戦目の「HP 半分で飛び去る = 勝ち扱い」用。
+    /// BossArena は OnDied と同様に扱う。
+    /// </summary>
+    public event Action<EnemyController> OnRetreated;
+
+    /// <summary>
+    /// 一時無敵。true の間は TakeDamage を無視する (ボスの形態遷移演出など)。接触ダメージは出る。
+    /// </summary>
+    public bool IsInvulnerable { get; set; }
+
+    /// <summary>
+    /// HP の下限。被ダメージでこれ未満には減らない (0 = 通常どおり倒れる)。
+    /// ボスの「HP 半分で形態遷移/撤退」を一撃で飛ばされないようにする用。
+    /// </summary>
+    public int HpFloor { get; set; }
 
     private string _persistentId; // 撃破記録用 ID (ステージ名+初期位置+名前)
     private bool _trackDefeat;    // 撃破を記録するか (スポナー製は false)
@@ -318,7 +339,7 @@ public class EnemyController : MonoBehaviour, IDamageable
 
     public void TakeDamage(in DamageInfo info)
     {
-        if (_state == State.Dead)
+        if (_state == State.Dead || IsInvulnerable)
             return;
 
         var broken = _isBroken.Value;
@@ -339,7 +360,7 @@ public class EnemyController : MonoBehaviour, IDamageable
         var hpDamage = info.HpDamage;
         if (broken)
             hpDamage = Mathf.RoundToInt(hpDamage * _consts.BreakHpDamageMultiplier);
-        var appliedHp = Mathf.Min(_hp.Value, hpDamage);
+        var appliedHp = Mathf.Max(0, Mathf.Min(_hp.Value - Mathf.Max(0, HpFloor), hpDamage));
         _hp.Value -= appliedHp;
 
         // ダメージ数値の通知 (崩し=白、HP=赤 で色分け表示される)
@@ -348,17 +369,36 @@ public class EnemyController : MonoBehaviour, IDamageable
 
         Flash();
 
-        if (_hp.Value <= 0)
+        var killed = _hp.Value <= 0;
+        var breaking = !killed && !broken && _guard.Value <= 0;
+
+        // プレイヤーの攻撃 (近接・突進・飛び道具・設置物) が当たったら一瞬止める。倒した・ブレイクさせた時は長め
+        PlayerController attacker = null;
+        if (info.Source != null && info.Source.TryGetComponent(out attacker))
         {
-            Die();
+            GamePause.HitStop(info.IsFinisher ? _consts.FinisherHitStopTime
+                : killed || breaking ? _consts.HeavyHitStopTime : _consts.HitStopTime);
+        }
+
+        // 裁断が決まった演出 (ここに来るのはブレイク中の敵に当たった時だけ)。倒したら斬撃線で真っ二つに割って見せる
+        var sliced = false;
+        if (info.IsFinisher)
+        {
+            sliced = FinisherEffect.Play(attacker, _sprite, info.HitPoint, killed,
+                _consts.FinisherShakeAmplitude, _consts.FinisherShakeTime);
+        }
+
+        if (killed)
+        {
+            Die(sliced);
             return;
         }
 
-        if (!broken && _guard.Value <= 0)
+        if (breaking)
         {
             BeginBreak();
         }
-        else if (!broken)
+        else if (!broken && !_superArmor)
         {
             BeginHurt(info.HitPoint, info.KnockbackPower);
         }
@@ -396,7 +436,8 @@ public class EnemyController : MonoBehaviour, IDamageable
         _sprite.color = _baseColor;
     }
 
-    private void Die()
+    /// <param name="sliced">裁断で切り分けの片を出した (本体はすぐ隠して消す)。</param>
+    private void Die(bool sliced = false)
     {
         _state = State.Dead;
         _isBroken.Value = false;
@@ -420,6 +461,14 @@ public class EnemyController : MonoBehaviour, IDamageable
             col.enabled = false;
         _rb.simulated = false;
 
+        if (sliced)
+        {
+            foreach (var r in GetComponentsInChildren<Renderer>())
+                r.enabled = false;
+            Destroy(gameObject, _consts.DeathFadeTime);
+            return;
+        }
+
         transform.DOScale(Vector3.zero, _consts.DeathFadeTime)
             .SetEase(Ease.InBack)
             .OnComplete(() => Destroy(gameObject));
@@ -433,6 +482,57 @@ public class EnemyController : MonoBehaviour, IDamageable
 
     /// <summary>ブレイク中であることを示す色 (仮素材の色分け)。</summary>
     private Color BreakTint() => new Color(1f, 0.85f, 0.3f);
+
+    #endregion
+
+    #region ボス用 (撤退・硬直解除・向き)
+
+    /// <summary>
+    /// 被弾硬直・拘束・ブレイクを即座に解除して行動可能に戻す (ボスの形態遷移/撤退の開始用)。
+    /// ブレイク中なら通常のブレイク明けと同じく防御値を全回復する。死亡中は何もしない。
+    /// </summary>
+    public void ClearStun()
+    {
+        if (_state == State.Break)
+            EndBreak();
+        else if (_state == State.Hurt)
+            _state = State.Acting;
+    }
+
+    /// <summary>移動せずに向きだけ変える (direction の符号: 正 = 右)。</summary>
+    public void Face(float direction)
+    {
+        if (Mathf.Abs(direction) > 0.01f && _sprite != null)
+            _sprite.flipX = (direction < 0f) != _visualFacesLeft;
+    }
+
+    /// <summary>
+    /// 倒れずに撤退する (勝ち扱い)。行動・当たり判定を止め、撃破記録と糸のドロップは撃破時と同様に行い、
+    /// <see cref="OnRetreated"/> を発火する。本体は消さない (飛び去る演出と Destroy は呼び出し側が行う)。
+    /// </summary>
+    /// <param name="dropThreads">糸をドロップするか (撃破時と同じ数)</param>
+    public void Retreat(bool dropThreads)
+    {
+        if (_state == State.Dead)
+            return;
+
+        _state = State.Dead;
+        _isBroken.Value = false;
+        Active.Remove(this);
+
+        if (_trackDefeat)
+            DefeatedEnemyRegistry.MarkDefeated(_persistentId);
+
+        var threadDrop = ThreadDrop;
+        if (dropThreads && threadDrop > 0)
+            ThreadDropped?.Invoke(transform.position, threadDrop, Mathf.Abs(transform.lossyScale.y), LootArea);
+
+        foreach (var col in GetComponentsInChildren<Collider2D>())
+            col.enabled = false;
+        _rb.simulated = false;
+
+        OnRetreated?.Invoke(this);
+    }
 
     #endregion
 
