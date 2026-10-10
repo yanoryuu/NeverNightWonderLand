@@ -28,7 +28,7 @@ public static class BuildW1
         FarGondola(new Vector2(13f, 23.5f), new Vector2(0.86f, 0.84f), new Vector2(28f, 8f), 0.62f);
         FarGondola(new Vector2(45f, 20.5f), new Vector2(0.86f, 0.84f), new Vector2(28f, 8f), 0.55f);
         BulbString(29.3f, 39f, 5.1f, 0.7f, -6);      // 街灯 → 乗り場リフトのレール
-        BulbString(14.3f, 22f, 7.6f, 0.7f, -7);      // 街灯の上 (旗の上を渡す)
+        // 街灯 (x14) の上 y7.6 の電球の連なりは消した: 左端が街灯の灯より 2 上の宙で切れて浮いて見えた (2026-10-10 Audit2)
         RockDecor(0.6f);
 
         // 頭上の外周の帯 (A1_U4 と同じ遠景)。地上からは本物の外周 (下端 y162) は見えない

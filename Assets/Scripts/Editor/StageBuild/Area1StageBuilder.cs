@@ -2593,6 +2593,11 @@ namespace NeverNight.StageBuild
                     blocked.Add(new Vector2Int(x, y));
             }
             bool FarFrom(Vector2 p, float min) => wallPlaced.All(o => (o - p).sqrMagnitude >= min * min);
+            // 夜空のシーン (SkyBackdrop の W2/W3/W6/W8 など) では、部屋の背景板 (Backdrop_*) が無い所は奥が空 = 壁が無い。
+            // そこに壁掛けの灯・ポスター・旗・鎖を置くと宙に浮く (2026-10-10 の点検で W6 の空に浮いたポスター・壁灯)
+            var backs = WallBackdrops();
+            bool Backed(Vector2 p, float hw, float hh) => backs == null ||
+                backs.Any(bb => p.x - hw >= bb.min.x && p.x + hw <= bb.max.x && p.y - hh >= bb.min.y && p.y + hh <= bb.max.y);
 
             foreach (var room in layout.RoomsInScene(id).Where(r => !r.Outdoor))
             foreach (var r in room.Rects)
@@ -2622,7 +2627,7 @@ namespace NeverNight.StageBuild
                     if (lamps <= 0) break;
                     if (!Free(f.x, f.y, 1, 5)) continue;
                     var c = new Vector2(f.x + 0.5f, f.y + 3.5f);
-                    if (!FarFrom(c, 6f)) continue;
+                    if (!FarFrom(c, 6f) || !Backed(c, 0.5f, 0.5f)) continue;
                     Place(wallGroup, "rock/decal_lamp_wall.png", c, OrderWallDecor, rnd.Next(2) == 0);
                     Occupy(f.x, f.y + 3, 1, 1);
                     wallPlaced.Add(c); lamps--; wallCount++;
@@ -2634,7 +2639,7 @@ namespace NeverNight.StageBuild
                     if (posters <= 0) break;
                     if (!Free(f.x, f.y, 1, 4)) continue;
                     var c = new Vector2(f.x + 0.5f, f.y + 2.1f);
-                    if (!FarFrom(c, 5f)) continue;
+                    if (!FarFrom(c, 5f) || !Backed(c, 0.5f, 0.75f)) continue;
                     Place(wallGroup, "rock/decal_poster.png", c, OrderWallDecor);
                     Occupy(f.x, f.y + 1, 1, 2);
                     wallPlaced.Add(c); posters--; wallCount++;
@@ -2646,7 +2651,7 @@ namespace NeverNight.StageBuild
                     if (buntings <= 0) break;
                     if (!Free(c0.x, c0.y - 4, 3, 5) || !Rock(c0.x + 1, c0.y + 1) || !Rock(c0.x + 2, c0.y + 1)) continue;
                     var c = new Vector2(c0.x + 1.5f, c0.y + 0.62f);
-                    if (!FarFrom(c, 6f)) continue;
+                    if (!FarFrom(c, 6f) || !Backed(c - new Vector2(0f, 0.6f), 1.5f, 0.4f)) continue;
                     Place(wallGroup, "rock/decal_bunting.png", c, OrderWallDecor);
                     Occupy(c0.x, c0.y, 3, 1);
                     wallPlaced.Add(c); buntings--; wallCount++;
@@ -2658,7 +2663,7 @@ namespace NeverNight.StageBuild
                     if (chains <= 0) break;
                     if (!Free(c0.x, c0.y - 6, 1, 7)) continue;
                     var c = new Vector2(c0.x + 0.5f, c0.y + 1.15f - 1.5f); // 上端 (フック) を天井の帯の裏へ
-                    if (!FarFrom(c, 5f)) continue;
+                    if (!FarFrom(c, 5f) || !Backed(c - new Vector2(0f, 0.5f), 0.5f, 1f)) continue;
                     Place(wallGroup, "rock/decal_chain_hanging.png", c, OrderWallDecor, false, new Color(0.85f, 0.82f, 0.9f));
                     Occupy(c0.x, c0.y - 2, 1, 3);
                     wallPlaced.Add(c); chains--; wallCount++;
@@ -2666,6 +2671,19 @@ namespace NeverNight.StageBuild
             }
 
             return $"[RockDecor] seed={StableHash(id)} density={density:0.##} rock={rockCount}/{target} deep={deepCount}/{deepTarget} moss={mossCount} wall={wallCount}";
+        }
+
+        /// <summary>
+        /// 壁掛けの飾りを置ける「奥の壁」の範囲。夜空のシーン (Background に NightSky がある) では部屋の背景板 (Backdrop_*) の矩形の一覧、
+        /// 地下のシーン (奥がずっと機械の壁) では null (= どこでも可)。
+        /// </summary>
+        public static List<Bounds> WallBackdrops()
+        {
+            var group = Group("Background");
+            if (group.Find("NightSky") == null)
+                return null;
+            return group.Cast<Transform>().Where(t => t.name.StartsWith("Backdrop"))
+                .Select(t => t.GetComponent<SpriteRenderer>()).Where(sr => sr != null && sr.enabled).Select(sr => sr.bounds).ToList();
         }
 
         // ================================================================== 仕上げ・検証

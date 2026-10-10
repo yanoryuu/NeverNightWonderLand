@@ -94,8 +94,7 @@ public static class BuildW3
 
         // ================= 飾り
         HangLamp(41f, 168f); HangLamp(49f, 168f);
-        Prop("rock/decal_lamp_wall.png", 45.5f, 114.5f, 1f, OrderWallDecor);
-        Prop("rock/decal_lamp_wall.png", 45.5f, 135.5f, 1f, OrderWallDecor);
+        // 壁掛けの灯 (45.5,114.5)/(45.5,135.5) は消した: 坑の奥は夜空で掛ける壁が無く、中景の観覧車の輪 (視差) と重なる時以外は宙に浮いて見えた (2026-10-10 Audit2)
 
         // ================= ヒント
         // 案内文はチュートリアルの操作説明 (キーの説明) だけ残す。呼びかけ・攻略助言・場所の説明は削除 (2026-10-03 ユーザー決定, Docs/UI/UIAssignment.md「案内文」)

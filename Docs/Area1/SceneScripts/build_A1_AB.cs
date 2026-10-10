@@ -285,7 +285,10 @@ public static class BuildAB
         Glow(320.5f, -45.8f, 1.6f, WarmGlow, -7);
 
         // ================= ST の見た目: 噴水の真下の石の縦穴 (水が滴る配管、上から月明かり)
-        TintRock(336, -40, 366, 2, new Color(0.72f, 0.78f, 0.95f));
+        // 井戸の岩を青く。横はシーン全体・下 (大ホールの天井 y-36 → y-23) はグラデーション
+        // (以前は矩形 x336..366 で、大ホールから見上げると天井の岩に色の境の縦の帯が見えた。2026-10-10 Audit2)
+        TintRockGradient(280, -36, 400, -22, Color.white, new Color(0.72f, 0.78f, 0.95f));
+        TintRock(280, -22, 400, 40, new Color(0.72f, 0.78f, 0.95f));
         PipeRun(343.2f, -27f, 343.2f, -3f, 0.7f, -6, new Color(0.45f, 0.55f, 0.75f));
         PipeRun(358.8f, -27f, 358.8f, -3f, 0.7f, -6, new Color(0.45f, 0.55f, 0.75f));
         PipeRun(343.2f, -4.2f, 358.8f, -4.2f, 0.5f, -6, new Color(0.45f, 0.55f, 0.75f));
