@@ -3,6 +3,8 @@
 //     --entry PlayEnemy.Watch --args '["Enemy_Charger", 4]' → 4 秒後に PlayEnemy.Log (0.1 秒ごとの敵と自機の状態)
 //     --entry PlayEnemy.Hit --args '["Enemy_Charger", 5, 1]' (HP ダメージ, 防御ダメージ, プレイヤーの攻撃として)
 //     --entry PlayEnemy.Boss / PlayEnemy.BossHits (ボスの状態 / 撃破までの手数の目安)
+//     --entry PlayEnemy.SlashBombs --args '[10, true]' (ポップコーンが近くに来たら実際の攻撃ボタンで斬る。結果は PlayEnemy.SlashLog)
+//     --entry PlayEnemy.Bombs (投げられたポップコーンの状態)
 using System.Collections;
 using System.Linq;
 using System.Reflection;
@@ -52,7 +54,7 @@ public static class PlayEnemy
         var sb = new StringBuilder(PlayerState()).AppendLine();
         foreach (var e in Object.FindObjectsByType<EnemyController>(FindObjectsSortMode.None).OrderBy(e => e.transform.position.x))
             sb.AppendLine(EnemyState(e));
-        sb.Append($"bullets={Object.FindObjectsByType<EnemyBullet>(FindObjectsSortMode.None).Length} hazards={Object.FindObjectsByType<BossHazard>(FindObjectsSortMode.None).Length}");
+        sb.Append($"bullets={Object.FindObjectsByType<EnemyBullet>(FindObjectsSortMode.None).Length} lobs={Object.FindObjectsByType<EnemyLobBomb>(FindObjectsSortMode.None).Length} hazards={Object.FindObjectsByType<BossHazard>(FindObjectsSortMode.None).Length}");
         return sb.ToString();
     }
 
@@ -154,7 +156,7 @@ public static class PlayEnemy
                 .Count(s => s.enabled && (s.name.Contains("Shadow") || s.name.Contains("Mark") || s.name.Contains("Glow") || s.name.Contains("Spot") || s.name.Contains("Range")));
             var hp = P.Health.Hp.CurrentValue;
             var p = P.transform.position;
-            sb.AppendLine($"t={Time.time - t0:F1} P=({p.x:F1},{p.y:F1}) hp={hp}{(hp < lastHp ? " <<DMG " + (lastHp - hp) : "")} | {EnemyState(e).Replace("brk=False ", "").Replace("hurt=False ", "").Replace("ctrl=Acting ", "")} b={Object.FindObjectsByType<EnemyBullet>(FindObjectsSortMode.None).Length} hz={Object.FindObjectsByType<BossHazard>(FindObjectsSortMode.None).Length} mk={shadows}");
+            sb.AppendLine($"t={Time.time - t0:F1} P=({p.x:F1},{p.y:F1}) hp={hp}{(hp < lastHp ? " <<DMG " + (lastHp - hp) : "")} | {EnemyState(e).Replace("brk=False ", "").Replace("hurt=False ", "").Replace("ctrl=Acting ", "")} b={Object.FindObjectsByType<EnemyBullet>(FindObjectsSortMode.None).Length}{LobState()} hz={Object.FindObjectsByType<BossHazard>(FindObjectsSortMode.None).Length} mk={shadows}");
             lastHp = hp;
             if (hp <= 4) { P.Health.Heal(99); lastHp = P.Health.Hp.CurrentValue; } // 倒れないよう回復 (被ダメージの記録は続ける)
             yield return new WaitForSeconds(interval);
@@ -206,6 +208,189 @@ public static class PlayEnemy
         var rp = (R3.ReactiveProperty<int>)f.GetValue(P);
         rp.Value = dir;
     }
+
+    /// <summary>投げられたポップコーン (EnemyLobBomb) の位置と着地済みか。Watch の 1 行にも付ける。</summary>
+    static string LobState()
+    {
+        var bombs = Object.FindObjectsByType<EnemyLobBomb>(FindObjectsSortMode.None);
+        if (bombs.Length == 0) return "";
+        return " lob=[" + string.Join(" ", bombs.Select(b => $"({b.transform.position.x:F1},{b.transform.position.y:F1}){(b.IsLanded ? "L" : "")}")) + "]";
+    }
+
+    public static string Bombs() => "bombs:" + LobState() + " | " + Markers().Replace("\n", " / ") + " | " + PlayerState();
+
+    /// <summary>
+    /// seconds 秒間、ポップコーンが自機の 1.8 以内に来たら (landedOnly なら着地したものだけ) そちらを向いて
+    /// 攻撃ボタンを押す (PlayerInputSource.Override の VirtualPlayerInput に Tap → 実際の攻撃の流れ → PerformAttackHit)。
+    /// 0.35 秒後にポップコーンが残っているか・爆発 (PopcornBlast) が出たか・自機の HP を PlayerPrefs "PE_slash" に記録する。
+    /// </summary>
+    public static string SlashBombs(float seconds, bool landedOnly)
+    {
+        if (!(PlayerInputSource.Override is VirtualPlayerInput)) Isolate();
+        PlayerPrefs.SetString("PE_slash", "");
+        P.StartCoroutine(SlashCo(seconds, landedOnly));
+        return "slash armed";
+    }
+
+    static IEnumerator SlashCo(float seconds, bool landedOnly)
+    {
+        var input = (VirtualPlayerInput)PlayerInputSource.Override;
+        var sb = new StringBuilder();
+        var end = Time.time + seconds;
+        while (Time.time < end)
+        {
+            var center = (Vector2)P.GetComponent<Collider2D>().bounds.center;
+            var b = Object.FindObjectsByType<EnemyLobBomb>(FindObjectsSortMode.None)
+                .FirstOrDefault(x => (!landedOnly || x.IsLanded) && Vector2.Distance(x.transform.position, center) < 1.8f);
+            if (b != null)
+            {
+                var id = b.GetInstanceID();
+                var hp0 = P.Health.Hp.CurrentValue;
+                var landed = b.IsLanded;
+                Face(b.transform.position.x >= center.x ? 1 : -1);
+                input.Tap(PlayerButton.Attack);
+                var blast = false;
+                var t1 = Time.time + 0.35f;
+                while (Time.time < t1)
+                {
+                    blast |= Object.FindObjectsByType<SpriteRenderer>(FindObjectsSortMode.None).Any(s => s.name == "PopcornBlast");
+                    yield return null;
+                }
+                var alive = Object.FindObjectsByType<EnemyLobBomb>(FindObjectsSortMode.None).Any(x => x.GetInstanceID() == id);
+                sb.AppendLine($"t={Time.time:F1} slash landed={landed} bombAlive={alive} blast={blast} hp {hp0}->{P.Health.Hp.CurrentValue}");
+                PlayerPrefs.SetString("PE_slash", sb.ToString());
+                yield return new WaitForSeconds(0.3f);
+            }
+            yield return new WaitForFixedUpdate();
+        }
+        sb.AppendLine("done");
+        PlayerPrefs.SetString("PE_slash", sb.ToString());
+    }
+
+    public static string SlashLog() => PlayerPrefs.GetString("PE_slash", "(empty)");
+
+    /// <summary>
+    /// 次に投げられたポップコーンを、投げた 0.15 秒後に自機を横へ dx ずらして避ける (着地させる)。
+    /// 着地位置・着地から爆発までの時間・爆発時の自機との距離・被ダメージを PlayerPrefs "PE_dodge" に記録する。
+    /// </summary>
+    public static string DodgeLob(float dx) => DodgeLobShot(dx, "");
+
+    /// <summary>DodgeLob + 着地 0.35 秒後 (予告の円) と爆発の瞬間にゲーム画面を撮る (shotPrefix_mark.png / _blast.png。空なら撮らない)。</summary>
+    public static string DodgeLobShot(float dx, string shotPrefix)
+    {
+        PlayerPrefs.SetString("PE_dodge", "(waiting)");
+        P.StartCoroutine(DodgeCo(dx, shotPrefix));
+        return "dodge armed " + dx;
+    }
+
+    static IEnumerator DodgeCo(float dx, string shotPrefix)
+    {
+        var shotMark = !string.IsNullOrEmpty(shotPrefix);
+        var shotBlast = shotMark;
+        var sb = new StringBuilder();
+        var end = Time.time + 10f;
+        var known = new System.Collections.Generic.HashSet<int>(Object.FindObjectsByType<EnemyLobBomb>(FindObjectsSortMode.None).Select(b => b.GetInstanceID()));
+        EnemyLobBomb bomb = null;
+        while (Time.time < end && bomb == null)
+        {
+            bomb = Object.FindObjectsByType<EnemyLobBomb>(FindObjectsSortMode.None).FirstOrDefault(b => !known.Contains(b.GetInstanceID()));
+            yield return null;
+        }
+        if (bomb == null) { PlayerPrefs.SetString("PE_dodge", "no throw"); yield break; }
+        var tThrow = Time.time;
+        yield return new WaitForSeconds(0.15f);
+        P.Teleport((Vector2)P.transform.position + new Vector2(dx, 0f));
+        if (shotMark) { yield return new WaitForSeconds(0.2f); ScreenCapture.CaptureScreenshot(shotPrefix + "_flight.png"); }
+        var hp0 = P.Health.Hp.CurrentValue;
+        var tLand = -1f;
+        Vector2 landAt = default;
+        while (bomb != null && Time.time < end)
+        {
+            if (tLand < 0f && bomb.IsLanded) { tLand = Time.time; landAt = bomb.transform.position; sb.AppendLine($"landed at ({landAt.x:F2},{landAt.y:F2}) flight={tLand - tThrow:F2}s " + Markers().Replace("\n", " / ")); }
+            if (shotMark && tLand >= 0f && Time.time - tLand >= 0.35f) { ScreenCapture.CaptureScreenshot(shotPrefix + "_mark.png"); shotMark = false; }
+            if (Object.FindObjectsByType<SpriteRenderer>(FindObjectsSortMode.None).Any(s => s.name == "PopcornBlast")) break;
+            yield return null;
+        }
+        if (shotBlast) { yield return new WaitForSeconds(0.04f); ScreenCapture.CaptureScreenshot(shotPrefix + "_blast.png"); }
+        var pb = P.GetComponent<Collider2D>().bounds;
+        var dist = Vector2.Distance(((Collider2D)P.GetComponent<Collider2D>()).ClosestPoint(landAt), landAt);
+        yield return new WaitForSeconds(0.05f);
+        sb.AppendLine($"blast after {(tLand >= 0 ? Time.time - 0.05f - tLand : -1):F2}s from landing, playerClosest={dist:F2} hp {hp0}->{P.Health.Hp.CurrentValue} P=({pb.center.x:F2},{pb.center.y:F2})");
+        PlayerPrefs.SetString("PE_dodge", sb.ToString());
+    }
+
+    public static string DodgeLog() => PlayerPrefs.GetString("PE_dodge", "(empty)");
+
+    /// <summary>自機を水平に歩かせる (VirtualPlayerInput.Move。-1..1)。</summary>
+    public static string Walk(float move)
+    {
+        if (!(PlayerInputSource.Override is VirtualPlayerInput)) Isolate();
+        ((VirtualPlayerInput)PlayerInputSource.Override).Move = move;
+        return "walk " + move + " " + PlayerState();
+    }
+
+    /// <summary>テスト用: 指定位置からポップコーンを直接投げる (壁当たりの確認など)。</summary>
+    public static string LobAt(float x, float y, float vx, float vy, float gravity)
+    {
+        var e = Find("Enemy_PopcornThrower");
+        var bomb = EnemyLobBomb.Spawn(null, new Vector2(x, y), new Vector2(vx, vy), gravity, 0.8f, 1.2f, 2, e != null ? e.gameObject : null,
+            default, null, e != null ? e.GetComponentInChildren<SpriteRenderer>() : null, new Color(1f, 0.96f, 0.72f));
+        PlayerPrefs.SetString("PE_trace", "");
+        P.StartCoroutine(TraceCo(bomb));
+        return "lob " + LobState();
+    }
+
+    static IEnumerator TraceCo(EnemyLobBomb bomb)
+    {
+        var sb = new StringBuilder();
+        var t0 = Time.time;
+        var landed = false;
+        while (bomb != null && !landed)
+        {
+            landed = bomb.IsLanded;
+            sb.Append($"t={Time.time - t0:F2}({bomb.transform.position.x:F2},{bomb.transform.position.y:F2}){(landed ? "LANDED" : "")} ");
+            yield return new WaitForSeconds(0.05f);
+        }
+        sb.Append(bomb == null ? "gone" : "");
+        PlayerPrefs.SetString("PE_trace", sb.ToString());
+    }
+
+    /// <summary>
+    /// ポップコーン投げの予備動作中に (hp, guard) のダメージを与え (プレイヤーの攻撃として)、中断されたか・その後の投げを PlayerPrefs "PE_int" に記録する。
+    /// </summary>
+    public static string InterruptLob(int hp, int guard)
+    {
+        PlayerPrefs.SetString("PE_int", "(waiting)");
+        P.StartCoroutine(InterruptLobCo(hp, guard));
+        return "armed lob interrupt";
+    }
+
+    static IEnumerator InterruptLobCo(int hp, int guard)
+    {
+        var e = Find("Enemy_PopcornThrower");
+        var act = e != null ? e.GetComponent<EnemyLobAction>() : null;
+        var sr = e != null ? e.GetComponent<SpriteRenderer>() : null;
+        var sb = new StringBuilder();
+        var end = Time.time + 8f;
+        while (act != null && !act.IsWindingUp && Time.time < end) yield return null;
+        if (act == null || !act.IsWindingUp) { PlayerPrefs.SetString("PE_int", "timeout"); yield break; }
+        var before = Object.FindObjectsByType<EnemyLobBomb>(FindObjectsSortMode.None).Length;
+        sb.AppendLine($"windup: color={sr.color} lobs={before}");
+        e.TakeDamage(new DamageInfo(hp, guard, (Vector2)P.transform.position, P.gameObject));
+        var t0 = Time.time;
+        yield return new WaitForSeconds(0.05f);
+        sb.AppendLine($"+0.05 winding={act.IsWindingUp} {EnemyState(e)}");
+        var thrownAt = -1f;
+        while (Time.time - t0 < 5f)
+        {
+            if (thrownAt < 0f && Object.FindObjectsByType<EnemyLobBomb>(FindObjectsSortMode.None).Length > before) thrownAt = Time.time - t0;
+            yield return null;
+        }
+        sb.AppendLine($"next throw at +{thrownAt:F2}s color={sr.color} {EnemyState(e)}");
+        PlayerPrefs.SetString("PE_int", sb.ToString());
+    }
+
+    public static string TraceLog() => PlayerPrefs.GetString("PE_trace", "(empty)");
 
     public static string SwingLog() => PlayerPrefs.GetString("PE_swing", "(empty)");
 
@@ -389,6 +574,114 @@ public static class PlayEnemy
 
     public static string ShotLog() => PlayerPrefs.GetString("PE_shot", "(empty)");
 
+    // ================================================================== エリア1 の地上の雑魚の配置確認 (2026-10-10)
+
+    /// <summary>
+    /// seconds 秒間、シーンの全ての敵を 0.1 秒ごとに見て、初期位置・x の範囲・y の最小/最大・最後の位置・状態を
+    /// PlayerPrefs "PE_foes" に記録する (PlayEnemy.FoesLog で読む)。落下 (初期 y より 0.3 以上下) と
+    /// 地形との重なり (ピボットが layer Ground の当たりの中) に印を付ける。
+    /// </summary>
+    public static string Foes(float seconds)
+    {
+        Application.runInBackground = true;
+        PlayerPrefs.SetString("PE_foes", "(running)");
+        P.StartCoroutine(FoesCo(seconds));
+        return "foes watching " + seconds;
+    }
+
+    class FoeTrack { public EnemyController E; public string Name; public Vector2 P0, Last; public float MinX, MaxX, MinY, MaxY; public bool Buried; public int Lobs; public string States = ""; }
+
+    static IEnumerator FoesCo(float seconds)
+    {
+        var tracks = Object.FindObjectsByType<EnemyController>(FindObjectsSortMode.None).Select(e =>
+        {
+            var p = (Vector2)e.transform.position;
+            return new FoeTrack { E = e, Name = e.name, P0 = p, Last = p, MinX = p.x, MaxX = p.x, MinY = p.y, MaxY = p.y };
+        }).ToList();
+        var knownBombs = new System.Collections.Generic.HashSet<int>();
+        var t0 = Time.time;
+        var minHp = P.Health.Hp.CurrentValue;
+        while (Time.time - t0 < seconds)
+        {
+            foreach (var t in tracks)
+            {
+                if (t.E == null) continue;
+                var p = (Vector2)t.E.transform.position;
+                t.Last = p;
+                t.MinX = Mathf.Min(t.MinX, p.x); t.MaxX = Mathf.Max(t.MaxX, p.x);
+                t.MinY = Mathf.Min(t.MinY, p.y); t.MaxY = Mathf.Max(t.MaxY, p.y);
+                foreach (var c in Physics2D.OverlapPointAll(p))
+                    if (!c.isTrigger && c.gameObject.layer == 10 && c.attachedRigidbody != t.E.GetComponent<Rigidbody2D>()) t.Buried = true;
+                var st = string.Join("+", t.E.GetComponents<MonoBehaviour>().Where(m => m is IEnemyModule mod && mod.IsActive).Select(m => m.GetType().Name.Replace("Motion", "").Replace("Action", "") + ":" + Field(m, "_state")));
+                if (!t.States.EndsWith(st + ";")) t.States += st + ";";
+            }
+            foreach (var b in Object.FindObjectsByType<EnemyLobBomb>(FindObjectsSortMode.None))
+                if (knownBombs.Add(b.GetInstanceID()))
+                {
+                    var owner = tracks.Where(t => t.E != null).OrderBy(t => Vector2.Distance(t.E.transform.position, b.transform.position)).FirstOrDefault();
+                    if (owner != null) owner.Lobs++;
+                }
+            minHp = Mathf.Min(minHp, P.Health.Hp.CurrentValue);
+            yield return new WaitForSeconds(0.1f);
+        }
+        var sb = new StringBuilder($"{StageLoader.Instance?.CurrentStageName} {seconds}s minHp={minHp} {PlayerState()}\n");
+        foreach (var t in tracks.OrderBy(t => t.P0.x))
+        {
+            var fell = t.MinY < t.P0.y - 0.3f;
+            sb.AppendLine($"{t.Name} p0=({t.P0.x:F1},{t.P0.y:F2}) last=({t.Last.x:F1},{t.Last.y:F2}) x[{t.MinX:F1}..{t.MaxX:F1}] y[{t.MinY:F2}..{t.MaxY:F2}]{(fell ? " **FELL**" : "")}{(t.Buried ? " **BURIED**" : "")}{(t.E == null ? " (gone)" : "")} lobs={t.Lobs} states={(t.States.Length > 300 ? t.States.Substring(0, 300) + "…" : t.States)}");
+        }
+        PlayerPrefs.SetString("PE_foes", sb.ToString());
+    }
+
+    public static string FoesLog() => PlayerPrefs.GetString("PE_foes", "(empty)");
+
+    /// <summary>
+    /// 突進の壁当たり: 自機を (px,py) に置き、敵 name の ChargeMotion が Charge に入ったら自機を (ax,ay) へ逃がす
+    /// (突進だけが進んで壁に当たるか)。0.1 秒ごとの敵の状態を PlayerPrefs "PE_charge" に記録 (8 秒)。
+    /// </summary>
+    public static string ChargeWall(string name, float px, float py, float ax, float ay)
+    {
+        Isolate();
+        KeepAlive(3000);
+        Tp(px, py);
+        PlayerPrefs.SetString("PE_charge", "(running)");
+        P.StartCoroutine(ChargeWallCo(name, ax, ay));
+        return "charge test " + name;
+    }
+
+    static IEnumerator ChargeWallCo(string name, float ax, float ay)
+    {
+        var e = Find(name);
+        var cm = e != null ? e.GetComponent<ChargeMotion>() : null;
+        var sb = new StringBuilder();
+        var t0 = Time.time;
+        var moved = false;
+        var last = "";
+        while (Time.time - t0 < 8f && e != null)
+        {
+            var st = Field(cm, "_state");
+            if (!moved && st == "Charge") { P.Teleport(new Vector2(ax, ay)); moved = true; sb.AppendLine($"t={Time.time - t0:F1} 自機を退避 ({ax},{ay})"); }
+            var line = $"{st} ({e.transform.position.x:F1},{e.transform.position.y:F2})";
+            if (st != last) sb.AppendLine($"t={Time.time - t0:F1} {line} wall={e.HitWallLastStep}");
+            last = st;
+            yield return new WaitForSeconds(0.05f);
+        }
+        sb.AppendLine($"end {EnemyState(e)} | {PlayerState()}");
+        PlayerPrefs.SetString("PE_charge", sb.ToString());
+    }
+
+    public static string ChargeLog() => PlayerPrefs.GetString("PE_charge", "(empty)");
+
+    /// <summary>まとめて: 入力の分離 + 倒れない + (x,y) へ移動 (x が NaN なら移動しない) + Foes(seconds)。</summary>
+    public static string Area(float seconds, float x, float y)
+    {
+        Isolate();
+        KeepAlive(3000);
+        var r = float.IsNaN(x) ? PlayerState() : Tp(x, y);
+        Foes(seconds);
+        return r;
+    }
+
     public static string Flags(string csv) => string.Join(" ", csv.Split(',').Select(f => $"{f}={GameProgress.Has(f)}"));
     public static string Unflag(string f) { GameProgress.Unset(f); return "unset " + f; }
 
@@ -397,7 +690,7 @@ public static class PlayEnemy
     {
         var sb = new StringBuilder();
         foreach (var s in Object.FindObjectsByType<SpriteRenderer>(FindObjectsSortMode.None)
-                     .Where(s => s.enabled && (s.name.Contains("Shadow") || s.name.Contains("Mark") || s.name.Contains("Glow") || s.name.Contains("Spot") || s.name.Contains("Range") || s.name.Contains("Bullet") || s.name.Contains("Knife") || s.name.Contains("Balloon") || s.name.Contains("Bomb"))))
+                     .Where(s => s.enabled && (s.name.Contains("Shadow") || s.name.Contains("Mark") || s.name.Contains("Glow") || s.name.Contains("Spot") || s.name.Contains("Range") || s.name.Contains("Bullet") || s.name.Contains("Knife") || s.name.Contains("Balloon") || s.name.Contains("Bomb") || s.name.Contains("Popcorn"))))
             sb.AppendLine($"{s.name} pos=({s.transform.position.x:F1},{s.transform.position.y:F1}) layer={s.sortingLayerName} order={s.sortingOrder} col={s.color}");
         return sb.ToString();
     }

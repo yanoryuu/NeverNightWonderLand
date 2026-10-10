@@ -14,6 +14,10 @@ using Object = UnityEngine.Object;
 
 namespace NeverNight.StageBuild
 {
+    /// <summary>地上の雑魚の種類 (Docs/EnemySpec.md)。プレハブは Assets/Prefabs/Enemies/Enemy_{kind}.prefab。
+    /// Area1StageBuilder.GroundFoe(...) と同名なので、class の中ではなく名前空間直下に置く。</summary>
+    public enum GroundFoe { Chaser, Bundled, Charger, Stomper, PopcornThrower }
+
     /// <summary>
     /// エリア1 のシーン組み立て API (エディタ専用・静的メソッド)。Unity CLI の eval_file から呼ぶ。
     /// 手順と例は Docs/Area1/SceneBuildGuide.md。
@@ -999,6 +1003,22 @@ namespace NeverNight.StageBuild
             if (heavy)
                 Set(go.GetComponent<EnemyController>(), "_consts",
                     AssetDatabase.LoadAssetAtPath<EnemyConsts>("Assets/Scripts/Enemy/EnemyConsts_Heavy.asset"));
+            return go;
+        }
+
+        /// <summary>地上の雑魚 (2026-10-10)。floorY = 床の上面、y = floorY + 0.6 (1×1・ピボット中心)。
+        /// 種類の enum は同名のメソッドと衝突するため名前空間直下 (NeverNight.StageBuild.GroundFoe)。</summary>
+        public static GameObject GroundFoe(GroundFoe kind, float x, float floorY, string name = null)
+        {
+            var path = $"Assets/Prefabs/Enemies/Enemy_{kind}.prefab";
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (prefab == null)
+                throw new System.Exception($"GroundFoe: プレハブが無い {path}");
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, ActiveScene);
+            go.transform.SetParent(Group("Enemies"), true);
+            go.transform.position = new Vector3(x, floorY + 0.6f, 0);
+            if (name != null)
+                go.name = name;
             return go;
         }
 
@@ -2868,6 +2888,22 @@ namespace NeverNight.StageBuild
                     else Err($"{s.name} {p}: 真下 4 以内に床が無い");
                 }
                 else Ok($"{s.name} {p}: 床 y≈{Mathf.Ceil(ground)}");
+            }
+
+            // 地上の雑魚 (GroundFoe): 足元 1.5 以内に地面があるか
+            foreach (var ec in Object.FindObjectsByType<EnemyController>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                var src = PrefabUtility.GetCorrespondingObjectFromSource(ec.gameObject);
+                var srcPath = src != null ? AssetDatabase.GetAssetPath(src) : "";
+                if (!srcPath.StartsWith("Assets/Prefabs/Enemies/Enemy_") || srcPath.Contains("Flying"))
+                    continue;
+                var p = (Vector2)ec.transform.position;
+                var hasGround = false;
+                for (var d = 0.5f; d <= 1.5f && !hasGround; d += 0.1f)
+                    hasGround = SolidAt(p.x, p.y - d);
+                if (!hasGround) Warn($"{ec.name} {p}: 地上の雑魚の下 1.5 に地面が無い");
+                else if (SolidAt(p.x, p.y)) Warn($"{ec.name} {p}: 地上の雑魚が地形に埋まっている");
+                else Ok($"{ec.name} {p}: 地上の雑魚 ({Path.GetFileNameWithoutExtension(srcPath)})");
             }
 
             // 移動装置 (TransportInteractable) の先シーン・スポーン

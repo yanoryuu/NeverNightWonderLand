@@ -103,7 +103,9 @@ public class EnemyPerception : MonoBehaviour
             return true;
 
         var mask = _obstacleLayer.value != 0 ? _obstacleLayer : (LayerMask)LayerMask.GetMask("Ground");
-        return !Physics2D.Linecast(transform.position, player.position, mask);
+        // すり抜け床 (鉄骨・配管の足場) は視線を遮らない (EnemyLobAction の CanSee と同じ判定。2026-10-10:
+        // 足場の上のポップコーン投げが、乗っている足場に遮られて下のプレイヤーを見つけられなかった)
+        return EnemyMotionUtil.HasLineOfSight(transform.position, player.position, mask);
     }
 
     private void OnDrawGizmosSelected()

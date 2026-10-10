@@ -1,4 +1,5 @@
 using UnityEngine;
+using Foe = NeverNight.StageBuild.GroundFoe;   // 種類 (GroundFoe() と同名なので別名で)
 using static NeverNight.StageBuild.Area1StageBuilder;
 
 // A1_T3 「縦の衣装ラック」(T3) + 「針だまりの小部屋」(T3b) + 「楽屋裏の勝手口」(T3c)
@@ -55,7 +56,7 @@ public static class BuildT3
         MoveSpawn("A1_U4", 99.5f, -43.5f);
 
         // 敵×1 (中段の踊り場の上)
-        Enemy(110.5f, -74f, name: "RackEnemy");
+        GroundFoe(Foe.Chaser, 110.5f, -75f, "ShelfChaser");   // 2026-10-10 (RackEnemy を置換) 踊り場
 
         // ================= T3b (x117..138, y-99..-81): 針だまりの小部屋
         Ground(117, 138, -96);
@@ -122,10 +123,12 @@ public static class BuildT3
         HangLamp(104f, -39f); HangLamp(124.5f, -81f); HangLamp(135.5f, -81f); HangLamp(146f, -84f);
 
         // 敵を少し増やす (2026-10-03 PendingChanges 8: 部屋の意図に合わせる。位置は enemy_probe.cs の候補から)
-        Enemy(108.5f, -95.4f, name: "FloorEnemy");   // 一番下の床 (x104..113)。チュートリアルなので控えめに 1 体だけ足す
+        GroundFoe(Foe.Chaser, 108.5f, -96f, "FloorChaser");  // 2026-10-10 (FloorEnemy を置換)。一番下の床 (x104..113)。チュートリアルなので控えめに 1 体だけ足す
 
         // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
         log += Depth("A1_T3") + "\n";
+        // 雰囲気 (§15): 作り直しで消えないよう StageAtmosphere をレシピで置く (2026-10-10)
+        log += Atmosphere("A1_T3") + "\n";
         return log + Finish();
     }
 }

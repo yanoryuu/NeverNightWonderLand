@@ -1,6 +1,7 @@
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
+using Foe = NeverNight.StageBuild.GroundFoe;   // 種類 (GroundFoe() と同名なので別名で)
 using static NeverNight.StageBuild.Area1StageBuilder;
 
 // A1_D3 「歯車の胃袋」(D3 x243..267 y-201..-120) + 「歯車の横穴」(D3a x270..288 y-144..-129) + 「ネズミの巣」(D7 x270..297 y-174..-153)
@@ -256,9 +257,12 @@ public static class BuildD3
 
         // 敵を少し増やす (2026-10-03 PendingChanges 8: 部屋の意図に合わせる。位置は enemy_probe.cs の候補から)
         Enemy(258f, -134f, true, name: "GearFlyer");     // 縦穴の上の方の空中 (壁の 2 体より上)
+        GroundFoe(Foe.Charger, 256.5f, -198f, "PitCharger");  // 2026-10-10 縦穴の底 (x247..267) (追加)
 
         // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
         log += Depth("A1_D3") + "\n";
+        // 雰囲気 (§15): 作り直しで消えないよう StageAtmosphere をレシピで置く (2026-10-10)
+        log += Atmosphere("A1_D3") + "\n";
         return log + Finish();
     }
 }

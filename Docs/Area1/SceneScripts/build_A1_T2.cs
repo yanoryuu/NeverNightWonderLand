@@ -1,4 +1,5 @@
 using UnityEngine;
+using Foe = NeverNight.StageBuild.GroundFoe;   // 種類 (GroundFoe() と同名なので別名で)
 using static NeverNight.StageBuild.Area1StageBuilder;
 
 // A1_T2 「崩れた搬入路」(T2 + 穴 T2 下段) + 「忘れ物の棚」(T2s, 隠し部屋)
@@ -38,7 +39,7 @@ public static class BuildT2
         Prop("props/elevator_cabin.png", 73.3f, -106.4f, 1.1f).transform.rotation = Quaternion.Euler(0, 0, 9f);
 
         // ---- 弱い敵 1 体 (穴を越えた先)
-        Enemy(81f, -95f, name: "WeakEnemy");
+        GroundFoe(Foe.Chaser, 79f, -96f, "TutorialChaser");   // 2026-10-10 新しい雑魚 (WeakEnemy を置換)
 
         // ---- T2s (x51..69, y-75..-60): 糸×30
         Solid(64, -75, 68, -74);    // 小さな台
@@ -57,6 +58,8 @@ public static class BuildT2
 
         // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
         log += Depth("A1_T2") + "\n";
+        // 雰囲気 (§15): 作り直しで消えないよう StageAtmosphere をレシピで置く (2026-10-10)
+        log += Atmosphere("A1_T2") + "\n";
         return log + Finish();
     }
 }

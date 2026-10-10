@@ -1,4 +1,5 @@
 using UnityEngine;
+using Foe = NeverNight.StageBuild.GroundFoe;   // 種類 (GroundFoe() と同名なので別名で)
 using static NeverNight.StageBuild.Area1StageBuilder;
 
 // A1_W5 「回るゴンドラ」(W5, 観覧車の内側 x24..90 y180..234) + 「外れたゴンドラ」(W5g x93..108 y210..222, 二段ジャンプ)
@@ -182,10 +183,12 @@ public static class BuildW5
         // 案内文はチュートリアルの操作説明 (キーの説明) だけ残す。呼びかけ・攻略助言・場所の説明は削除 (2026-10-03 ユーザー決定, Docs/UI/UIAssignment.md「案内文」)
 
         // 敵を少し増やす (2026-10-03 PendingChanges 8: 部屋の意図に合わせる。位置は enemy_probe.cs の候補から)
-        Enemy(35f, 180.6f, name: "FloorWalker");         // いちばん下の床 (x29..41)。回る足場の上には置かない (読みの部屋)
+        GroundFoe(Foe.Chaser, 35f, 180f, "FloorChaser");  // 2026-10-10 (FloorWalker を置換)。いちばん下の床 (x29..41)。回る足場の上には置かない (読みの部屋)
 
         // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
         log += Depth("A1_W5") + "\n";
+        // 雰囲気 (§15): 作り直しで消えないよう StageAtmosphere をレシピで置く (2026-10-10)
+        log += Atmosphere("A1_W5") + "\n";
         return log + Finish();
     }
 }

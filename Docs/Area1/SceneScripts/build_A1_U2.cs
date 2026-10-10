@@ -1,5 +1,6 @@
 using System.Linq;
 using UnityEngine;
+using Foe = NeverNight.StageBuild.GroundFoe;   // 種類 (GroundFoe() と同名なので別名で)
 using static NeverNight.StageBuild.Area1StageBuilder;
 
 // A1_U2 「月明かりの遊歩道」(U2, 屋外) + 「売店の屋根」(U2a, 屋外・任意の登り) + 「裏方の通用口」(U2r, 床下) + 「裏方の倉庫」(U2r2, 突進の先)
@@ -161,11 +162,13 @@ public static class BuildU2
         // 案内文はチュートリアルの操作説明 (キーの説明) だけ残す。呼びかけ・攻略助言・場所の説明は削除 (2026-10-03 ユーザー決定, Docs/UI/UIAssignment.md「案内文」)
 
         // 敵を少し増やす (2026-10-03 PendingChanges 8: 部屋の意図に合わせる。位置は enemy_probe.cs の候補から)
-        Enemy(228f, 0.6f, name: "WalkWalker");           // 遊歩道の東寄りの床 (売店の前)
+        GroundFoe(Foe.Stomper, 228f, 0f, "WalkStomper");   // 2026-10-10 (WalkWalker を置換)。遊歩道の東寄りの床 (売店の前)
         Enemy(205f, 19f, true, name: "FlyerHigh");        // 遊歩道の上空 (足場の無い高さ)
 
         // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
         log += Depth("A1_U2") + "\n";
+        // 雰囲気 (§15): 作り直しで消えないよう StageAtmosphere をレシピで置く (2026-10-10)
+        log += Atmosphere("A1_U2") + "\n";
         return log + Finish();
     }
 }
