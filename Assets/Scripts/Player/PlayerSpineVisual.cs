@@ -224,7 +224,7 @@ public class PlayerSpineVisual : MonoBehaviour
             if (_landingActive && Exists(_landingAnimation))
             {
                 // 着地モーションを流し終えたら待機へ戻す
-                var current = _skeleton.AnimationState.GetCurrent(0);
+                var current = _skeleton.AnimationState.GetTrack(0);
                 if (_currentAnimation == _landingAnimation && current != null && current.IsComplete)
                     _landingActive = false;
                 else
