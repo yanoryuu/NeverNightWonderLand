@@ -679,8 +679,12 @@ public class PlayerController : MonoBehaviour
             return false;
 
         _airJumpUsed = true;
+        DoubleJumpCount++;
         return true;
     }
+
+    /// <summary>二段ジャンプした回数。見た目側 (PlayerSpineVisual) が増えたのを見てモーションを流す。</summary>
+    public int DoubleJumpCount { get; private set; }
 
     #endregion
 
@@ -1139,6 +1143,29 @@ public class PlayerController : MonoBehaviour
     public void EndAttack()
     {
         _isAttacking = false;
+    }
+
+    /// <summary>近接コンボで振っている段 (0 始まり)。近接コンボ中でなければ -1。</summary>
+    public int MeleeSwingIndex { get; private set; } = -1;
+
+    /// <summary>振っている段の長さ (sec)。見た目側がモーションの再生速度を合わせるのに使う。</summary>
+    public float MeleeSwingDuration { get; private set; }
+
+    /// <summary>振り始めた段の通し番号。同じモーションが続いても振り直しを見分けられるようにする。</summary>
+    public int MeleeSwingCount { get; private set; }
+
+    /// <summary>近接コンボの 1 段を振り始めた時に呼ぶ (AttackState)。</summary>
+    public void NotifyMeleeSwing(int comboIndex, float duration)
+    {
+        MeleeSwingIndex = comboIndex;
+        MeleeSwingDuration = duration;
+        MeleeSwingCount++;
+    }
+
+    /// <summary>近接コンボを終えた時に呼ぶ (AttackState.Exit)。</summary>
+    public void ClearMeleeSwing()
+    {
+        MeleeSwingIndex = -1;
     }
 
     /// <summary>

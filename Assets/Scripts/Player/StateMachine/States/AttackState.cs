@@ -31,6 +31,7 @@ public class AttackState : PlayerState
     public override void Exit()
     {
         Player.EndAttack();
+        Player.ClearMeleeSwing();
         Player.StartAirComboCooldown();
     }
 
@@ -40,6 +41,7 @@ public class AttackState : PlayerState
         _profile = Player.CurrentMeleeProfile;
         _timer = _profile.Duration;
         _hitDone = false;
+        Player.NotifyMeleeSwing(_comboIndex, _profile.Duration);
 
         _airStall = !Player.IsGrounded;
         if (_airStall)
