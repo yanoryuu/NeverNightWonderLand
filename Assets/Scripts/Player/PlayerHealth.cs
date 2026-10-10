@@ -87,6 +87,10 @@ public class PlayerHealth : MonoBehaviour, IDamageable
 
         _model.Damage(info.HpDamage);
 
+        // 攻撃を受けた手応えとして、パッドを一瞬だけ振動させる (とどめの一撃でも振動する)
+        var consts = _controller.Consts;
+        PadRumble.Play(consts.HurtRumbleLow, consts.HurtRumbleHigh, consts.HurtRumbleTime);
+
         if (_model.IsDepleted)
         {
             _sprite.enabled = true;
