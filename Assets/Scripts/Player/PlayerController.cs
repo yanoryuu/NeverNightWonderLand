@@ -1,6 +1,5 @@
 using R3;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using VContainer;
 
 /// <summary>
@@ -15,9 +14,6 @@ using VContainer;
 public class PlayerController : MonoBehaviour
 {
     #region Constants
-
-    // スティックの遊び(デッドゾーン)。これを超えたら入力ありとみなす
-    private const float StickDeadZone = 0.3f;
 
     // 裁断の先行入力を保持する時間 (sec)。攻撃モーション中に押しても直後に発動できる
     private const float FinisherBufferTime = 0.25f;
@@ -82,6 +78,7 @@ public class PlayerController : MonoBehaviour
     public ChargeRushChargeState ChargeRushChargeState { get; private set; }
     public ChargeRushState ChargeRushState { get; private set; }
     public ParryState ParryState { get; private set; }
+    public LadderState LadderState { get; private set; }
 
     #endregion
 
@@ -99,6 +96,7 @@ public class PlayerController : MonoBehaviour
     private bool _interactPressed;   // このフレームにインタラクト入力されたか
     private ItemSlot? _itemSlotPressed; // このフレームに押されたアイテムスロット (L1/[I] ホールド + 方向)
     private bool _grapplePressed;    // このフレームにグラップル入力されたか
+    private float _ladderGrabTimer;  // 梯子に掴まる「上 (下) + ジャンプ」のジャンプを押してからの残り猶予
 
     #endregion
 
@@ -132,6 +130,7 @@ public class PlayerController : MonoBehaviour
     private bool _isDead;
     private bool _isRunning;         // ダッシュ後に維持される走り状態
     private bool _airJumpUsed;       // 二段ジャンプ (赤ハサミ) を使用済みか。接地でリセット
+    private bool _glideBlocked;      // すり抜け床から降りた直後: ジャンプを一度離すまで滑空しない (PendingChanges 34)
     private bool _dashInvulnerable;  // 現在のダッシュが接触ダメージ無効 (回避) か
     private bool _skillInvulnerable; // スキル (横突進/大ジャンプ) 中の無敵。敵を貫通する
 
@@ -293,6 +292,7 @@ public class PlayerController : MonoBehaviour
         ChargeRushChargeState = new ChargeRushChargeState(this, _stateMachine);
         ChargeRushState = new ChargeRushState(this, _stateMachine);
         ParryState = new ParryState(this, _stateMachine);
+        LadderState = new LadderState(this, _stateMachine);
 
         // 初期化がすべて終わってから UI (Presenter) へ自身を公開する
         _playerRuntime?.Register(this);
@@ -319,11 +319,31 @@ public class PlayerController : MonoBehaviour
         InputDeviceTracker.Poll();
 
         if (GamePause.IsPaused)
+        {
+            PlayerInputSource.ClearLatchedPresses();
             return;
+        }
+
+        // ヒットストップ中は入力を読まない。止まっている間の押下は溜めておき、解除後の最初のフレームで読む
+        if (GamePause.IsHitStopped)
+        {
+            PlayerInputSource.LatchPresses();
+            return;
+        }
 
         ReadInput();
         UpdateTimers();
+        TryAttachArrivalLadder();
+
+        var velocityBeforeLogic = _rb.linearVelocity;
         _stateMachine.CurrentState.LogicUpdate();
+
+        // ステートの Enter (Update 側) が速度を直接書き換えた (突進・道具ダッシュ・糸移動など) なら、
+        // その速度はもう「自前の速度 + 前ステップの外力」ではない。次の物理ステップで外力を差し引いて
+        // クランプすると書いた速度が潰れるので、上乗せ記録を捨てる (ジャンプ系は LeaveGround で処理済み)
+        if (_appliedExternalVelocity != Vector2.zero && _rb.linearVelocity != velocityBeforeLogic)
+            _appliedExternalVelocity = Vector2.zero;
+
         UpdateFacing();
         UpdateAnimatorParameters();
     }
@@ -333,8 +353,10 @@ public class PlayerController : MonoBehaviour
         if (_consts == null)
             return;
 
+        RemoveAppliedExternalVelocity();
         UpdateGrounded();
         _stateMachine.CurrentState.PhysicsUpdate();
+        ApplyExternalVelocity();
     }
 
     private void OnDrawGizmosSelected()
@@ -373,114 +395,32 @@ public class PlayerController : MonoBehaviour
 
     private void ReadInput()
     {
-        _moveInput = 0f;
-        _verticalInput = 0f;
-        var jumpPressedThisFrame = false;
-        var dashPressedThisFrame = false;
-        var attackPressedThisFrame = false;
-        var specialPressedThisFrame = false;
-        var finisherPressedThisFrame = false;
-        var healPressedThisFrame = false;
-        var interactPressedThisFrame = false;
-        ItemSlot? itemSlotPressedThisFrame = null;
-        var grapplePressedThisFrame = false;
+        // 入力はハブ経由で読む (通常はキーボード/パッドの直読み。割り当ては PlayerInputSource.ReadDevice)。
+        // テストプレイ (エディタ/Development Build) では仮想入力・記録の再生に差し替えられる
+        var input = PlayerInputSource.ReadForPlayer();
 
-        var keyboard = Keyboard.current;
-        if (keyboard != null)
-        {
-            // [I] ホールド中は方向キーをアイテム選択に使う (移動・回復には反映しない)
-            var itemHeld = keyboard.iKey.isPressed;
-            if (itemHeld)
-            {
-                if (keyboard.sKey.wasPressedThisFrame || keyboard.downArrowKey.wasPressedThisFrame)
-                    itemSlotPressedThisFrame = ItemSlot.Down;
-                else if (keyboard.aKey.wasPressedThisFrame || keyboard.leftArrowKey.wasPressedThisFrame)
-                    itemSlotPressedThisFrame = ItemSlot.Left;
-                else if (keyboard.dKey.wasPressedThisFrame || keyboard.rightArrowKey.wasPressedThisFrame)
-                    itemSlotPressedThisFrame = ItemSlot.Right;
-            }
-            else
-            {
-                if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed) _moveInput -= 1f;
-                if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed) _moveInput += 1f;
-                if (keyboard.downArrowKey.isPressed || keyboard.sKey.isPressed) _verticalInput -= 1f;
-                healPressedThisFrame = keyboard.sKey.wasPressedThisFrame;
-            }
-
-            if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed) _verticalInput += 1f;
-
-            _jumpHeld = keyboard.spaceKey.isPressed;
-            jumpPressedThisFrame = keyboard.spaceKey.wasPressedThisFrame;
-            _dashHeld = keyboard.leftShiftKey.isPressed;
-
-            // キーボード: Shift = ダッシュ, J = 近接攻撃, K = 特殊攻撃, L = 裁断,
-            //             S = 回復, E = インタラクト, I ホールド+方向 = アイテム使用, F = 糸移動 (青)
-            dashPressedThisFrame = keyboard.leftShiftKey.wasPressedThisFrame;
-            attackPressedThisFrame = keyboard.jKey.wasPressedThisFrame;
-            specialPressedThisFrame = keyboard.kKey.wasPressedThisFrame;
-            finisherPressedThisFrame = keyboard.lKey.wasPressedThisFrame;
-            interactPressedThisFrame = keyboard.eKey.wasPressedThisFrame;
-            grapplePressedThisFrame = keyboard.fKey.wasPressedThisFrame;
-        }
-
-        var gamepad = Gamepad.current;
-        if (gamepad != null)
-        {
-            // L1 ホールド中は十字キーをアイテム選択に使う (移動・インタラクトには反映しない)。
-            // スティックでの移動は L1 ホールド中も有効
-            var itemHeld = gamepad.leftShoulder.isPressed;
-
-            // 慣性なしの移動に合わせ、スティックはデッドゾーンを超えたら最大入力として扱う
-            var stickX = gamepad.leftStick.x.ReadValue();
-            if (stickX < -StickDeadZone || (!itemHeld && gamepad.dpad.left.isPressed)) _moveInput = -1f;
-            else if (stickX > StickDeadZone || (!itemHeld && gamepad.dpad.right.isPressed)) _moveInput = 1f;
-
-            var stickY = gamepad.leftStick.y.ReadValue();
-            if (stickY > StickDeadZone || (!itemHeld && gamepad.dpad.up.isPressed)) _verticalInput = 1f;
-            else if (stickY < -StickDeadZone || (!itemHeld && gamepad.dpad.down.isPressed)) _verticalInput = -1f;
-
-            if (itemHeld)
-            {
-                if (gamepad.dpad.down.wasPressedThisFrame) itemSlotPressedThisFrame = ItemSlot.Down;
-                else if (gamepad.dpad.left.wasPressedThisFrame) itemSlotPressedThisFrame = ItemSlot.Left;
-                else if (gamepad.dpad.right.wasPressedThisFrame) itemSlotPressedThisFrame = ItemSlot.Right;
-            }
-
-            // ホロウナイト準拠の配置:
-            // ジャンプ = ×(A), 近接攻撃 = □(X), 特殊攻撃 = △(Y), 回復 = ○(B/フォーカス枠),
-            // ダッシュ = R2, 裁断 = R1(クイックキャスト枠), 糸移動 = L2(スーパーダッシュ枠),
-            // アイテム = L1 ホールド+十字, インタラクト = 上入力
-            _jumpHeld |= gamepad.buttonSouth.isPressed;
-            jumpPressedThisFrame |= gamepad.buttonSouth.wasPressedThisFrame;
-            dashPressedThisFrame |= gamepad.rightTrigger.wasPressedThisFrame;
-            _dashHeld |= gamepad.rightTrigger.isPressed;
-            attackPressedThisFrame |= gamepad.buttonWest.wasPressedThisFrame;
-            specialPressedThisFrame |= gamepad.buttonNorth.wasPressedThisFrame;
-            finisherPressedThisFrame |= gamepad.rightShoulder.wasPressedThisFrame;
-            healPressedThisFrame |= gamepad.buttonEast.wasPressedThisFrame;
-            grapplePressedThisFrame |= gamepad.leftTrigger.wasPressedThisFrame;
-
-            // インタラクト = 上入力 (十字キー上 / 左スティック上) — ホロウナイトと同じ
-            interactPressedThisFrame |= (!itemHeld && gamepad.dpad.up.wasPressedThisFrame)
-                                        || gamepad.leftStick.up.wasPressedThisFrame;
-        }
-
-        _moveInput = Mathf.Clamp(_moveInput, -1f, 1f);
+        _moveInput = Mathf.Clamp(input.Move, -1f, 1f);
+        _verticalInput = input.Vertical;
+        _jumpHeld = input.JumpHeld;
+        _dashHeld = input.DashHeld;
 
         // 先行入力(ジャンプ/裁断バッファ)を更新
-        if (jumpPressedThisFrame)
+        if (input.JumpPressed)
+        {
             _jumpBufferTimer = _consts.JumpBufferTime;
-        if (finisherPressedThisFrame)
+            _ladderGrabTimer = _consts.LadderGrabWindow;
+        }
+        if (input.FinisherPressed)
             _finisherBufferTimer = FinisherBufferTime;
 
         // 押されたフレームのみ true。各ステートが TryConsume で消費する
-        _dashPressed = dashPressedThisFrame;
-        _attackPressed = attackPressedThisFrame;
-        _specialPressed = specialPressedThisFrame;
-        _healPressed = healPressedThisFrame;
-        _interactPressed = interactPressedThisFrame;
-        _itemSlotPressed = itemSlotPressedThisFrame;
-        _grapplePressed = grapplePressedThisFrame;
+        _dashPressed = input.DashPressed;
+        _attackPressed = input.AttackPressed;
+        _specialPressed = input.SpecialPressed;
+        _healPressed = input.HealPressed;
+        _interactPressed = input.InteractPressed;
+        _itemSlotPressed = input.ItemSlot;
+        _grapplePressed = input.GrapplePressed;
     }
 
     private void UpdateTimers()
@@ -490,12 +430,17 @@ public class PlayerController : MonoBehaviour
         if (_finisherBufferTimer > 0f) _finisherBufferTimer -= dt;
         if (_dashCooldownTimer > 0f) _dashCooldownTimer -= dt;
         if (_specialCooldownTimer > 0f) _specialCooldownTimer -= dt;
+        if (_ladderGrabTimer > 0f) _ladderGrabTimer -= dt;
 
-        // 降り抜け中のすり抜け床: 時間が経ったら衝突を戻す
+        // 降り抜け中のすり抜け床: 体が床の上側に掛かっていなくなったら衝突を戻す
         for (var i = _dropThroughPlatforms.Count - 1; i >= 0; i--)
         {
-            _dropThroughTimers[i] -= dt;
-            if (_dropThroughTimers[i] > 0f)
+            _dropThroughTimers[i] += dt;
+            var platform = _dropThroughPlatforms[i];
+            if (platform != null && platform.enabled && platform.gameObject.activeInHierarchy
+                && (platform == _ladderPlatform   // 梯子に掴まっている間は上端の床と衝突しない
+                    || _dropThroughTimers[i] < DropThroughMinTime
+                    || (_dropThroughTimers[i] < DropThroughMaxTime && IsStillPassingThrough(platform))))
                 continue;
 
             if (_dropThroughPlatforms[i] != null)
@@ -568,6 +513,16 @@ public class PlayerController : MonoBehaviour
         _healPressed = false;
         return true;
     }
+
+    /// <summary>
+    /// インタラクト (会話・拠点・扉・レバーなど) を受け付けられるか。接地して止まっている時だけ
+    /// (待機ステート・横入力なし・横速度が小さい。コンベア等の外力のぶんは除く。梯子の上は不可)。
+    /// </summary>
+    public bool CanInteractNow =>
+        !_isDead && _ladder == null && _isGrounded
+        && _stateMachine.CurrentState == IdleState
+        && Mathf.Abs(_moveInput) < 0.01f
+        && Mathf.Abs(_rb.linearVelocity.x - _appliedExternalVelocity.x) <= _consts.InteractMaxSpeed;
 
     /// <summary>インタラクト入力を消費する (PlayerInteractor 用)。</summary>
     public bool TryConsumeInteract()
@@ -681,8 +636,11 @@ public class PlayerController : MonoBehaviour
     private readonly Collider2D[] _groundHits = new Collider2D[8];
     private readonly RaycastHit2D[] _groundCastHits = new RaycastHit2D[8];
 
-    // 降り抜け (下入力+ジャンプ) 中に衝突を無効化しているすり抜け床と残り時間
-    private const float DropThroughTime = 0.3f;
+    // 降り抜け (下入力+ジャンプ) 中に衝突を無効化しているすり抜け床と経過時間。
+    // 一定時間ではなく「体が床の形の上側に掛からなくなる (床の下へ抜けた・横へ出た・床が下へ過ぎた)」まで無効のままにする (IsStillPassingThrough)。
+    // 降りていくゴンドラ等は落下の出だしで体と一緒に下がるので、固定 0.3 秒だと抜け切る前に衝突が戻って乗り直していた (PendingChanges 34)
+    private const float DropThroughMinTime = 0.1f;  // 最低でもこの時間は無効 (抜け始めの重なり判定のゆらぎ対策)
+    private const float DropThroughMaxTime = 2.5f;  // 保険: これを過ぎたら重なっていても戻す
     private Collider2D[] _ownColliders;
     private readonly System.Collections.Generic.List<Collider2D> _dropThroughPlatforms = new();
     private readonly System.Collections.Generic.List<float> _dropThroughTimers = new();
@@ -693,6 +651,7 @@ public class PlayerController : MonoBehaviour
         _isGrounded = false;
         _groundNormal = Vector2.up;
         _groundedVelocityApplied = false;
+        _groundCollider = null;
 
         if (_launchTimer > 0f)
         {
@@ -728,6 +687,7 @@ public class PlayerController : MonoBehaviour
                 }
 
                 _isGrounded = true;
+                _groundCollider = _groundHits[i];
                 break;
             }
 
@@ -740,6 +700,10 @@ public class PlayerController : MonoBehaviour
                 _groundNormal = ground.normal;
                 if (wasGrounded || _rb.linearVelocity.y <= 0.1f)
                     _isGrounded = true;
+
+                // 真下の面を優先して「乗っている物」とする (動く足場の運搬・コンベアの判定用)
+                if (_isGrounded)
+                    _groundCollider = ground.collider;
             }
         }
 
@@ -766,7 +730,7 @@ public class PlayerController : MonoBehaviour
             _isRunning = false;
 
         var speed = _isRunning ? _consts.RunSpeed : _consts.MoveSpeed;
-        var velocityX = _moveInput * speed;
+        var velocityX = _moveInput * speed * _moveSpeedMultiplier;
 
         if (IsSnappedToGround)
             ApplyGroundedVelocity(velocityX);
@@ -805,6 +769,12 @@ public class PlayerController : MonoBehaviour
     /// </summary>
     public void LeaveGround()
     {
+        // 直前のステップで上乗せした外力 (動く足場の運搬・コンベア・風) をここで取り除いておく。
+        // ジャンプ等は Update 側 (ステートの Enter) で初速を書くため、取り除かずにおくと次の物理ステップ頭の
+        // RemoveAppliedExternalVelocity が「上乗せ前の速度 (接地中は張り付きの下向き) の範囲」へ y をクランプし、
+        // 初速が 0 に潰れる = 動く足場やコンベアの上でジャンプできない不具合になっていた (PendingChanges 32)
+        RemoveAppliedExternalVelocity();
+
         _isGrounded = false;
         _groundNormal = Vector2.up;
         _launchTimer = LaunchGraceTime;
@@ -878,7 +848,7 @@ public class PlayerController : MonoBehaviour
         }
 
         var velocityY = _rb.linearVelocity.y;
-        var gravity = _consts.Gravity;
+        var gravity = _consts.Gravity * _gravityMultiplier;
 
         if (velocityY < 0f)
             gravity *= _consts.FallGravityMultiplier;
@@ -886,10 +856,14 @@ public class PlayerController : MonoBehaviour
             gravity *= _consts.LowJumpMultiplier;
 
         velocityY -= gravity * Time.fixedDeltaTime;
-        velocityY = Mathf.Max(velocityY, -_consts.MaxFallSpeed);
+        velocityY = Mathf.Max(velocityY, -_consts.MaxFallSpeed * _maxFallSpeedMultiplier);
+
+        // すり抜け床から降りた時のジャンプ押しっぱなしでは滑空しない。一度離したら解除
+        if (!_jumpHeld)
+            _glideBlocked = false;
 
         // 滑空 (赤ハサミ): 落下中にジャンプ長押しで落下速度を抑える
-        if (velocityY < 0f && _jumpHeld && !_isGrounded
+        if (velocityY < 0f && _jumpHeld && !_glideBlocked && !_isGrounded
             && _progression != null && _progression.Has(ScissorUpgrade.Red))
         {
             velocityY = Mathf.Max(velocityY, -_consts.GlideFallSpeed);
@@ -1041,13 +1015,45 @@ public class PlayerController : MonoBehaviour
                 Physics2D.IgnoreCollision(own, platform, true);
 
             _dropThroughPlatforms.Add(platform);
-            _dropThroughTimers.Add(DropThroughTime);
+            _dropThroughTimers.Add(0f);
         }
 
         // 消費したジャンプ入力で跳ばないようにバッファを破棄する
         _jumpBufferTimer = 0f;
         _coyoteTimer = 0f;
+        // 降りるのに使ったジャンプの押しっぱなしで滑空しない (一度離して押し直すと滑空できる)
+        _glideBlocked = true;
+        ClearCarryMomentum();
         return true;
+    }
+
+    /// <summary>
+    /// 降り抜け中の床をまだ通り抜けている途中か (今衝突を戻すと床の上へ押し戻されるか)。
+    /// 床の bounds ではなく実際の形 (タイルマップなら 1 マスずつの形) と体を比べる。
+    /// すり抜け床は部屋の段が全部 1 つの TilemapCollider2D なので、bounds で比べると部屋のすり抜け床を全部抜けるまで
+    /// 衝突が戻らず、下の段の床まですり抜けていた (PendingChanges 41)。
+    /// 重なっていても押し出す向きが下 (体が床の厚みの中ほどより下) なら抜けたとみなす:
+    /// 一方通行の床は下へ押し返す接触を無視するので乗り直さず、すぐ下の段には着地できる。
+    /// </summary>
+    private bool IsStillPassingThrough(Collider2D platform)
+    {
+        const float margin = 0.02f;
+        foreach (var own in _ownColliders)
+        {
+            if (own == null || !own.enabled || own.isTrigger)
+                continue;
+
+            var d = Physics2D.Distance(own, platform);
+            if (!d.isValid || d.distance >= margin)
+                continue;
+
+            // normal は床の点 → 体の点。重なっている時は 2 点が入れ替わるので、体を押し出す向きは逆になる
+            var pushOut = d.isOverlapped ? -d.normal : d.normal;
+            if (pushOut.y > -0.5f)
+                return true;
+        }
+
+        return false;
     }
 
     /// <summary>コヨーテタイムを回復する (グラップルで壁に張り付いた時など)。</summary>
@@ -1060,8 +1066,13 @@ public class PlayerController : MonoBehaviour
     /// <summary>ジャンプ初速を与える(JumpState.Enter から呼ばれる)。</summary>
     public void Jump()
     {
+        // 地面からのジャンプ (コヨーテ中を含む。二段ジャンプは除く) なら、乗っていた動く足場の横の勢いを引き継ぐ
+        var fromGround = _isGrounded || _coyoteTimer > 0f;
+        if (fromGround)
+            StartCarryMomentum();
+
         LeaveGround();
-        _rb.linearVelocity = new Vector2(_rb.linearVelocity.x, _consts.JumpVelocity);
+        _rb.linearVelocity = new Vector2(_rb.linearVelocity.x, _consts.JumpVelocity * _jumpMultiplier);
         _jumpBufferTimer = 0f;
         _coyoteTimer = 0f;
     }
@@ -1079,6 +1090,421 @@ public class PlayerController : MonoBehaviour
     public PlayerState GetGroundedState()
     {
         return Mathf.Abs(_moveInput) > 0.01f ? MoveState : IdleState;
+    }
+
+    #endregion
+
+    #region Ladder (states 用)
+
+    // 梯子: 掴まっている梯子と、衝突を切っている上端のすり抜け床 (降り抜けの一覧に入れて接地判定からも外す)
+    private ClimbableLadder _ladder;
+    private Collider2D _ladderPlatform;
+    private bool _pendingArrivalLadder; // 入り口に着いた時、そこが梯子の途中なら掴まった状態で始める
+
+    /// <summary>梯子に掴まっているか。</summary>
+    public bool IsOnLadder => _ladder != null;
+
+    /// <summary>見た目の体の中心の x (Spine の骨格の原点はルートからずれている。向きで反転)。</summary>
+    public float BodyCenterX => _rb.position.x + _consts.VisualBodyOffsetX * _facing.Value;
+
+    /// <summary>梯子に掴まっている時のルートの x (見た目の体の中心が梯子の中心に来る位置)。</summary>
+    private float LadderRootX(ClimbableLadder ladder) => ladder.CenterX - _consts.VisualBodyOffsetX * _facing.Value;
+
+    /// <summary>足元の高さ (体のカプセルの下端)。</summary>
+    public float FeetY => _capsule != null
+        ? _rb.position.y + (_capsule.offset.y - _capsule.size.y * 0.5f) * Mathf.Abs(transform.lossyScale.y)
+        : _rb.position.y;
+
+    /// <summary>
+    /// 梯子に掴まれるか。途中: 範囲内で「上 + ジャンプ」(猶予内なら押す順は問わない)。
+    /// 上端: 上端の近くで「下 + ジャンプ」(すり抜け床から降りるより優先。跳んだ直後に下を押した場合も拾う)。
+    /// 上入力だけ (インタラクト・狙い) では掴まない。
+    /// </summary>
+    public bool TryGrabLadder(out ClimbableLadder ladder, out bool fromTop)
+    {
+        ladder = null;
+        fromTop = false;
+        if (_ladderGrabTimer <= 0f || _isDead)
+            return false;
+
+        var x = BodyCenterX; // 梯子との位置合わせは見た目の体の中心で
+        var feet = FeetY;
+        if (_verticalInput > 0.5f)
+        {
+            ladder = ClimbableLadder.FindGrabbable(x, feet);
+        }
+        else if (_verticalInput < -0.5f)
+        {
+            // 接地中は上端に立っている時だけ。空中 (跳んだ直後) は上端の少し上まで
+            ladder = _isGrounded
+                ? ClimbableLadder.FindTopNear(x, feet, 0.3f, 0.3f)
+                : ClimbableLadder.FindTopNear(x, feet, 0.3f, 2f);
+            fromTop = ladder != null;
+        }
+
+        if (ladder == null)
+            return false;
+
+        _ladderGrabTimer = 0f;
+        return true;
+    }
+
+    /// <summary>
+    /// 入り口に着いた時に呼ぶ (StageLoader)。次のフレームで、そこが梯子の途中ならそのまま掴まる
+    /// (梯子の途中に入り口がある縦の移動で、着いた瞬間に落ちないように)。
+    /// </summary>
+    public void AttachToLadderOnArrival() => _pendingArrivalLadder = true;
+
+    private void TryAttachArrivalLadder()
+    {
+        if (!_pendingArrivalLadder)
+            return;
+
+        _pendingArrivalLadder = false;
+        if (_isDead)
+            return;
+
+        // 梯子を登って来た場合、前のステージの梯子 (もう無効) に掴まったままになっている
+        var stale = _ladder != null && !_ladder.isActiveAndEnabled;
+        if (_ladder != null && !stale)
+            return;
+
+        var pos = (Vector2)transform.position;
+        _rb.position = pos;
+        // 入り口の位置は操作で合わせたものではないので、横の範囲を少し広く見る (ルートと体の中心のずれのぶん)
+        var ladder = ClimbableLadder.FindGrabbable(BodyCenterX, FeetY, 0.5f);
+        if (ladder == null)
+        {
+            if (stale)
+                _stateMachine.ChangeState(FallState);
+            return;
+        }
+
+        LadderState.SetLadder(ladder, false);
+        if (_stateMachine.CurrentState == LadderState)
+        {
+            // 梯子から梯子へ (同じステートなので掴み直しだけ)
+            EndLadder();
+            BeginLadder(ladder, false);
+        }
+        else
+        {
+            _stateMachine.ChangeState(LadderState);
+        }
+    }
+
+    /// <summary>梯子に掴まる (LadderState.Enter)。梯子の中心へ寄せ、上端の床との衝突を切る。</summary>
+    public void BeginLadder(ClimbableLadder ladder, bool fromTop)
+    {
+        _ladder = ladder;
+        _isRunning = false;
+        _isDashing = false;
+        _isAttacking = false;
+        _airJumpUsed = false;
+        _jumpBufferTimer = 0f;
+        _coyoteTimer = 0f;
+        _ladderGrabTimer = 0f;
+        ClearCarryMomentum();
+        RemoveAppliedExternalVelocity();
+
+        var pos = _rb.position;
+        pos.x = LadderRootX(ladder);
+        if (fromTop)
+        {
+            pos.y += ladder.Top - 0.35f - FeetY; // 上端の床の少し下へ (体は梯子に掛かる)
+            // 立っていた上端の床はこの後衝突を切るので、接地の判定も今ここで外す
+            // (次の物理ステップまで残ると「下りて地面に着いた」と判定されてすぐ梯子から降りてしまう)
+            _isGrounded = false;
+            _groundCollider = null;
+        }
+        _rb.position = pos;
+        transform.position = pos;
+        _rb.linearVelocity = Vector2.zero;
+
+        var platform = ladder.TopPlatform;
+        if (platform != null)
+        {
+            foreach (var own in _ownColliders)
+                Physics2D.IgnoreCollision(own, platform, true);
+            if (!_dropThroughPlatforms.Contains(platform))
+            {
+                _dropThroughPlatforms.Add(platform);
+                _dropThroughTimers.Add(0f);
+            }
+
+            _ladderPlatform = platform;
+        }
+    }
+
+    /// <summary>
+    /// 梯子から離れる (LadderState.Exit)。上端の床は降り抜けと同じ扱いに戻す
+    /// (体が床に掛かっていなくなったら衝突が戻る)。
+    /// </summary>
+    public void EndLadder()
+    {
+        if (_ladderPlatform != null)
+        {
+            var i = _dropThroughPlatforms.IndexOf(_ladderPlatform);
+            if (i >= 0)
+                _dropThroughTimers[i] = 0f;
+        }
+
+        _ladderPlatform = null;
+        _ladder = null;
+    }
+
+    /// <summary>梯子の上り下り (LadderState.PhysicsUpdate)。重力なし・横は梯子の中心に固定。</summary>
+    public void ApplyLadderClimb(ClimbableLadder ladder)
+    {
+        // 遷移で前のステージの梯子が無効になった (次の LogicUpdate で落下へ)。入り口へ置いた位置を梯子の列へ戻さない
+        if (ladder == null || !ladder.isActiveAndEnabled)
+            return;
+
+        var vertical = Mathf.Clamp(_verticalInput, -1f, 1f);
+        var vy = vertical * _consts.LadderClimbSpeed;
+
+        // 接地中に下へは押し込まない
+        if (vy < 0f && _isGrounded)
+            vy = 0f;
+
+        var x = LadderRootX(ladder);
+        if (Mathf.Abs(_rb.position.x - x) > 0.001f)
+            _rb.position = new Vector2(x, _rb.position.y);
+
+        _rb.linearVelocity = new Vector2(0f, vy);
+    }
+
+    /// <summary>ジャンプ入力 (先行入力) を梯子から離れるのに使う。消費したら true。</summary>
+    public bool TryConsumeLadderJump()
+    {
+        if (_jumpBufferTimer <= 0f)
+            return false;
+
+        // 消費する (離れた直後に空中ジャンプ・掴み直しへ化けないように)。JumpState は先行入力なしで跳ぶ
+        _jumpBufferTimer = 0f;
+        _coyoteTimer = 0f;
+        _ladderGrabTimer = 0f;
+        return true;
+    }
+
+    /// <summary>登り切って上端の床に立つ。床との衝突をすぐ戻して、足元を床の上面に合わせる。</summary>
+    public void StandOnLadderTop(ClimbableLadder ladder)
+    {
+        var platform = ladder.TopPlatform;
+        if (platform != null)
+        {
+            var i = _dropThroughPlatforms.IndexOf(platform);
+            if (i >= 0)
+            {
+                _dropThroughPlatforms.RemoveAt(i);
+                _dropThroughTimers.RemoveAt(i);
+            }
+
+            foreach (var own in _ownColliders)
+                Physics2D.IgnoreCollision(own, platform, false);
+        }
+
+        _ladderPlatform = null;
+        var pos = _rb.position;
+        pos.y += ladder.Top + 0.02f - FeetY;
+        _rb.position = pos;
+        transform.position = pos;
+        _rb.linearVelocity = Vector2.zero;
+        _isGrounded = true;
+        _coyoteTimer = _consts.CoyoteTime;
+    }
+
+    #endregion
+
+    #region External Forces (ギミック用)
+
+    // ギミック (コンベア・横風・水中・動く足場) からの外力と移動倍率。
+    // 移動は毎ステップ速度を直接指定する方式なので、Unity の Effector2D の力は上書きされて効かない。
+    // そこで「ステートが速度を決めた後に外力ぶんを上乗せし、次のステップの頭で取り除く」方式で足し込む。
+    // ステートからは外力抜きの速度 (自前の移動) だけが見える。ゾーンが無い時は何もしない (従来と同一挙動)。
+
+    private Vector2 _externalVelocity;        // 次の物理ステップで上乗せする外力 (AddExternalVelocity で積む・1ステップで消費)
+    private Vector2 _appliedExternalVelocity; // 直前のステップで実際に上乗せした量
+    private Vector2 _preExternalVelocity;     // 上乗せ前の (ステートが決めた) 速度
+    private Collider2D _groundCollider;       // 乗っている地面のコライダー (非接地なら null)
+
+    private readonly System.Collections.Generic.Dictionary<Object, PlayerMovementModifier> _movementModifiers = new();
+    private float _moveSpeedMultiplier = 1f;
+    private float _jumpMultiplier = 1f;
+    private float _gravityMultiplier = 1f;
+    private float _maxFallSpeedMultiplier = 1f;
+
+    /// <summary>乗っている地面のコライダー (非接地なら null)。コンベア・安全地点の判定に使う。</summary>
+    public Collider2D GroundCollider => _groundCollider;
+
+    /// <summary>
+    /// 次の物理ステップだけ外力速度を足す (コンベア・横風など)。効かせ続けるゾーンは毎 FixedUpdate 呼ぶこと。
+    /// 複数のゾーンから呼ばれた場合は合算される。
+    /// </summary>
+    public void AddExternalVelocity(Vector2 velocity) => _externalVelocity += velocity;
+
+    /// <summary>
+    /// 移動倍率 (水中の減速など) を登録する。source ごとに1つで、同じ source で呼ぶと上書き。
+    /// 複数登録された場合は積で効く。ゾーンから出たら <see cref="RemoveMovementModifier"/> で外すこと。
+    /// </summary>
+    public void SetMovementModifier(Object source, PlayerMovementModifier modifier)
+    {
+        if (source == null)
+            return;
+
+        _movementModifiers[source] = modifier;
+        RecalculateMovementModifiers();
+    }
+
+    public void RemoveMovementModifier(Object source)
+    {
+        if (source != null && _movementModifiers.Remove(source))
+            RecalculateMovementModifiers();
+    }
+
+    /// <summary>
+    /// 指定位置へ瞬間移動する (トゲ・穴から安全地点への復帰など)。速度と外力の持ち越しも消す。
+    /// </summary>
+    public void Teleport(Vector2 position)
+    {
+        transform.position = position;
+        _rb.position = position;
+        _rb.linearVelocity = Vector2.zero;
+        _externalVelocity = Vector2.zero;
+        _appliedExternalVelocity = Vector2.zero;
+        ClearCarryMomentum();
+        Physics2D.SyncTransforms();
+    }
+
+    private void RecalculateMovementModifiers()
+    {
+        _moveSpeedMultiplier = _jumpMultiplier = _gravityMultiplier = _maxFallSpeedMultiplier = 1f;
+        foreach (var m in _movementModifiers.Values)
+        {
+            _moveSpeedMultiplier *= m.MoveSpeed;
+            _jumpMultiplier *= m.Jump;
+            _gravityMultiplier *= m.Gravity;
+            _maxFallSpeedMultiplier *= m.MaxFallSpeed;
+        }
+    }
+
+    /// <summary>
+    /// 物理ステップの頭で、直前に上乗せした外力を取り除く。
+    /// 衝突で外力ぶんが打ち消されていた場合 (壁に押し付けられた等) でも、
+    /// ステートが決めた速度より大きく・逆向きにはならないようにクランプする。
+    /// </summary>
+    private void RemoveAppliedExternalVelocity()
+    {
+        if (_appliedExternalVelocity == Vector2.zero)
+            return;
+
+        var v = _rb.linearVelocity - _appliedExternalVelocity;
+        v.x = Mathf.Clamp(v.x, Mathf.Min(0f, _preExternalVelocity.x), Mathf.Max(0f, _preExternalVelocity.x));
+        v.y = Mathf.Clamp(v.y, Mathf.Min(0f, _preExternalVelocity.y), Mathf.Max(0f, _preExternalVelocity.y));
+        _rb.linearVelocity = v;
+        _appliedExternalVelocity = Vector2.zero;
+    }
+
+    /// <summary>
+    /// ステートの PhysicsUpdate の後に外力を上乗せする。ゾーンから積まれた外力に加え、
+    /// Kinematic の Rigidbody2D (動く足場・ピストン) に乗っていれば、その接地点の速度で運ぶ。
+    /// </summary>
+    private void ApplyExternalVelocity()
+    {
+        var external = _externalVelocity;
+        _externalVelocity = Vector2.zero;
+
+        // 梯子に掴まっている間は外力 (コンベア・風・足場の運搬) を受けない
+        if (_ladder != null)
+            return;
+
+        if (IsSnappedToGround && _groundCollider != null)
+        {
+            var body = _groundCollider.attachedRigidbody;
+            if (body != null && body.bodyType == RigidbodyType2D.Kinematic)
+            {
+                var feet = _groundCheck != null ? (Vector2)_groundCheck.position : _rb.position;
+                var carry = body.GetPointVelocity(feet);
+                external += carry;
+                _lastPlatformCarryX = carry.x;
+                _lastPlatformCarryTime = Time.fixedTime;
+            }
+        }
+
+        external.x += UpdateCarryMomentum();
+
+        if (external == Vector2.zero)
+            return;
+
+        _preExternalVelocity = _rb.linearVelocity;
+        _rb.linearVelocity += external;
+        _appliedExternalVelocity = external;
+    }
+
+    // ---- 動く足場から跳んだ時の横の勢い (PendingChanges 33)
+    // 地面からジャンプした瞬間に乗っていた Kinematic の足場の「横」速度だけを、空中で自然に消える勢いとして外力に足す。
+    // 縦の速度は足さない (ジャンプの高さは常に 3.33 / 二段 6.63)。自前の空中移動 (入力) はそのまま効くので、勢いに乗りつつ操作できる。
+    // 減り方: 最初の CarryHoldTime は全量 → CarryDecayTime で 0 へ (直線)。逆方向へ入力している間は CarryOpposeRate 倍速く減る。
+    // 着地・壁に当たる・空中ジャンプ/空中攻撃以外のステート (ダッシュ・壁張り付き・被弾・スキル等) に移った時点で消す。
+    // コンベア・横風は引き継がない (乗っている間だけの「床の効果」。跳んだら素の空中移動に戻る = Hollow Knight の感触)。
+    private const float CarryHoldTime = 0.12f;
+    private const float CarryDecayTime = 0.38f;
+    private const float CarryOpposeRate = 3f;
+    private const float CarryMinSpeed = 0.2f; // これ未満の足場の横速度 (縦リフトのゆらぎ等) は引き継がない
+
+    private float _lastPlatformCarryX;          // 最後に運ばれた足場の横速度
+    private float _lastPlatformCarryTime = -1f; // それを記録した物理時刻
+    private float _carryMomentumX;              // 引き継いだ横の勢い (0 = なし)
+    private float _carryElapsed;
+
+    /// <summary>引き継ぎ中の横の勢い (デバッグ・テスト用。減衰後の値)。</summary>
+    public float CarryMomentumX => _carryMomentumX == 0f ? 0f : _carryMomentumX * CarryFactor();
+
+    private void StartCarryMomentum()
+    {
+        ClearCarryMomentum();
+        // 足場に運ばれていたのが直前 (コヨーテの猶予内) なら引き継ぐ
+        if (Time.fixedTime - _lastPlatformCarryTime > _consts.CoyoteTime + Time.fixedDeltaTime * 1.5f)
+            return;
+        if (Mathf.Abs(_lastPlatformCarryX) < CarryMinSpeed)
+            return;
+
+        _carryMomentumX = _lastPlatformCarryX;
+    }
+
+    private void ClearCarryMomentum()
+    {
+        _carryMomentumX = 0f;
+        _carryElapsed = 0f;
+    }
+
+    private float CarryFactor() =>
+        _carryElapsed <= CarryHoldTime ? 1f : Mathf.Clamp01(1f - (_carryElapsed - CarryHoldTime) / CarryDecayTime);
+
+    /// <summary>物理ステップごとに勢いを進め、このステップで足す横速度を返す。</summary>
+    private float UpdateCarryMomentum()
+    {
+        if (_carryMomentumX == 0f)
+            return 0f;
+
+        var dir = _carryMomentumX > 0f ? 1 : -1;
+        var state = _stateMachine.CurrentState;
+        var airborne = state is AirborneState || state is AttackState;
+        if (!airborne || IsSnappedToGround || IsTouchingWall(dir))
+        {
+            ClearCarryMomentum();
+            return 0f;
+        }
+
+        _carryElapsed += Time.fixedDeltaTime * (IsPressingToward(-dir) ? CarryOpposeRate : 1f);
+        var factor = CarryFactor();
+        if (factor <= 0f)
+        {
+            ClearCarryMomentum();
+            return 0f;
+        }
+
+        return _carryMomentumX * factor;
     }
 
     #endregion
@@ -1182,6 +1608,9 @@ public class PlayerController : MonoBehaviour
     {
         var center = GetAttackCenter(profile, _facing.Value);
         var hits = Physics2D.OverlapBoxAll(center, profile.BoxSize, 0f, _consts.AttackTargetLayer);
+
+        // 当たり判定に入った物は箱・隠し壁のセル・能力ブロックのセルも含めて全部に当てる
+        // (PendingChanges 29: 当たり判定内の箱は同時に壊れてよい)
 
         var anyHit = false;
         foreach (var hit in hits)
@@ -1382,9 +1811,11 @@ public class PlayerController : MonoBehaviour
     /// </summary>
     private void UpdateAnimatorParameters()
     {
-        _animator.SetFloat(ParamSpeed, Mathf.Abs(_rb.linearVelocity.x));
-        _animator.SetFloat(ParamYVelocity, _rb.linearVelocity.y);
-        _animator.SetBool(ParamIsGrounded, _isGrounded);
+        // 外力 (コンベア・風・足場の運搬) のぶんは除く。立ち止まって運ばれている時に走りモーションにしない
+        var velocity = _rb.linearVelocity - _appliedExternalVelocity;
+        _animator.SetFloat(ParamSpeed, Mathf.Abs(velocity.x));
+        _animator.SetFloat(ParamYVelocity, velocity.y);
+        _animator.SetBool(ParamIsGrounded, _isGrounded || _ladder != null); // 梯子の上り下りは専用の絵が無いので立ちの絵
         _animator.SetBool(ParamIsDashing, _isDashing);
         _animator.SetBool(ParamIsAttacking, _isAttacking);
         if (_hasIsHurtParam)

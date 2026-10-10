@@ -3,13 +3,16 @@ using TMPro;
 using UnityEngine;
 
 /// <summary>
-/// ホーム画面 (拠点で開く)。SavePoint のインタラクトから開かれ、開いた時点で HP は自動で全回復する。
-/// アイテム補充 (糸を消費して再生成) / 攻撃方法の入れ替え / セーブ (確認あり) を行う。
+/// ホーム画面 (拠点で開く)。SavePoint のインタラクトから開かれ、開いた時点で HP は自動で全回復し、
+/// このプレイのセーブを拠点の位置で更新する (休んだ時のセーブ, PendingChanges 47)。
+/// アイテム補充 (糸を消費して再生成) / 攻撃方法の入れ替え / セーブ (セーブスロット画面で記録先を選ぶ) を行う。
 /// HomeUI シーン (Additive) に置かれ、UI はプレハブ上で事前配置した MenuPanelView を参照する。
 /// </summary>
 public class HomeUIView : MonoBehaviour
 {
-    private enum Page { Main, Attacks, SaveConfirm }
+    private enum Page { Main, Attacks }
+
+    private const int SaveIndex = 2; // メインページの「セーブ」の位置
 
     [Tooltip("メニューに使う日本語フォント")]
     [SerializeField] private TMP_FontAsset _font;
@@ -45,9 +48,14 @@ public class HomeUIView : MonoBehaviour
         _saveBridge = playerGo.GetComponent<PlayerSaveBridge>();
         _savePoint = savePoint;
 
-        // 拠点に入ったら自動で全回復し、倒した敵の記録をクリアする (以後のステージ入りで復活)
+        // 拠点に入ったら自動で全回復し、倒した敵と壊した木箱の記録をクリアする (以後のステージ入りで復活)
         HealFull();
         DefeatedEnemyRegistry.Clear();
+        BrokenCrateRegistry.Clear();
+        PlayerSaveBridge.RememberBench(savePoint); // 死亡リトライの復帰先 (PendingChanges 39)
+        // 休んだらこのプレイのセーブを拠点の位置で更新する (PendingChanges 47。メニューの「セーブ」は別のスロットへ記録したい時用)
+        if (_saveBridge != null && _saveBridge.SaveOnRest(savePoint))
+            Notifier.Notify("セーブしました");
 
         GamePause.Push();
         ShowMain();
@@ -70,7 +78,10 @@ public class HomeUIView : MonoBehaviour
 
     #region Pages
 
-    private void ShowMain()
+    private void ShowMain() => ShowMain(-1);
+
+    /// <summary>メインページ。selectIndex で選択位置を指定する (-1 = 先頭)。</summary>
+    private void ShowMain(int selectIndex)
     {
         _page = Page.Main;
         _menu.SetTitle("拠点");
@@ -84,9 +95,9 @@ public class HomeUIView : MonoBehaviour
         {
             new($"アイテムを補充する (糸 {refillCost})", Refill, inventory != null),
             new("攻撃方法を入れ替える", ShowAttacks, _player != null && _player.AttackLoadout != null),
-            new("セーブ", ShowSaveConfirm, _saveBridge != null),
+            new("セーブ", OpenSaveSlots, _saveBridge != null),
             new("閉じる", CloseMenu),
-        });
+        }, selectIndex);
     }
 
     /// <summary>HP を全回復する (拠点画面を開いた時に自動で呼ばれる)。満タンなら何もしない。</summary>
@@ -144,32 +155,35 @@ public class HomeUIView : MonoBehaviour
         _menu.SetEntries(entries);
     }
 
-    private void ShowSaveConfirm()
+    /// <summary>
+    /// セーブスロット画面 (SaveSlotUI シーン) で記録先を選ぶ。選んでいる間はホーム画面を隠す
+    /// (ポーズは掛けたまま)。データのあるスロットはスロット画面側で上書き確認をする。
+    /// </summary>
+    private void OpenSaveSlots()
     {
-        _page = Page.SaveConfirm;
-        _menu.SetTitle("セーブ");
-        _menu.SetBody("ここまでの進行をセーブしますか?");
-        _menu.SetEntries(new List<MenuPanelView.Entry>
+        var slots = FindFirstObjectByType<SaveSlotView>();
+        if (slots == null)
         {
-            new("はい", DoSave),
-            new("いいえ", ShowMain),
-        });
-    }
-
-    private void DoSave()
-    {
-        var data = _saveBridge.Collect();
-
-        // 復帰位置は拠点の位置にする
-        if (_savePoint != null)
-        {
-            data.posX = _savePoint.transform.position.x;
-            data.posY = _savePoint.transform.position.y + 0.5f;
+            Debug.LogWarning("[HomeUIView] SaveSlotView が見つかりません。SaveSlotUI シーンがロードされているか確認してください。", this);
+            return;
         }
 
-        SaveSystem.Save(data);
-        Notifier.Notify("セーブしました");
-        ShowMain();
+        _menu.Close();
+        slots.Open(SaveSlotView.Mode.Save, slot =>
+        {
+            SaveSystem.ActiveSlot = slot;
+            SaveSystem.Save(slot, _saveBridge.CollectAt(_savePoint)); // 復帰位置は拠点の位置
+            GameSession.SaveBelongsToRun = true;
+            Notifier.Notify("セーブしました");
+            ReopenMain();
+        }, ReopenMain, showBackground: true);
+    }
+
+    /// <summary>スロット画面から戻った時: 選択位置は「セーブ」のまま。</summary>
+    private void ReopenMain()
+    {
+        ShowMain(SaveIndex);
+        _menu.Open();
     }
 
     #endregion

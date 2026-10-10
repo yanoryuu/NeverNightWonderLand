@@ -21,6 +21,9 @@ public class UILifetimeScope : LifetimeScope
     [SerializeField] private FinisherPromptView _finisherPromptView;
     [SerializeField] private MinimapView _minimapView;
 
+    [Tooltip("ミニマップが描く地図データ (全体マップと同じもの)")]
+    [SerializeField] private MapData _mapData;
+
     protected override void Configure(IContainerBuilder builder)
     {
         if (_hpBarView != null)
@@ -65,8 +68,12 @@ public class UILifetimeScope : LifetimeScope
             builder.RegisterEntryPoint<FinisherPromptPresenter>();
         }
 
-        // ミニマップは Presenter を持たないが、PlayerRuntime の注入 ([Inject]) が必要
-        if (_minimapView != null)
-            builder.RegisterComponent(_minimapView);
+        // ミニマップは全体マップと同じ地図データで描く (Issue #5 Q5)
+        if (_minimapView != null && _mapData != null)
+        {
+            builder.RegisterInstance(_mapData);
+            builder.RegisterComponent(_minimapView).As<IMinimapView>();
+            builder.RegisterEntryPoint<MinimapPresenter>();
+        }
     }
 }

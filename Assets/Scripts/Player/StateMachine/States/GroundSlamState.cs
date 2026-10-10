@@ -30,6 +30,10 @@ public class GroundSlamState : PlayerState
         if (Player.TryDropThroughPlatform())
             return;
 
+        // 足元が落下攻撃ブロックなら砕いて落下を続ける (ブロックは 1 セルずつなので、積んだ段を順に突き抜ける)
+        if (BreakBelow())
+            return;
+
         // 着地衝撃: 足元中心の範囲攻撃
         Player.PerformAttackHit(Player.Consts.SlamAttack);
         StateMachine.ChangeState(Player.GetGroundedState());
@@ -42,16 +46,22 @@ public class GroundSlamState : PlayerState
         BreakBelow();
     }
 
-    /// <summary>足元の SkillBreakable(落下攻撃) を砕く。砕けたブロックは当たりが消え、そのまま落下が続く。</summary>
-    private void BreakBelow()
+    /// <summary>
+    /// 足元の SkillBreakable(落下攻撃) を砕く。砕けたブロックは当たりが消え、そのまま落下が続く。
+    /// 1 つでも砕けたら true。
+    /// </summary>
+    private bool BreakBelow()
     {
+        var broke = false;
         var center = (Vector2)Player.transform.position + Player.Consts.SlamBreakOffset;
         var hits = Physics2D.OverlapBoxAll(center, Player.Consts.SlamBreakSize, 0f,
             Player.Consts.GroundLayer);
         foreach (var hit in hits)
         {
-            if (hit.TryGetComponent<SkillBreakable>(out var breakable))
-                breakable.TryBreak(PlayerSkill.GroundSlam);
+            if (hit.TryGetComponent<SkillBreakable>(out var breakable) && breakable.TryBreak(PlayerSkill.GroundSlam, Player.transform.position))
+                broke = true;
         }
+
+        return broke;
     }
 }

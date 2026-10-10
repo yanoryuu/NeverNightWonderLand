@@ -1,0 +1,3405 @@
+{
+ "note": "Area1 layout. 1 map cell = 3 world units. world y=0 is the surface ground line (cellY=34). Underground is negative y. Tile cell = 1 world unit.",
+ "scale": 3,
+ "groundCellY": 34,
+ "scenes": {
+  "A1_T1": {
+   "name": "目覚めの楽屋",
+   "rooms": [
+    "T1",
+    "T1s"
+   ]
+  },
+  "A1_T2": {
+   "name": "崩れた搬入路",
+   "rooms": [
+    "T2",
+    "T2s"
+   ]
+  },
+  "A1_T3": {
+   "name": "縦の衣装ラック",
+   "rooms": [
+    "T3",
+    "T3b",
+    "T3c"
+   ]
+  },
+  "A1_T4": {
+   "name": "チケット売り場の廊下",
+   "rooms": [
+    "T4"
+   ]
+  },
+  "A1_B1": {
+   "name": "",
+   "rooms": [
+    "B1",
+    "S1"
+   ]
+  },
+  "A1_H": {
+   "name": "回転木馬の待合所",
+   "rooms": [
+    "H",
+    "H2",
+    "Hs1",
+    "Hs2"
+   ]
+  },
+  "A1_C1": {
+   "name": "灯の大扉の回廊",
+   "rooms": [
+    "C1"
+   ]
+  },
+  "A1_U1": {
+   "name": "メリーの吹き抜け",
+   "rooms": [
+    "U1",
+    "U2e"
+   ]
+  },
+  "A1_U2": {
+   "name": "月明かりの遊歩道",
+   "rooms": [
+    "U2",
+    "U2a",
+    "U2r",
+    "U2r2"
+   ]
+  },
+  "A1_U3": {
+   "name": "コーヒーカップ広場",
+   "rooms": [
+    "U3",
+    "U3s"
+   ]
+  },
+  "A1_U4": {
+   "name": "観覧車の足元",
+   "rooms": [
+    "U4",
+    "Uh"
+   ]
+  },
+  "A1_W1": {
+   "name": "観覧車の乗り場",
+   "rooms": [
+    "W1"
+   ]
+  },
+  "A1_W2": {
+   "name": "支柱の足場",
+   "rooms": [
+    "W2",
+    "W2s"
+   ]
+  },
+  "A1_W3": {
+   "name": "整備用リフト",
+   "rooms": [
+    "W3"
+   ]
+  },
+  "A1_W4": {
+   "name": "風の外周",
+   "rooms": [
+    "W4",
+    "W4r"
+   ]
+  },
+  "A1_W5": {
+   "name": "回るゴンドラ",
+   "rooms": [
+    "W5",
+    "W5g"
+   ]
+  },
+  "A1_W6": {
+   "name": "中心軸の機械室",
+   "rooms": [
+    "W6",
+    "W7"
+   ]
+  },
+  "A1_W8": {
+   "name": "てっぺんへの梯子",
+   "rooms": [
+    "W8"
+   ]
+  },
+  "A1_MB1": {
+   "name": "ゴンドラの道化",
+   "rooms": [
+    "MB1",
+    "S2"
+   ]
+  },
+  "A1_D1": {
+   "name": "配管の縦穴",
+   "rooms": [
+    "D1"
+   ]
+  },
+  "A1_D2": {
+   "name": "搬送ベルトの通路",
+   "rooms": [
+    "D2",
+    "D2w"
+   ]
+  },
+  "A1_D5": {
+   "name": "蒸気管の迷路",
+   "rooms": [
+    "D5",
+    "D6"
+   ]
+  },
+  "A1_D3": {
+   "name": "歯車の胃袋",
+   "rooms": [
+    "D3",
+    "D3a",
+    "D7"
+   ]
+  },
+  "A1_D4": {
+   "name": "ピストンの間",
+   "rooms": [
+    "D4",
+    "D4s",
+    "D8"
+   ]
+  },
+  "A1_MB2": {
+   "name": "歯車の重馬",
+   "rooms": [
+    "MB2",
+    "S3"
+   ]
+  },
+  "A1_AB": {
+   "name": "噴水下の大音楽堂",
+   "rooms": [
+    "AB",
+    "ST"
+   ]
+  },
+  "A1_FP": {
+   "name": "噴水広場",
+   "rooms": [
+    "FP",
+    "FP2"
+   ]
+  }
+ },
+ "rooms": [
+  {
+   "id": "T1",
+   "zone": "T",
+   "name": "目覚めの楽屋",
+   "scene": "A1_T1",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 3,
+     "cellY": 60,
+     "cellW": 12,
+     "cellH": 7,
+     "world": {
+      "xMin": 9,
+      "xMax": 45,
+      "yMin": -99,
+      "yMax": -78
+     }
+    }
+   ],
+   "intent": "何も起きない安全な部屋で、移動とジャンプだけを試させる。左上の衣装棚は普通のジャンプで届く“最初の寄り道”。",
+   "features": [
+    "スタート地点",
+    "低い段差が2つ",
+    "衣装棚へのジャンプ"
+   ]
+  },
+  {
+   "id": "T1s",
+   "zone": "T",
+   "name": "衣装棚の奥",
+   "scene": "A1_T1",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 4,
+     "cellY": 53,
+     "cellW": 5,
+     "cellH": 5,
+     "world": {
+      "xMin": 12,
+      "xMax": 27,
+      "yMin": -72,
+      "yMax": -57
+     }
+    }
+   ],
+   "intent": "寄り道の先にはご褒美がある、という約束を最初に見せる部屋。中身は物語の手がかりで、強さには関わらないので取り逃しても困らない。",
+   "features": [
+    "日誌「閉園しなかった夜」その1"
+   ]
+  },
+  {
+   "id": "T2",
+   "zone": "T",
+   "name": "崩れた搬入路",
+   "scene": "A1_T2",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 16,
+     "cellY": 61,
+     "cellW": 14,
+     "cellH": 6,
+     "world": {
+      "xMin": 48,
+      "xMax": 90,
+      "yMin": -99,
+      "yMax": -81
+     }
+    },
+    {
+     "cellX": 21,
+     "cellY": 67,
+     "cellW": 4,
+     "cellH": 3,
+     "world": {
+      "xMin": 63,
+      "xMax": 75,
+      "yMin": -108,
+      "yMax": -99
+     }
+    }
+   ],
+   "intent": "回避ダッシュで床の穴を越える。落ちても穴の底から歩いて戻れるので、失敗が怖くない。弱い敵1体で攻撃を教える。左上の壁にひびが入っていて、攻撃で壊せる隠し壁の初出になる。",
+   "features": [
+    "回避ダッシュで穴越え",
+    "弱い敵×1",
+    "ひびの入った壁"
+   ]
+  },
+  {
+   "id": "T2s",
+   "zone": "T",
+   "name": "忘れ物の棚",
+   "scene": "A1_T2",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 17,
+     "cellY": 54,
+     "cellW": 6,
+     "cellH": 5,
+     "world": {
+      "xMin": 51,
+      "xMax": 69,
+      "yMin": -75,
+      "yMax": -60
+     }
+    }
+   ],
+   "intent": "「怪しい壁は叩け」を教える最初の隠し部屋。中身はすぐ拠点で使える額の糸にして、見つけた得をすぐ実感させる。",
+   "features": [
+    "糸×30"
+   ]
+  },
+  {
+   "id": "T3",
+   "zone": "T",
+   "name": "縦の衣装ラック",
+   "scene": "A1_T3",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 31,
+     "cellY": 47,
+     "cellW": 7,
+     "cellH": 20,
+     "world": {
+      "xMin": 93,
+      "xMax": 114,
+      "yMin": -99,
+      "yMax": -39
+     }
+    }
+   ],
+   "intent": "左右交互の足場を登る縦移動の練習。天井に橙色の点検口が見えていて、後で地上から落下攻撃で降りてくる近道になることを予告する。",
+   "features": [
+    "交互の足場で登る",
+    "敵×1(足場の上)",
+    "天井の点検口(上から開く)"
+   ]
+  },
+  {
+   "id": "T3b",
+   "zone": "T",
+   "name": "針だまりの小部屋",
+   "scene": "A1_T3",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 39,
+     "cellY": 61,
+     "cellW": 7,
+     "cellH": 6,
+     "world": {
+      "xMin": 117,
+      "xMax": 138,
+      "yMin": -99,
+      "yMax": -81
+     }
+    }
+   ],
+   "intent": "トゲ床を短いジャンプで越える小さな試験。ここで初めてダメージを受ける想定なので、回復の操作を案内する。",
+   "features": [
+    "トゲ床",
+    "回復の案内",
+    "道具「まち針」"
+   ]
+  },
+  {
+   "id": "T3c",
+   "zone": "T",
+   "name": "楽屋裏の勝手口",
+   "scene": "A1_T3",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 47,
+     "cellY": 62,
+     "cellW": 6,
+     "cellH": 5,
+     "world": {
+      "xMin": 141,
+      "xMax": 159,
+      "yMin": -99,
+      "yMax": -84
+     }
+    }
+   ],
+   "intent": "開かない勝手口がある行き止まり。最初は「何かありそう」と思わせるだけで、地下ルートの配電室から梯子を下ろすと、地下とチュートリアルをつなぐ近道になる。",
+   "features": [
+    "床の跳ね上げ戸(地下側から開く)"
+   ]
+  },
+  {
+   "id": "T4",
+   "zone": "T",
+   "name": "チケット売り場の廊下",
+   "scene": "A1_T4",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 39,
+     "cellY": 48,
+     "cellW": 15,
+     "cellH": 6,
+     "world": {
+      "xMin": 117,
+      "xMax": 162,
+      "yMin": -60,
+      "yMax": -42
+     }
+    }
+   ],
+   "intent": "重装甲の敵でブレイク→裁断を教え、ここまでの操作を総ざらいする。奥にボス前の仮眠ベンチ(セーブ)を置き、負けてもすぐ再挑戦できるようにする。",
+   "features": [
+    "重装甲の敵×1",
+    "ブレイク→裁断の案内",
+    "セーブ(ボス前)"
+   ]
+  },
+  {
+   "id": "B1",
+   "zone": "B",
+   "name": "",
+   "scene": "A1_B1",
+   "transport": null,
+   "outdoor": false,
+   "boss": "ボス",
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 55,
+     "cellY": 44,
+     "cellW": 14,
+     "cellH": 11,
+     "world": {
+      "xMin": 165,
+      "xMax": 207,
+      "yMin": -63,
+      "yMax": -30
+     }
+    }
+   ],
+   "intent": "基礎の卒業試験。平らで広い四角い部屋にして、地形ではなくボスの動きを読むことに集中させる。突進→回避、大振り→ブレイクの2パターンが中心。",
+   "features": [
+    "ボス「グラミネ」(1戦目: HP半分で撤退)",
+    "入ると扉が閉まる",
+    "撃破でスピーカー室が開く"
+   ]
+  },
+  {
+   "id": "S1",
+   "zone": "B",
+   "name": "第1スピーカー室",
+   "scene": "A1_B1",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": true,
+   "rects": [
+    {
+     "cellX": 70,
+     "cellY": 46,
+     "cellW": 6,
+     "cellH": 7,
+     "world": {
+      "xMin": 210,
+      "xMax": 228,
+      "yMin": -57,
+      "yMax": -36
+     }
+    }
+   ],
+   "intent": "「鳴りやまない音楽の元を壊す」という目的を初めて見せる部屋。壊すと音楽の一部が止み、拠点の大扉の灯が1つ点く。",
+   "features": [
+    "スピーカー①を破壊",
+    "大扉の灯 1/3"
+   ]
+  },
+  {
+   "id": "H",
+   "zone": "H",
+   "name": "回転木馬の待合所",
+   "scene": "A1_H",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 77,
+     "cellY": 42,
+     "cellW": 19,
+     "cellH": 12,
+     "world": {
+      "xMin": 231,
+      "xMax": 288,
+      "yMin": -60,
+      "yMax": -24
+     }
+    }
+   ],
+   "intent": "エリアの中心。上(地上)・下(地下)・右(大扉)の3方向が一目で見える十字路にして、攻める順番をプレイヤーに選ばせる。天井の空色ブロックと床の橙ブロックは“今は届かない”ものとして最初から見せる。",
+   "features": [
+    "セーブ",
+    "ショップ(道具・糸)",
+    "鍛冶屋(中ボスどちらかの撃破後に赤ハサミ=二段ジャンプ、攻撃強化)",
+    "空色の天井(大ジャンプ)",
+    "橙の床(落下攻撃)"
+   ]
+  },
+  {
+   "id": "H2",
+   "zone": "H",
+   "name": "迷子センター",
+   "scene": "A1_H",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 70,
+     "cellY": 36,
+     "cellW": 9,
+     "cellH": 5,
+     "world": {
+      "xMin": 210,
+      "xMax": 237,
+      "yMin": -21,
+      "yMax": -6
+     }
+    }
+   ],
+   "intent": "拠点の真上の静かな部屋。迷子の人形(NPC)が、地上と地下それぞれの見どころと地図売りの居場所を教えてくれる。戦闘のない部屋で一息つかせ、次に向かう先を選ぶ材料を渡す。",
+   "features": [
+    "NPC 迷子の人形",
+    "日誌 その2",
+    "糸×50(最初に話した時)"
+   ]
+  },
+  {
+   "id": "Hs1",
+   "zone": "H",
+   "name": "屋根裏の回転灯",
+   "scene": "A1_H",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 91,
+     "cellY": 38,
+     "cellW": 6,
+     "cellH": 3,
+     "world": {
+      "xMin": 273,
+      "xMax": 291,
+      "yMin": -21,
+      "yMax": -12
+     }
+    }
+   ],
+   "intent": "拠点の天井裏。別エリアで大ジャンプを覚えて戻ってきた時のご褒美で、拠点に戻るたびに見上げていた場所が開く。",
+   "features": [
+    "糸の大束×150"
+   ]
+  },
+  {
+   "id": "Hs2",
+   "zone": "H",
+   "name": "地下金庫",
+   "scene": "A1_H",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 90,
+     "cellY": 55,
+     "cellW": 6,
+     "cellH": 4,
+     "world": {
+      "xMin": 270,
+      "xMax": 288,
+      "yMin": -75,
+      "yMax": -63
+     }
+    }
+   ],
+   "intent": "拠点の床下の金庫。落下攻撃を覚えたら真っ先に試したくなる位置に置く。",
+   "features": [
+    "ハートピン③"
+   ]
+  },
+  {
+   "id": "C1",
+   "zone": "H",
+   "name": "灯の大扉の回廊",
+   "scene": "A1_C1",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 97,
+     "cellY": 48,
+     "cellW": 8,
+     "cellH": 5,
+     "world": {
+      "xMin": 291,
+      "xMax": 315,
+      "yMin": -57,
+      "yMax": -42
+     }
+    }
+   ],
+   "intent": "3つの灯が並ぶ大扉と、エリアボス前のベンチ。スピーカーを壊すたびに灯が1つずつ点き、進み具合が目で分かる。地下ルートの帰りのエレベーターもここの真下に着く。",
+   "features": [
+    "大扉(スピーカー3つで開く)",
+    "セーブ(エリアボス前)",
+    "エレベーターの到着口"
+   ]
+  },
+  {
+   "id": "U1",
+   "zone": "U",
+   "name": "メリーの吹き抜け",
+   "scene": "A1_U1",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 84,
+     "cellY": 30,
+     "cellW": 6,
+     "cellH": 11,
+     "world": {
+      "xMin": 252,
+      "xMax": 270,
+      "yMin": -21,
+      "yMax": 12
+     }
+    }
+   ],
+   "intent": "拠点から夜空へ出る縦穴。登り切った瞬間に視界が一気に開ける演出で、地上ルートの開放感を強調する。",
+   "features": [
+    "回転木馬の支柱を登る",
+    "ジップラインの到着点"
+   ]
+  },
+  {
+   "id": "U2",
+   "zone": "U",
+   "name": "月明かりの遊歩道",
+   "scene": "A1_U2",
+   "transport": null,
+   "outdoor": true,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 50,
+     "cellY": 25,
+     "cellW": 33,
+     "cellH": 9,
+     "world": {
+      "xMin": 150,
+      "xMax": 249,
+      "yMin": 0,
+      "yMax": 27
+     }
+    }
+   ],
+   "intent": "横に長く開けた道で、浮遊する敵との空中戦を教える。西の遠くに観覧車(目的地)を最初から見せる。東は柵越しに噴水が見えるが開かない=最後に来る場所の予告。",
+   "features": [
+    "浮遊する敵×3",
+    "売店の屋根への足場",
+    "床の切れ目(裏方の通用口へ)"
+   ]
+  },
+  {
+   "id": "U2a",
+   "zone": "U",
+   "name": "売店の屋根",
+   "scene": "A1_U2",
+   "transport": null,
+   "outdoor": true,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 74,
+     "cellY": 15,
+     "cellW": 9,
+     "cellH": 8,
+     "world": {
+      "xMin": 222,
+      "xMax": 249,
+      "yMin": 33,
+      "yMax": 57
+     }
+    }
+   ],
+   "intent": "屋根伝いに登る任意ルート。足場の上で浮遊敵に狙われる緊張感があり、取れたら得をした気分になる道具を置く。",
+   "features": [
+    "屋根の足場",
+    "浮遊する敵×1",
+    "道具「ボビン爆弾」"
+   ]
+  },
+  {
+   "id": "U2r",
+   "zone": "U",
+   "name": "裏方の通用口",
+   "scene": "A1_U2",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 52,
+     "cellY": 35,
+     "cellW": 7,
+     "cellH": 3,
+     "world": {
+      "xMin": 156,
+      "xMax": 177,
+      "yMin": -12,
+      "yMax": -3
+     }
+    }
+   ],
+   "intent": "遊歩道の床の切れ目から降りる狭い通路。奥の板壁は突進でしか壊れない。別エリアで突進を覚えた後に「そういえばあそこ」と戻ってくる理由になる。",
+   "features": [
+    "紫の板壁(突進)"
+   ]
+  },
+  {
+   "id": "U2r2",
+   "zone": "U",
+   "name": "裏方の倉庫",
+   "scene": "A1_U2",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 60,
+     "cellY": 35,
+     "cellW": 5,
+     "cellH": 3,
+     "world": {
+      "xMin": 180,
+      "xMax": 195,
+      "yMin": -12,
+      "yMax": -3
+     }
+    }
+   ],
+   "intent": "突進で板壁を破った先の小部屋。拠点の近くなので、取ったらそのまま買い物に行ける。",
+   "features": [
+    "糸の大束×80"
+   ]
+  },
+  {
+   "id": "U2e",
+   "zone": "A",
+   "name": "閉園の柵",
+   "scene": "A1_U1",
+   "transport": null,
+   "outdoor": true,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 92,
+     "cellY": 29,
+     "cellW": 9,
+     "cellH": 5,
+     "world": {
+      "xMin": 276,
+      "xMax": 303,
+      "yMin": 0,
+      "yMax": 15
+     }
+    }
+   ],
+   "intent": "柵越しに噴水広場を見せる“予告”の場所。柵は噴水広場の側からしか開かず、エリアボスを倒した後に開けると拠点への帰り道になる。",
+   "features": [
+    "柵(噴水広場側から開く)"
+   ]
+  },
+  {
+   "id": "U3",
+   "zone": "U",
+   "name": "コーヒーカップ広場",
+   "scene": "A1_U3",
+   "transport": null,
+   "outdoor": true,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 35,
+     "cellY": 23,
+     "cellW": 14,
+     "cellH": 11,
+     "world": {
+      "xMin": 105,
+      "xMax": 147,
+      "yMin": 0,
+      "yMax": 33
+     }
+    }
+   ],
+   "intent": "回るカップが足場になる闘技場。入ると出口が閉じ、敵の波を3回しのぐ。地上ルートの戦闘の山場。売店の壁は叩くと崩れる。",
+   "features": [
+    "回るカップの足場",
+    "敵の波×3(出口が閉じる)",
+    "ひびの入った売店の壁"
+   ]
+  },
+  {
+   "id": "U3s",
+   "zone": "U",
+   "name": "砂糖菓子の隠し部屋",
+   "scene": "A1_U3",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 38,
+     "cellY": 15,
+     "cellW": 7,
+     "cellH": 6,
+     "world": {
+      "xMin": 114,
+      "xMax": 135,
+      "yMin": 39,
+      "yMax": 57
+     }
+    }
+   ],
+   "intent": "闘技場を抜けた人だけが気づける隠し部屋。戦闘の山場の直後に強化アイテムを置き、頑張ったことに報いる。",
+   "features": [
+    "ハートピン①"
+   ]
+  },
+  {
+   "id": "U4",
+   "zone": "U",
+   "name": "観覧車の足元",
+   "scene": "A1_U4",
+   "transport": null,
+   "outdoor": true,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 19,
+     "cellY": 25,
+     "cellW": 15,
+     "cellH": 9,
+     "world": {
+      "xMin": 57,
+      "xMax": 102,
+      "yMin": 0,
+      "yMax": 27
+     }
+    }
+   ],
+   "intent": "中ボス前の休憩所(セーブ)と地図売り。床に橙色の点検口があり、落下攻撃で楽屋裏(T3)へ直通する。チュートリアルで見上げた点検口の答え合わせ。",
+   "features": [
+    "セーブ(中ボス前)",
+    "地図売り",
+    "橙の点検口(落下攻撃)"
+   ]
+  },
+  {
+   "id": "Uh",
+   "zone": "U",
+   "name": "点検口の縦穴",
+   "scene": "A1_U4",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 32,
+     "cellY": 35,
+     "cellW": 2,
+     "cellH": 11,
+     "world": {
+      "xMin": 96,
+      "xMax": 102,
+      "yMin": -36,
+      "yMax": -3
+     }
+    }
+   ],
+   "intent": "地上と楽屋裏をつなぐ縦穴。落下攻撃で突き抜ける途中に糸を拾える。",
+   "features": [
+    "糸×40",
+    "楽屋裏(T3)への近道"
+   ]
+  },
+  {
+   "id": "W1",
+   "zone": "W",
+   "name": "観覧車の乗り場",
+   "scene": "A1_W1",
+   "transport": null,
+   "outdoor": true,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 1,
+     "cellY": 24,
+     "cellW": 17,
+     "cellH": 10,
+     "world": {
+      "xMin": 3,
+      "xMax": 54,
+      "yMin": 0,
+      "yMax": 30
+     }
+    }
+   ],
+   "intent": "見上げても頂上が見えないほどの高さを最初に見せる部屋。乗り場のリフトは壊れていて、「自分の足で登るしかない」と一目で分かる。上の機械室で非常用リフトを動かすと、ここから一気に中間まで戻れるようになる。",
+   "features": [
+    "壊れた乗り場のリフト",
+    "見上げると観覧車の全景",
+    "非常用リフトの下の乗り口"
+   ]
+  },
+  {
+   "id": "W2",
+   "zone": "W",
+   "name": "支柱の足場",
+   "scene": "A1_W2",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 4,
+     "cellY": 0,
+     "cellW": 7,
+     "cellH": 23,
+     "world": {
+      "xMin": 12,
+      "xMax": 33,
+      "yMin": 33,
+      "yMax": 102
+     }
+    }
+   ],
+   "intent": "観覧車の足(支柱)の中を登る、基本の縦登り。足場は広めで浮遊する敵は1体だけ。ここで「この先はずっと上」という手ざわりを覚えさせる。落ちてもこの部屋の床に戻るだけ。",
+   "features": [
+    "交互の足場",
+    "浮遊する敵×1",
+    "支柱の継ぎ目にひび(隠し壁)"
+   ]
+  },
+  {
+   "id": "W2s",
+   "zone": "W",
+   "name": "支柱の中の隠し部屋",
+   "scene": "A1_W2",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 12,
+     "cellY": 10,
+     "cellW": 5,
+     "cellH": 5,
+     "world": {
+      "xMin": 36,
+      "xMax": 51,
+      "yMin": 57,
+      "yMax": 72
+     }
+    }
+   ],
+   "intent": "支柱の継ぎ目を叩くと崩れる隠し部屋。登りの最初の部屋に置き、「高い所でも壁は叩いてみる」習慣をつける。",
+   "features": [
+    "ハートピン②"
+   ]
+  },
+  {
+   "id": "W3",
+   "zone": "W",
+   "name": "整備用リフト",
+   "scene": "A1_W3",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 12,
+     "cellY": -22,
+     "cellW": 6,
+     "cellH": 26,
+     "world": {
+      "xMin": 36,
+      "xMax": 54,
+      "yMin": 90,
+      "yMax": 168
+     }
+    }
+   ],
+   "intent": "上下に動く整備用リフトを乗り継ぐ。リフトの上にいる間に浮遊敵が寄ってくるので、足場が動く中で戦う。上から落ちてきても、動くリフトのどれかが受け止める。",
+   "features": [
+    "上下に動くリフト×3",
+    "リフト上で戦う浮遊敵×2"
+   ]
+  },
+  {
+   "id": "W4",
+   "zone": "W",
+   "name": "風の外周",
+   "scene": "A1_W4",
+   "transport": null,
+   "outdoor": true,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 19,
+     "cellY": -24,
+     "cellW": 13,
+     "cellH": 8,
+     "world": {
+      "xMin": 57,
+      "xMax": 96,
+      "yMin": 150,
+      "yMax": 174
+     }
+    }
+   ],
+   "intent": "観覧車の外周の外へ出る。横風で押し戻される中を登る。下を見ると園内が小さく見え、どれだけ高く来たかを実感させる。落ちると下の整備用リフトの上に戻る(安全網)。奥の錆びた扉は突進で壊れる。",
+   "features": [
+    "横風(押し戻される)",
+    "眼下に園内の全景",
+    "紫の錆びた扉(突進)"
+   ]
+  },
+  {
+   "id": "W4r",
+   "zone": "W",
+   "name": "外周の物置",
+   "scene": "A1_W4",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 33,
+     "cellY": -23,
+     "cellW": 5,
+     "cellH": 5,
+     "world": {
+      "xMin": 99,
+      "xMax": 114,
+      "yMin": 156,
+      "yMax": 171
+     }
+    }
+   ],
+   "intent": "突進を覚えて戻ってきた人へのご褒美。整備員が観覧車を止めなかった理由が分かる日誌を置く。",
+   "features": [
+    "日誌 その5(整備員の手記)"
+   ]
+  },
+  {
+   "id": "W5",
+   "zone": "W",
+   "name": "回るゴンドラ",
+   "scene": "A1_W5",
+   "transport": null,
+   "outdoor": true,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 8,
+     "cellY": -44,
+     "cellW": 22,
+     "cellH": 18,
+     "world": {
+      "xMin": 24,
+      "xMax": 90,
+      "yMin": 180,
+      "yMax": 234
+     }
+    }
+   ],
+   "intent": "ゆっくり回るゴンドラを乗り継いで登る。回転のリズムを読んで飛び移る、戦闘より“読み”の部屋。落ちても下側のゴンドラが受け止めてくれる。1台だけ外れたゴンドラは二段ジャンプでしか届かない。",
+   "features": [
+    "回るゴンドラの足場×8",
+    "落ちても下のゴンドラに戻れる",
+    "外れたゴンドラ(二段ジャンプ)"
+   ]
+  },
+  {
+   "id": "W5g",
+   "zone": "W",
+   "name": "外れたゴンドラ",
+   "scene": "A1_W5",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 31,
+     "cellY": -40,
+     "cellW": 5,
+     "cellH": 4,
+     "world": {
+      "xMin": 93,
+      "xMax": 108,
+      "yMin": 210,
+      "yMax": 222
+     }
+    }
+   ],
+   "intent": "回転の輪から外れて引っかかったゴンドラ。二段ジャンプ (中ボス撃破後に拠点の鍛冶師から) を覚えてから戻ってくる場所。",
+   "features": [
+    "糸の大束×100"
+   ]
+  },
+  {
+   "id": "W6",
+   "zone": "W",
+   "name": "中心軸の機械室",
+   "scene": "A1_W6",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 12,
+     "cellY": -56,
+     "cellW": 10,
+     "cellH": 10,
+     "world": {
+      "xMin": 36,
+      "xMax": 66,
+      "yMin": 240,
+      "yMax": 270
+     }
+    }
+   ],
+   "intent": "観覧車の中心軸にある機械室で、登りの中間地点。セーブがあり、非常用リフトを動かすと乗り場まで降りられる(以後は往復可)。ここまでの登りを“保存”する安心感で、後半の登りに気持ちよく挑ませる。",
+   "features": [
+    "セーブ(中間地点)",
+    "非常用リフトのレバー",
+    "東に逆さゴンドラの寄り道"
+   ]
+  },
+  {
+   "id": "WL",
+   "zone": "W",
+   "name": "非常用リフト",
+   "scene": null,
+   "transport": "非常用リフト: A1_W6 の起動レバー→A1_W1 と往復 (flag A1_LiftWheel)",
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 0,
+     "cellY": -51,
+     "cellW": 2,
+     "cellH": 74,
+     "world": {
+      "xMin": 0,
+      "xMax": 6,
+      "yMin": 33,
+      "yMax": 255
+     }
+    },
+    {
+     "cellX": 2,
+     "cellY": -51,
+     "cellW": 9,
+     "cellH": 2,
+     "world": {
+      "xMin": 6,
+      "xMax": 33,
+      "yMin": 249,
+      "yMax": 255
+     }
+    }
+   ],
+   "intent": "機械室から乗り場までの直通リフト。中ボスに負けても、乗り場から一気に中間地点まで戻れる。「ひたすら登る」エリアの再挑戦を短くするための近道。",
+   "features": [
+    "リフト(機械室で起動・以後往復)"
+   ]
+  },
+  {
+   "id": "W7",
+   "zone": "W",
+   "name": "逆さゴンドラの寄り道",
+   "scene": "A1_W6",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 23,
+     "cellY": -58,
+     "cellW": 11,
+     "cellH": 8,
+     "world": {
+      "xMin": 69,
+      "xMax": 102,
+      "yMin": 252,
+      "yMax": 276
+     }
+    }
+   ],
+   "intent": "逆さまに吊られたゴンドラが並ぶ寄り道。天井と床が入れ替わったような足場で、登りの合間に頭を使わせる。奥の宝箱に道具を置く。",
+   "features": [
+    "逆さに吊られたゴンドラの足場",
+    "道具「針山」"
+   ]
+  },
+  {
+   "id": "W8",
+   "zone": "W",
+   "name": "てっぺんへの梯子",
+   "scene": "A1_W8",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 14,
+     "cellY": -80,
+     "cellW": 6,
+     "cellH": 22,
+     "world": {
+      "xMin": 42,
+      "xMax": 60,
+      "yMin": 276,
+      "yMax": 342
+     }
+    }
+   ],
+   "intent": "最後の一直線。上から荷物や敵が落ちてくる中を、梯子と細い足場で登り切る。落ちても機械室の床が受け止める。登り切った先が中ボスの舞台。",
+   "features": [
+    "上から落ちてくる荷物",
+    "浮遊する敵×2",
+    "落ちても機械室に戻る"
+   ]
+  },
+  {
+   "id": "MB1",
+   "zone": "W",
+   "name": "ゴンドラの道化",
+   "scene": "A1_MB1",
+   "transport": null,
+   "outdoor": false,
+   "boss": "中ボス",
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 6,
+     "cellY": -90,
+     "cellW": 22,
+     "cellH": 8,
+     "world": {
+      "xMin": 18,
+      "xMax": 84,
+      "yMin": 348,
+      "yMax": 372
+     }
+    }
+   ],
+   "intent": "観覧車のてっぺん、地上から120マス以上の高さでの空中戦。ボスは浮遊しながら風船爆弾を落とす。地上ルートで覚えた空中戦の集大成になる。",
+   "features": [
+    "中ボス「ゴンドラの道化」",
+    "足場が狭い・落ちても機械室から再挑戦"
+   ]
+  },
+  {
+   "id": "S2",
+   "zone": "W",
+   "name": "第2スピーカー",
+   "scene": "A1_MB1",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": true,
+   "rects": [
+    {
+     "cellX": 29,
+     "cellY": -90,
+     "cellW": 6,
+     "cellH": 6,
+     "world": {
+      "xMin": 87,
+      "xMax": 105,
+      "yMin": 354,
+      "yMax": 372
+     }
+    }
+   ],
+   "intent": "てっぺんのスピーカー。壊すと星空ジップラインが動き出し、拠点の真上まで一気に滑り降りられる(一方通行)。ひたすら登った分を一瞬で取り返す爽快感で、このルートを締めくくる。",
+   "features": [
+    "スピーカー②を破壊",
+    "大扉の灯 +1",
+    "星空ジップライン(一方通行)"
+   ]
+  },
+  {
+   "id": "D1",
+   "zone": "D",
+   "name": "配管の縦穴",
+   "scene": "A1_D1",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 79,
+     "cellY": 55,
+     "cellW": 6,
+     "cellH": 11,
+     "world": {
+      "xMin": 237,
+      "xMax": 255,
+      "yMin": -96,
+      "yMax": -63
+     }
+    }
+   ],
+   "intent": "拠点の床から地下へ降りる入口。地上とは逆に、暗く狭い場所へ降りていく合図になる。",
+   "features": [
+    "降りるだけの縦穴",
+    "配管の足場"
+   ]
+  },
+  {
+   "id": "D2",
+   "zone": "D",
+   "name": "搬送ベルトの通路",
+   "scene": "A1_D2",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 56,
+     "cellY": 67,
+     "cellW": 28,
+     "cellH": 6,
+     "world": {
+      "xMin": 168,
+      "xMax": 252,
+      "yMin": -117,
+      "yMax": -99
+     }
+    }
+   ],
+   "intent": "床が動くベルトコンベア。立ち止まると流されるので、流れに逆らう・乗るの判断を戦闘に混ぜる。西の端に配電室、床下に蒸気管の迷路。",
+   "features": [
+    "ベルトコンベアの床",
+    "敵×3",
+    "西に配電室・床下に迷路"
+   ]
+  },
+  {
+   "id": "D2w",
+   "zone": "D",
+   "name": "錆びた配電室",
+   "scene": "A1_D2",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 47,
+     "cellY": 69,
+     "cellW": 8,
+     "cellH": 6,
+     "world": {
+      "xMin": 141,
+      "xMax": 165,
+      "yMin": -123,
+      "yMax": -105
+     }
+    }
+   ],
+   "intent": "寄り道の部屋。レバーでベルトの向きを逆にでき、帰り道が楽になる。天井の跳ね上げ戸から梯子を下ろすと楽屋裏の勝手口につながる。西の鉄壁は突進で壊れ、別エリア「地下水路」へ続く。",
+   "features": [
+    "レバー(ベルトの向きを変える)",
+    "梯子(楽屋裏への近道)",
+    "道具「糸玉」",
+    "日誌 その3",
+    "紫の鉄壁(突進→地下水路)"
+   ]
+  },
+  {
+   "id": "D5",
+   "zone": "D",
+   "name": "蒸気管の迷路",
+   "scene": "A1_D5",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 60,
+     "cellY": 75,
+     "cellW": 20,
+     "cellH": 9,
+     "world": {
+      "xMin": 180,
+      "xMax": 240,
+      "yMin": -150,
+      "yMax": -123
+     }
+    }
+   ],
+   "intent": "一定の間隔で蒸気が噴き出す配管の迷路。道が3方向に分かれ、西は水没した排水溝(寄り道)、東は歯車の胃袋(本道)。迷わせすぎないよう、本道にだけ点滅する灯りを置く。",
+   "features": [
+    "蒸気の噴き出し(タイミング)",
+    "3方向の分かれ道",
+    "本道の目印の灯り",
+    "地図売り"
+   ]
+  },
+  {
+   "id": "D6",
+   "zone": "D",
+   "name": "水没した排水溝",
+   "scene": "A1_D5",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 44,
+     "cellY": 78,
+     "cellW": 15,
+     "cellH": 7,
+     "world": {
+      "xMin": 132,
+      "xMax": 177,
+      "yMin": -153,
+      "yMax": -132
+     }
+    }
+   ],
+   "intent": "水の中では動きが遅くなる寄り道。敵も少なく、急がず進めば安全。慌てると蒸気に当たる配置にして、落ち着いて進む人が得をする。",
+   "features": [
+    "水中(動きが遅くなる)",
+    "糸巻き②"
+   ]
+  },
+  {
+   "id": "D3",
+   "zone": "D",
+   "name": "歯車の胃袋",
+   "scene": "A1_D3",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 81,
+     "cellY": 74,
+     "cellW": 8,
+     "cellH": 27,
+     "world": {
+      "xMin": 243,
+      "xMax": 267,
+      "yMin": -201,
+      "yMax": -120
+     }
+    }
+   ],
+   "intent": "回る歯車を足場にして降りるエリアで一番深い縦穴。登りではなく“降りる”怖さと楽しさの部屋。途中に横穴が2つあり、上は二段ジャンプでしか届かず、下はネズミの巣へ続く。",
+   "features": [
+    "回る歯車の足場",
+    "壁に張り付く敵×2",
+    "横穴(二段ジャンプ)",
+    "横穴(ネズミの巣)"
+   ]
+  },
+  {
+   "id": "D3a",
+   "zone": "D",
+   "name": "歯車の横穴",
+   "scene": "A1_D3",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 90,
+     "cellY": 77,
+     "cellW": 6,
+     "cellH": 5,
+     "world": {
+      "xMin": 270,
+      "xMax": 288,
+      "yMin": -144,
+      "yMax": -129
+     }
+    }
+   ],
+   "intent": "中ボスを倒して拠点の鍛冶師から二段ジャンプを受け取った後、地下に戻ってくる理由になる横穴。",
+   "features": [
+    "糸の大束×60"
+   ]
+  },
+  {
+   "id": "D7",
+   "zone": "D",
+   "name": "ネズミの巣",
+   "scene": "A1_D3",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 90,
+     "cellY": 85,
+     "cellW": 9,
+     "cellH": 7,
+     "world": {
+      "xMin": 270,
+      "xMax": 297,
+      "yMin": -174,
+      "yMax": -153
+     }
+    }
+   ],
+   "intent": "小さな敵が群れで出てくる任意の戦闘部屋。全部倒すと宝箱が出る。腕試しをしたい人向けで、本道からは外す。",
+   "features": [
+    "小さな敵の群れ×3波",
+    "全滅で宝箱",
+    "糸巻き③"
+   ]
+  },
+  {
+   "id": "D4",
+   "zone": "D",
+   "name": "ピストンの間",
+   "scene": "A1_D4",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 90,
+     "cellY": 96,
+     "cellW": 26,
+     "cellH": 6,
+     "world": {
+      "xMin": 270,
+      "xMax": 348,
+      "yMin": -204,
+      "yMax": -186
+     }
+    }
+   ],
+   "intent": "天井と床から交互に出るピストンを、タイミングを計って抜ける長い廊下。床の一部は落下攻撃で抜ける。",
+   "features": [
+    "ピストンの罠",
+    "橙の床(落下攻撃)"
+   ]
+  },
+  {
+   "id": "D4s",
+   "zone": "D",
+   "name": "油だまりの底",
+   "scene": "A1_D4",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 100,
+     "cellY": 103,
+     "cellW": 7,
+     "cellH": 4,
+     "world": {
+      "xMin": 300,
+      "xMax": 321,
+      "yMin": -219,
+      "yMax": -207
+     }
+    }
+   ],
+   "intent": "ピストンの床下。ハートピンを置き、さらに下は別エリア「奈落の倉庫」へ続く。",
+   "features": [
+    "ハートピン④",
+    "さらに下へ(落下攻撃→奈落の倉庫)"
+   ]
+  },
+  {
+   "id": "D8",
+   "zone": "D",
+   "name": "整備員の休憩所",
+   "scene": "A1_D4",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 117,
+     "cellY": 95,
+     "cellW": 8,
+     "cellH": 7,
+     "world": {
+      "xMin": 351,
+      "xMax": 375,
+      "yMin": -204,
+      "yMax": -183
+     }
+    }
+   ],
+   "intent": "中ボス前のセーブ。壁に中ボスの設計図が貼ってあり、これから戦う相手を予告する。",
+   "features": [
+    "セーブ(中ボス前)",
+    "中ボスの設計図"
+   ]
+  },
+  {
+   "id": "MB2",
+   "zone": "D",
+   "name": "歯車の重馬",
+   "scene": "A1_MB2",
+   "transport": null,
+   "outdoor": false,
+   "boss": "中ボス",
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 126,
+     "cellY": 90,
+     "cellW": 20,
+     "cellH": 13,
+     "world": {
+      "xMin": 378,
+      "xMax": 438,
+      "yMin": -207,
+      "yMax": -168
+     }
+    }
+   ],
+   "intent": "重い地上型のボス。床の大歯車が回って足場の傾きが変わる、地形込みの戦い。地下ルートで覚えた地形の読み方の集大成。",
+   "features": [
+    "中ボス「歯車の重馬」",
+    "床の大歯車が回る"
+   ]
+  },
+  {
+   "id": "S3",
+   "zone": "D",
+   "name": "第3スピーカー",
+   "scene": "A1_MB2",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": true,
+   "rects": [
+    {
+     "cellX": 147,
+     "cellY": 94,
+     "cellW": 7,
+     "cellH": 7,
+     "world": {
+      "xMin": 441,
+      "xMax": 462,
+      "yMin": -201,
+      "yMax": -180
+     }
+    }
+   ],
+   "intent": "中ボスの奥。壊すと搬出エレベーターが動き出す。",
+   "features": [
+    "スピーカー③を破壊",
+    "大扉の灯 +1"
+   ]
+  },
+  {
+   "id": "E1",
+   "zone": "D",
+   "name": "搬出エレベーターと排気路",
+   "scene": null,
+   "transport": "搬出エレベーター: A1_MB2 (中ボス後) → A1_C1 の床下、往復 (flag A1_ElevatorDeep)",
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 136,
+     "cellY": 62,
+     "cellW": 3,
+     "cellH": 27,
+     "world": {
+      "xMin": 408,
+      "xMax": 417,
+      "yMin": -165,
+      "yMax": -84
+     }
+    },
+    {
+     "cellX": 99,
+     "cellY": 59,
+     "cellW": 40,
+     "cellH": 3,
+     "world": {
+      "xMin": 297,
+      "xMax": 417,
+      "yMin": -84,
+      "yMax": -75
+     }
+    },
+    {
+     "cellX": 99,
+     "cellY": 54,
+     "cellW": 3,
+     "cellH": 5,
+     "world": {
+      "xMin": 297,
+      "xMax": 306,
+      "yMin": -75,
+      "yMax": -60
+     }
+    }
+   ],
+   "intent": "中ボス後の帰り道。エレベーターで上がり、排気路の上昇気流に乗って大扉の回廊の真下へ出る。一度動かせば往復でき、地下ルートの長い道のりを一瞬にする。",
+   "features": [
+    "エレベーター(往復)",
+    "排気路(上昇気流)"
+   ]
+  },
+  {
+   "id": "AB",
+   "zone": "A",
+   "name": "噴水下の大音楽堂",
+   "scene": "A1_AB",
+   "transport": null,
+   "outdoor": false,
+   "boss": "エリアボス",
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 106,
+     "cellY": 44,
+     "cellW": 18,
+     "cellH": 14,
+     "world": {
+      "xMin": 318,
+      "xMax": 372,
+      "yMin": -72,
+      "yMax": -30
+     }
+    }
+   ],
+   "intent": "3つのスピーカーを繋いでいた本体「指揮者ノクターン」との戦い。前半は浮遊する音符(地上の空中戦)、後半は床がせり上がる(地下の地形戦)。撃破で糸の大束×200。",
+   "features": [
+    "エリアボス「指揮者ノクターン」",
+    "撃破で糸の大束×200"
+   ]
+  },
+  {
+   "id": "ST",
+   "zone": "A",
+   "name": "噴水への大階段",
+   "scene": "A1_AB",
+   "transport": null,
+   "outdoor": false,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 114,
+     "cellY": 35,
+     "cellW": 6,
+     "cellH": 8,
+     "world": {
+      "xMin": 342,
+      "xMax": 360,
+      "yMin": -27,
+      "yMax": -3
+     }
+    }
+   ],
+   "intent": "二段ジャンプ (拠点の鍛冶師が中ボス撃破後に鍛えてくれる赤ハサミ) を使わないと登れない縦穴。覚えた能力を締めくくりで使わせる。",
+   "features": [
+    "二段ジャンプで登る壁",
+    "噴水の下の階段"
+   ]
+  },
+  {
+   "id": "FP",
+   "zone": "A",
+   "name": "噴水広場",
+   "scene": "A1_FP",
+   "transport": null,
+   "outdoor": true,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 102,
+     "cellY": 22,
+     "cellW": 24,
+     "cellH": 12,
+     "world": {
+      "xMin": 306,
+      "xMax": 378,
+      "yMin": 0,
+      "yMax": 36
+     }
+    }
+   ],
+   "intent": "噴水の下から地上に出て、最初に柵越しに見た場所に戻ってくる達成感。内側から柵を開けると遊歩道とつながり、拠点へ戻れる。",
+   "features": [
+    "ふんすい(階段の出口)",
+    "柵を内側から開ける",
+    "日誌 その4"
+   ]
+  },
+  {
+   "id": "FP2",
+   "zone": "A",
+   "name": "正門前の並木道",
+   "scene": "A1_FP",
+   "transport": null,
+   "outdoor": true,
+   "boss": null,
+   "speaker": false,
+   "rects": [
+    {
+     "cellX": 127,
+     "cellY": 24,
+     "cellW": 22,
+     "cellH": 10,
+     "world": {
+      "xMin": 381,
+      "xMax": 447,
+      "yMin": 0,
+      "yMax": 30
+     }
+    }
+   ],
+   "intent": "次のエリアへの門の前の短い並木道。正門のアーチの上には二段ジャンプでしか届かない糸巻きがあり、手に入れたばかりの能力をもう一度試せる。振り返るとエリア全体が見える締めくくりの場所。",
+   "features": [
+    "次のエリアへの門",
+    "正門のアーチの上(二段ジャンプ)"
+   ]
+  }
+ ],
+ "links": [
+  {
+   "a": "T1",
+   "b": "T1s",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 6,
+    "cellY": 58,
+    "cellW": 2,
+    "cellH": 2,
+    "world": {
+     "xMin": 18,
+     "xMax": 24,
+     "yMin": -78,
+     "yMax": -72
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "T1",
+   "b": "T2",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 15,
+    "cellY": 63,
+    "cellW": 1,
+    "cellH": 3,
+    "world": {
+     "xMin": 45,
+     "xMax": 48,
+     "yMin": -96,
+     "yMax": -87
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "T2",
+   "b": "T2s",
+   "gate": "hidden",
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 19,
+    "cellY": 59,
+    "cellW": 2,
+    "cellH": 2,
+    "world": {
+     "xMin": 57,
+     "xMax": 63,
+     "yMin": -81,
+     "yMax": -75
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "T2",
+   "b": "T3",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 30,
+    "cellY": 63,
+    "cellW": 1,
+    "cellH": 3,
+    "world": {
+     "xMin": 90,
+     "xMax": 93,
+     "yMin": -96,
+     "yMax": -87
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "T3",
+   "b": "T3b",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 38,
+    "cellY": 63,
+    "cellW": 1,
+    "cellH": 3,
+    "world": {
+     "xMin": 114,
+     "xMax": 117,
+     "yMin": -96,
+     "yMax": -87
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "T3b",
+   "b": "T3c",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 46,
+    "cellY": 63,
+    "cellW": 1,
+    "cellH": 3,
+    "world": {
+     "xMin": 138,
+     "xMax": 141,
+     "yMin": -96,
+     "yMax": -87
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "T3",
+   "b": "T4",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 38,
+    "cellY": 49,
+    "cellW": 1,
+    "cellH": 3,
+    "world": {
+     "xMin": 114,
+     "xMax": 117,
+     "yMin": -54,
+     "yMax": -45
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "T4",
+   "b": "B1",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 54,
+    "cellY": 50,
+    "cellW": 1,
+    "cellH": 3,
+    "world": {
+     "xMin": 162,
+     "xMax": 165,
+     "yMin": -57,
+     "yMax": -48
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "B1",
+   "b": "S1",
+   "gate": "boss",
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 69,
+    "cellY": 49,
+    "cellW": 1,
+    "cellH": 3,
+    "world": {
+     "xMin": 207,
+     "xMax": 210,
+     "yMin": -54,
+     "yMax": -45
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "S1",
+   "b": "H",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 76,
+    "cellY": 49,
+    "cellW": 1,
+    "cellH": 3,
+    "world": {
+     "xMin": 228,
+     "xMax": 231,
+     "yMin": -54,
+     "yMax": -45
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "H",
+   "b": "H2",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 77,
+    "cellY": 41,
+    "cellW": 2,
+    "cellH": 1,
+    "world": {
+     "xMin": 231,
+     "xMax": 237,
+     "yMin": -24,
+     "yMax": -21
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "H",
+   "b": "U1",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 85,
+    "cellY": 41,
+    "cellW": 4,
+    "cellH": 1,
+    "world": {
+     "xMin": 255,
+     "xMax": 267,
+     "yMin": -24,
+     "yMax": -21
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "H",
+   "b": "Hs1",
+   "gate": "super",
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 92,
+    "cellY": 41,
+    "cellW": 3,
+    "cellH": 1,
+    "world": {
+     "xMin": 276,
+     "xMax": 285,
+     "yMin": -24,
+     "yMax": -21
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "H",
+   "b": "Hs2",
+   "gate": "slam",
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 92,
+    "cellY": 54,
+    "cellW": 2,
+    "cellH": 1,
+    "world": {
+     "xMin": 276,
+     "xMax": 282,
+     "yMin": -63,
+     "yMax": -60
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "H",
+   "b": "D1",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 80,
+    "cellY": 54,
+    "cellW": 3,
+    "cellH": 1,
+    "world": {
+     "xMin": 240,
+     "xMax": 249,
+     "yMin": -63,
+     "yMax": -60
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "H",
+   "b": "C1",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 96,
+    "cellY": 49,
+    "cellW": 1,
+    "cellH": 3,
+    "world": {
+     "xMin": 288,
+     "xMax": 291,
+     "yMin": -54,
+     "yMax": -45
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "U1",
+   "b": "U2",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 83,
+    "cellY": 29,
+    "cellW": 1,
+    "cellH": 4,
+    "world": {
+     "xMin": 249,
+     "xMax": 252,
+     "yMin": 3,
+     "yMax": 15
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "U1",
+   "b": "U2e",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 90,
+    "cellY": 30,
+    "cellW": 2,
+    "cellH": 3,
+    "world": {
+     "xMin": 270,
+     "xMax": 276,
+     "yMin": 3,
+     "yMax": 12
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "FP",
+   "b": "U2e",
+   "gate": "fence",
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 101,
+    "cellY": 29,
+    "cellW": 1,
+    "cellH": 4,
+    "world": {
+     "xMin": 303,
+     "xMax": 306,
+     "yMin": 3,
+     "yMax": 15
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "U2",
+   "b": "U2a",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 77,
+    "cellY": 23,
+    "cellW": 3,
+    "cellH": 2,
+    "world": {
+     "xMin": 231,
+     "xMax": 240,
+     "yMin": 27,
+     "yMax": 33
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "U2",
+   "b": "U2r",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 53,
+    "cellY": 34,
+    "cellW": 2,
+    "cellH": 1,
+    "world": {
+     "xMin": 159,
+     "xMax": 165,
+     "yMin": -3,
+     "yMax": 0
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "U2r",
+   "b": "U2r2",
+   "gate": "rush",
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 59,
+    "cellY": 35,
+    "cellW": 1,
+    "cellH": 3,
+    "world": {
+     "xMin": 177,
+     "xMax": 180,
+     "yMin": -12,
+     "yMax": -3
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "U2",
+   "b": "U3",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 49,
+    "cellY": 28,
+    "cellW": 1,
+    "cellH": 4,
+    "world": {
+     "xMin": 147,
+     "xMax": 150,
+     "yMin": 6,
+     "yMax": 18
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "U3",
+   "b": "U3s",
+   "gate": "hidden",
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 40,
+    "cellY": 21,
+    "cellW": 2,
+    "cellH": 2,
+    "world": {
+     "xMin": 120,
+     "xMax": 126,
+     "yMin": 33,
+     "yMax": 39
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "U3",
+   "b": "U4",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 34,
+    "cellY": 28,
+    "cellW": 1,
+    "cellH": 4,
+    "world": {
+     "xMin": 102,
+     "xMax": 105,
+     "yMin": 6,
+     "yMax": 18
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "U4",
+   "b": "Uh",
+   "gate": "slam",
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 32,
+    "cellY": 34,
+    "cellW": 2,
+    "cellH": 1,
+    "world": {
+     "xMin": 96,
+     "xMax": 102,
+     "yMin": -3,
+     "yMax": 0
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "Uh",
+   "b": "T3",
+   "gate": null,
+   "oneWay": true,
+   "zipline": false,
+   "passage": {
+    "cellX": 32,
+    "cellY": 46,
+    "cellW": 2,
+    "cellH": 1,
+    "world": {
+     "xMin": 96,
+     "xMax": 102,
+     "yMin": -39,
+     "yMax": -36
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "U4",
+   "b": "W1",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 18,
+    "cellY": 28,
+    "cellW": 1,
+    "cellH": 4,
+    "world": {
+     "xMin": 54,
+     "xMax": 57,
+     "yMin": 6,
+     "yMax": 18
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "W1",
+   "b": "W2",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 5,
+    "cellY": 23,
+    "cellW": 3,
+    "cellH": 1,
+    "world": {
+     "xMin": 15,
+     "xMax": 24,
+     "yMin": 30,
+     "yMax": 33
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "W2",
+   "b": "W2s",
+   "gate": "hidden",
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 11,
+    "cellY": 11,
+    "cellW": 1,
+    "cellH": 2,
+    "world": {
+     "xMin": 33,
+     "xMax": 36,
+     "yMin": 63,
+     "yMax": 69
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "W2",
+   "b": "W3",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 11,
+    "cellY": 1,
+    "cellW": 1,
+    "cellH": 3,
+    "world": {
+     "xMin": 33,
+     "xMax": 36,
+     "yMin": 90,
+     "yMax": 99
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "W3",
+   "b": "W4",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 18,
+    "cellY": -21,
+    "cellW": 1,
+    "cellH": 3,
+    "world": {
+     "xMin": 54,
+     "xMax": 57,
+     "yMin": 156,
+     "yMax": 165
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "W4",
+   "b": "W4r",
+   "gate": "rush",
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 32,
+    "cellY": -22,
+    "cellW": 1,
+    "cellH": 3,
+    "world": {
+     "xMin": 96,
+     "xMax": 99,
+     "yMin": 159,
+     "yMax": 168
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "W4",
+   "b": "W5",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 22,
+    "cellY": -26,
+    "cellW": 4,
+    "cellH": 2,
+    "world": {
+     "xMin": 66,
+     "xMax": 78,
+     "yMin": 174,
+     "yMax": 180
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "W5",
+   "b": "W5g",
+   "gate": "dj",
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 30,
+    "cellY": -39,
+    "cellW": 1,
+    "cellH": 2,
+    "world": {
+     "xMin": 90,
+     "xMax": 93,
+     "yMin": 213,
+     "yMax": 219
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "W5",
+   "b": "W6",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 15,
+    "cellY": -46,
+    "cellW": 4,
+    "cellH": 2,
+    "world": {
+     "xMin": 45,
+     "xMax": 57,
+     "yMin": 234,
+     "yMax": 240
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "W6",
+   "b": "W7",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 22,
+    "cellY": -55,
+    "cellW": 1,
+    "cellH": 3,
+    "world": {
+     "xMin": 66,
+     "xMax": 69,
+     "yMin": 258,
+     "yMax": 267
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "W6",
+   "b": "WL",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 11,
+    "cellY": -51,
+    "cellW": 1,
+    "cellH": 2,
+    "world": {
+     "xMin": 33,
+     "xMax": 36,
+     "yMin": 249,
+     "yMax": 255
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "WL",
+   "b": "W1",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 0,
+    "cellY": 23,
+    "cellW": 2,
+    "cellH": 1,
+    "world": {
+     "xMin": 0,
+     "xMax": 6,
+     "yMin": 30,
+     "yMax": 33
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "W6",
+   "b": "W8",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 15,
+    "cellY": -58,
+    "cellW": 4,
+    "cellH": 2,
+    "world": {
+     "xMin": 45,
+     "xMax": 57,
+     "yMin": 270,
+     "yMax": 276
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "W8",
+   "b": "MB1",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 15,
+    "cellY": -82,
+    "cellW": 4,
+    "cellH": 2,
+    "world": {
+     "xMin": 45,
+     "xMax": 57,
+     "yMin": 342,
+     "yMax": 348
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "MB1",
+   "b": "S2",
+   "gate": "boss",
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 28,
+    "cellY": -88,
+    "cellW": 1,
+    "cellH": 3,
+    "world": {
+     "xMin": 84,
+     "xMax": 87,
+     "yMin": 357,
+     "yMax": 366
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "S2",
+   "b": "U1",
+   "gate": null,
+   "oneWay": true,
+   "zipline": true,
+   "passage": null,
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "D1",
+   "b": "D2",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 80,
+    "cellY": 66,
+    "cellW": 3,
+    "cellH": 1,
+    "world": {
+     "xMin": 240,
+     "xMax": 249,
+     "yMin": -99,
+     "yMax": -96
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "D2",
+   "b": "D2w",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 55,
+    "cellY": 70,
+    "cellW": 1,
+    "cellH": 3,
+    "world": {
+     "xMin": 165,
+     "xMax": 168,
+     "yMin": -117,
+     "yMax": -108
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "D2w",
+   "b": "T3c",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 49,
+    "cellY": 67,
+    "cellW": 2,
+    "cellH": 2,
+    "world": {
+     "xMin": 147,
+     "xMax": 153,
+     "yMin": -105,
+     "yMax": -99
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "D2",
+   "b": "D5",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 62,
+    "cellY": 73,
+    "cellW": 3,
+    "cellH": 2,
+    "world": {
+     "xMin": 186,
+     "xMax": 195,
+     "yMin": -123,
+     "yMax": -117
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "D5",
+   "b": "D6",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 59,
+    "cellY": 80,
+    "cellW": 1,
+    "cellH": 3,
+    "world": {
+     "xMin": 177,
+     "xMax": 180,
+     "yMin": -147,
+     "yMax": -138
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "D5",
+   "b": "D3",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 80,
+    "cellY": 78,
+    "cellW": 1,
+    "cellH": 3,
+    "world": {
+     "xMin": 240,
+     "xMax": 243,
+     "yMin": -141,
+     "yMax": -132
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "D3",
+   "b": "D3a",
+   "gate": "dj",
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 89,
+    "cellY": 78,
+    "cellW": 1,
+    "cellH": 2,
+    "world": {
+     "xMin": 267,
+     "xMax": 270,
+     "yMin": -138,
+     "yMax": -132
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "D3",
+   "b": "D7",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 89,
+    "cellY": 88,
+    "cellW": 1,
+    "cellH": 3,
+    "world": {
+     "xMin": 267,
+     "xMax": 270,
+     "yMin": -171,
+     "yMax": -162
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "D3",
+   "b": "D4",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 89,
+    "cellY": 97,
+    "cellW": 1,
+    "cellH": 3,
+    "world": {
+     "xMin": 267,
+     "xMax": 270,
+     "yMin": -198,
+     "yMax": -189
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "D4",
+   "b": "D4s",
+   "gate": "slam",
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 102,
+    "cellY": 102,
+    "cellW": 2,
+    "cellH": 1,
+    "world": {
+     "xMin": 306,
+     "xMax": 312,
+     "yMin": -207,
+     "yMax": -204
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "D4",
+   "b": "D8",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 116,
+    "cellY": 97,
+    "cellW": 1,
+    "cellH": 3,
+    "world": {
+     "xMin": 348,
+     "xMax": 351,
+     "yMin": -198,
+     "yMax": -189
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "D8",
+   "b": "MB2",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 125,
+    "cellY": 97,
+    "cellW": 1,
+    "cellH": 3,
+    "world": {
+     "xMin": 375,
+     "xMax": 378,
+     "yMin": -198,
+     "yMax": -189
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "MB2",
+   "b": "S3",
+   "gate": "boss",
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 146,
+    "cellY": 96,
+    "cellW": 1,
+    "cellH": 3,
+    "world": {
+     "xMin": 438,
+     "xMax": 441,
+     "yMin": -195,
+     "yMax": -186
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "MB2",
+   "b": "E1",
+   "gate": "boss",
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 136,
+    "cellY": 89,
+    "cellW": 3,
+    "cellH": 1,
+    "world": {
+     "xMin": 408,
+     "xMax": 417,
+     "yMin": -168,
+     "yMax": -165
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "E1",
+   "b": "C1",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 99,
+    "cellY": 53,
+    "cellW": 3,
+    "cellH": 1,
+    "world": {
+     "xMin": 297,
+     "xMax": 306,
+     "yMin": -60,
+     "yMax": -57
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "C1",
+   "b": "AB",
+   "gate": "speakers",
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 105,
+    "cellY": 49,
+    "cellW": 1,
+    "cellH": 3,
+    "world": {
+     "xMin": 315,
+     "xMax": 318,
+     "yMin": -54,
+     "yMax": -45
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "AB",
+   "b": "ST",
+   "gate": "boss",
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 115,
+    "cellY": 43,
+    "cellW": 3,
+    "cellH": 1,
+    "world": {
+     "xMin": 345,
+     "xMax": 354,
+     "yMin": -30,
+     "yMax": -27
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  },
+  {
+   "a": "ST",
+   "b": "FP",
+   "gate": "dj",
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 115,
+    "cellY": 34,
+    "cellW": 3,
+    "cellH": 1,
+    "world": {
+     "xMin": 345,
+     "xMax": 354,
+     "yMin": -3,
+     "yMax": 0
+    }
+   },
+   "sameScene": false,
+   "kind": "scene-transition"
+  },
+  {
+   "a": "FP",
+   "b": "FP2",
+   "gate": null,
+   "oneWay": false,
+   "zipline": false,
+   "passage": {
+    "cellX": 126,
+    "cellY": 27,
+    "cellW": 1,
+    "cellH": 4,
+    "world": {
+     "xMin": 378,
+     "xMax": 381,
+     "yMin": 9,
+     "yMax": 21
+    }
+   },
+   "sameScene": true,
+   "kind": "inside-scene"
+  }
+ ],
+ "exits": [
+  {
+   "id": "X1",
+   "n": "星見台",
+   "sub": "別エリア",
+   "g": "super",
+   "from": "MB1",
+   "at": [
+    17,
+    -93.5
+   ],
+   "dir": "up"
+  },
+  {
+   "id": "X2",
+   "n": "地下水路",
+   "sub": "別エリア",
+   "g": "rush",
+   "from": "D2w",
+   "at": [
+    47,
+    72
+   ],
+   "dir": "left"
+  },
+  {
+   "id": "X3",
+   "n": "奈落の倉庫",
+   "sub": "別エリア",
+   "g": "slam",
+   "from": "D4s",
+   "at": [
+    103.5,
+    107
+   ],
+   "dir": "down"
+  },
+  {
+   "id": "NX",
+   "n": "エリア2へ",
+   "sub": "次のエリア",
+   "g": null,
+   "from": "FP2",
+   "at": [
+    149,
+    29
+   ],
+   "dir": "right"
+  }
+ ],
+ "rewards": [
+  {
+   "room": "T1s",
+   "k": "lore",
+   "n": "日誌「閉園しなかった夜」その1",
+   "req": null
+  },
+  {
+   "room": "T2s",
+   "k": "thread",
+   "n": "糸×30",
+   "req": "hidden"
+  },
+  {
+   "room": "T3b",
+   "k": "tool",
+   "n": "道具「まち針」",
+   "req": null
+  },
+  {
+   "room": "H2",
+   "k": "lore",
+   "n": "日誌その2+糸×50",
+   "req": null
+  },
+  {
+   "room": "U2a",
+   "k": "tool",
+   "n": "道具「ボビン爆弾」",
+   "req": null
+  },
+  {
+   "room": "U3s",
+   "k": "heart",
+   "n": "ハートピン①",
+   "req": "hidden"
+  },
+  {
+   "room": "W2s",
+   "k": "heart",
+   "n": "ハートピン②",
+   "req": "hidden"
+  },
+  {
+   "room": "W4r",
+   "k": "lore",
+   "n": "日誌その5(整備員の手記)",
+   "req": "rush"
+  },
+  {
+   "room": "W5g",
+   "k": "thread",
+   "n": "糸の大束×100",
+   "req": "dj"
+  },
+  {
+   "room": "W7",
+   "k": "tool",
+   "n": "道具「針山」",
+   "req": null
+  },
+  {
+   "room": "Uh",
+   "k": "thread",
+   "n": "糸×40",
+   "req": "slam"
+  },
+  {
+   "room": "U2r2",
+   "k": "thread",
+   "n": "糸の大束×80",
+   "req": "rush"
+  },
+  {
+   "room": "Hs1",
+   "k": "thread",
+   "n": "糸の大束×150",
+   "req": "super"
+  },
+  {
+   "room": "Hs2",
+   "k": "heart",
+   "n": "ハートピン③",
+   "req": "slam"
+  },
+  {
+   "room": "D2w",
+   "k": "tool",
+   "n": "道具「糸玉」+日誌その3",
+   "req": null
+  },
+  {
+   "room": "D6",
+   "k": "spool",
+   "n": "糸巻き②",
+   "req": null
+  },
+  {
+   "room": "D7",
+   "k": "spool",
+   "n": "糸巻き③",
+   "req": null
+  },
+  {
+   "room": "D3a",
+   "k": "thread",
+   "n": "糸の大束×60",
+   "req": "dj"
+  },
+  {
+   "room": "D4s",
+   "k": "heart",
+   "n": "ハートピン④",
+   "req": "slam"
+  },
+  {
+   "room": "FP",
+   "k": "lore",
+   "n": "日誌その4(噴水の碑文)",
+   "req": null
+  },
+  {
+   "room": "FP2",
+   "k": "spool",
+   "n": "糸巻き①(正門のアーチの上)",
+   "req": "dj",
+   "at": [
+    145.5,
+    26.5
+   ]
+  },
+  {
+   "room": "AB",
+   "k": "thread",
+   "n": "糸の大束×200",
+   "req": null
+  },
+  {
+   "room": "H",
+   "k": "skill",
+   "n": "赤ハサミ(二段ジャンプ。中ボスどちらかの撃破後に拠点の鍛冶師から)",
+   "req": null
+  }
+ ]
+}

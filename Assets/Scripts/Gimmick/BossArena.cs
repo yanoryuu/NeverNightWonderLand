@@ -2,10 +2,12 @@ using UnityEngine;
 
 /// <summary>
 /// 中ボス戦エリア。プレイヤーがトリガーに入るとゲート (壁) を閉じてエリアから出られなくし、
-/// ボスの撃破でゲートを開放する。撃破は GameProgress のフラグで永続化されるため、
+/// ボスの撃破 (または撤退 = EnemyController.OnRetreated) でゲートを開放する。撃破は GameProgress のフラグで永続化されるため、
 /// 再訪時 (拠点で休んだ後も) はボスが出現せずゲートも開いたまま。
 /// トリガーの Collider2D はゲートより内側のエリアを覆うように配置する。
 /// ゲートは非アクティブで配置しておき、入場時に有効化される。
+/// 任意: _followUpMessage を設定すると、撃破通知に続けてもう 1 つ通知を出す (世界観の一文。例: 鍛冶屋への誘導)。
+/// _followUpUnlessUpgrade を true にすると、プレイヤーが _followUpUpgrade のハサミを既に持っている時は出さない。
 /// </summary>
 [RequireComponent(typeof(Collider2D))]
 public class BossArena : MonoBehaviour
@@ -22,7 +24,17 @@ public class BossArena : MonoBehaviour
     [Tooltip("撃破時の通知メッセージ")]
     [SerializeField] private string _defeatMessage = "扉が開いた";
 
+    [Tooltip("撃破通知に続けて出す通知 (任意, 世界観の一文)。空なら出さない")]
+    [SerializeField] private string _followUpMessage = "";
+
+    [Tooltip("true なら、プレイヤーが _followUpUpgrade を既に持っている時は _followUpMessage を出さない")]
+    [SerializeField] private bool _followUpUnlessUpgrade;
+
+    [Tooltip("_followUpUnlessUpgrade の判定に使うハサミの色")]
+    [SerializeField] private ScissorUpgrade _followUpUpgrade = ScissorUpgrade.Red;
+
     private bool _started;
+    private PlayerController _player;
 
     private void Awake()
     {
@@ -45,6 +57,12 @@ public class BossArena : MonoBehaviour
             return;
 
         _boss.OnDied += OnBossDied;
+        // 撤退 (倒れずに飛び去る。グラミネ第1のボスの 1 戦目) も撃破と同じく勝ち扱いにする
+        _boss.OnRetreated += OnBossDied;
+
+        // ボスの糸は闘技場 (このトリガーの範囲) いっぱいに散らす (PendingChanges 25)
+        var b = GetComponent<Collider2D>().bounds;
+        _boss.LootArea = new Rect(b.min.x, b.min.y, b.size.x, b.size.y);
     }
 
     private void OnTriggerEnter2D(Collider2D other)
@@ -52,9 +70,11 @@ public class BossArena : MonoBehaviour
         if (_started || !enabled || _boss == null)
             return;
 
-        if (other.GetComponentInParent<PlayerController>() == null)
+        var player = other.GetComponentInParent<PlayerController>();
+        if (player == null)
             return;
 
+        _player = player;
         _started = true;
         SetGatesClosed(true);
     }
@@ -64,6 +84,13 @@ public class BossArena : MonoBehaviour
         GameProgress.Set(_flagId);
         SetGatesClosed(false);
         Notifier.Notify(_defeatMessage);
+
+        if (string.IsNullOrEmpty(_followUpMessage))
+            return;
+        if (_followUpUnlessUpgrade && _player != null
+            && _player.TryGetComponent<PlayerProgression>(out var progression) && progression.Has(_followUpUpgrade))
+            return;
+        Notifier.Notify(_followUpMessage);
     }
 
     private void SetGatesClosed(bool closed)

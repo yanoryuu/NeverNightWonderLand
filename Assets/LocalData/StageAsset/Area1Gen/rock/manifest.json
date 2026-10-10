@@ -1,0 +1,518 @@
+[
+ {
+  "file": "rock_fill_01.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "fill",
+  "tileable": true,
+  "note": "subtle cracks; 40px border = plain #52003a, seamless with coverbox"
+ },
+ {
+  "file": "rock_fill_02.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "fill",
+  "tileable": true,
+  "note": "embedded stones; 40px border = plain #52003a, seamless with coverbox"
+ },
+ {
+  "file": "rock_fill_03.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "fill",
+  "tileable": true,
+  "note": "faint candy-brick fragments; 40px border = plain #52003a, seamless with coverbox"
+ },
+ {
+  "file": "rock_fill_04.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "fill",
+  "tileable": true,
+  "note": "rivet plate; 40px border = plain #52003a, seamless with coverbox"
+ },
+ {
+  "file": "rock_fill_05.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "fill",
+  "tileable": true,
+  "note": "buried gear; 40px border = plain #52003a, seamless with coverbox"
+ },
+ {
+  "file": "rock_fill_06.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "fill",
+  "tileable": true,
+  "note": "pipe stub; 40px border = plain #52003a, seamless with coverbox"
+ },
+ {
+  "file": "rock_big_01.png",
+  "widthPx": 1092,
+  "heightPx": 1092,
+  "cells": [
+   2.0,
+   2.0
+  ],
+  "kind": "fill_big",
+  "tileable": true,
+  "note": "carousel horse fossil relief; 2x2 cells, plain border"
+ },
+ {
+  "file": "rock_big_02.png",
+  "widthPx": 1092,
+  "heightPx": 1092,
+  "cells": [
+   2.0,
+   2.0
+  ],
+  "kind": "fill_big",
+  "tileable": true,
+  "note": "big buried gears; 2x2 cells, plain border"
+ },
+ {
+  "file": "rock_big_03.png",
+  "widthPx": 1092,
+  "heightPx": 1092,
+  "cells": [
+   2.0,
+   2.0
+  ],
+  "kind": "fill_big",
+  "tileable": true,
+  "note": "stone cluster; 2x2 cells, plain border"
+ },
+ {
+  "file": "decal_pipe_h.png",
+  "widthPx": 1092,
+  "heightPx": 546,
+  "cells": [
+   2.0,
+   1.0
+  ],
+  "kind": "decal",
+  "tileable": false,
+  "note": "horizontal rusty pipe"
+ },
+ {
+  "file": "decal_pipe_v.png",
+  "widthPx": 546,
+  "heightPx": 1092,
+  "cells": [
+   1.0,
+   2.0
+  ],
+  "kind": "decal",
+  "tileable": false,
+  "note": "vertical rusty pipe"
+ },
+ {
+  "file": "decal_crack_01.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "decal",
+  "tileable": false,
+  "note": "crack"
+ },
+ {
+  "file": "decal_crack_02.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "decal",
+  "tileable": false,
+  "note": "crack"
+ },
+ {
+  "file": "decal_moss_glow.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "decal",
+  "tileable": false,
+  "note": "teal glowing fungus"
+ },
+ {
+  "file": "decal_poster.png",
+  "widthPx": 546,
+  "heightPx": 819,
+  "cells": [
+   1.0,
+   1.5
+  ],
+  "kind": "decal",
+  "tileable": false,
+  "note": "torn park poster"
+ },
+ {
+  "file": "decal_chain_hanging.png",
+  "widthPx": 546,
+  "heightPx": 1638,
+  "cells": [
+   1.0,
+   3.0
+  ],
+  "kind": "decal",
+  "tileable": false,
+  "note": "hanging chain, hang from top"
+ },
+ {
+  "file": "decal_lamp_wall.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "decal",
+  "tileable": false,
+  "note": "wall lamp, warm glow"
+ },
+ {
+  "file": "decal_bunting.png",
+  "widthPx": 1638,
+  "heightPx": 546,
+  "cells": [
+   3.0,
+   1.0
+  ],
+  "kind": "decal",
+  "tileable": false,
+  "note": "pennant bunting; ends not seam-matched, place as single span"
+ },
+ {
+  "file": "rock_tex.png",
+  "widthPx": 2184,
+  "heightPx": 2184,
+  "cells": [
+   4.0,
+   4.0
+  ],
+  "kind": "texture",
+  "tileable": true,
+  "note": "seamless 4x4-cell plum rock, mean (81,0,55); wraps both axes"
+ },
+ {
+  "file": "rock_tex_r0_c0.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "texture_slice",
+  "tileable": true,
+  "note": "slice row 0 (0=top) col 0; place by (x mod 4, y mod 4)"
+ },
+ {
+  "file": "rock_tex_r0_c1.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "texture_slice",
+  "tileable": true,
+  "note": "slice row 0 (0=top) col 1; place by (x mod 4, y mod 4)"
+ },
+ {
+  "file": "rock_tex_r0_c2.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "texture_slice",
+  "tileable": true,
+  "note": "slice row 0 (0=top) col 2; place by (x mod 4, y mod 4)"
+ },
+ {
+  "file": "rock_tex_r0_c3.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "texture_slice",
+  "tileable": true,
+  "note": "slice row 0 (0=top) col 3; place by (x mod 4, y mod 4)"
+ },
+ {
+  "file": "rock_tex_r1_c0.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "texture_slice",
+  "tileable": true,
+  "note": "slice row 1 (0=top) col 0; place by (x mod 4, y mod 4)"
+ },
+ {
+  "file": "rock_tex_r1_c1.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "texture_slice",
+  "tileable": true,
+  "note": "slice row 1 (0=top) col 1; place by (x mod 4, y mod 4)"
+ },
+ {
+  "file": "rock_tex_r1_c2.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "texture_slice",
+  "tileable": true,
+  "note": "slice row 1 (0=top) col 2; place by (x mod 4, y mod 4)"
+ },
+ {
+  "file": "rock_tex_r1_c3.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "texture_slice",
+  "tileable": true,
+  "note": "slice row 1 (0=top) col 3; place by (x mod 4, y mod 4)"
+ },
+ {
+  "file": "rock_tex_r2_c0.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "texture_slice",
+  "tileable": true,
+  "note": "slice row 2 (0=top) col 0; place by (x mod 4, y mod 4)"
+ },
+ {
+  "file": "rock_tex_r2_c1.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "texture_slice",
+  "tileable": true,
+  "note": "slice row 2 (0=top) col 1; place by (x mod 4, y mod 4)"
+ },
+ {
+  "file": "rock_tex_r2_c2.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "texture_slice",
+  "tileable": true,
+  "note": "slice row 2 (0=top) col 2; place by (x mod 4, y mod 4)"
+ },
+ {
+  "file": "rock_tex_r2_c3.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "texture_slice",
+  "tileable": true,
+  "note": "slice row 2 (0=top) col 3; place by (x mod 4, y mod 4)"
+ },
+ {
+  "file": "rock_tex_r3_c0.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "texture_slice",
+  "tileable": true,
+  "note": "slice row 3 (0=top) col 0; place by (x mod 4, y mod 4)"
+ },
+ {
+  "file": "rock_tex_r3_c1.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "texture_slice",
+  "tileable": true,
+  "note": "slice row 3 (0=top) col 1; place by (x mod 4, y mod 4)"
+ },
+ {
+  "file": "rock_tex_r3_c2.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "texture_slice",
+  "tileable": true,
+  "note": "slice row 3 (0=top) col 2; place by (x mod 4, y mod 4)"
+ },
+ {
+  "file": "rock_tex_r3_c3.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "texture_slice",
+  "tileable": true,
+  "note": "slice row 3 (0=top) col 3; place by (x mod 4, y mod 4)"
+ },
+ {
+  "file": "rock_motif_gear.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "motif_decal",
+  "tileable": false,
+  "note": "half-buried gear; transparent"
+ },
+ {
+  "file": "rock_motif_stones.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "motif_decal",
+  "tileable": false,
+  "note": "stone cluster; transparent"
+ },
+ {
+  "file": "rock_motif_fossil.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "motif_decal",
+  "tileable": false,
+  "note": "carousel horse fossil slab; transparent"
+ },
+ {
+  "file": "rock_motif_plate.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "motif_decal",
+  "tileable": false,
+  "note": "riveted plate; transparent"
+ },
+ {
+  "file": "rock_motif_pipestub.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "motif_decal",
+  "tileable": false,
+  "note": "pipe stub, points right; transparent"
+ },
+ {
+  "file": "rock_motif_cracks.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "kind": "motif_decal",
+  "tileable": false,
+  "note": "crack cluster; transparent"
+ },
+ {
+  "file": "rock_motif_gears_big.png",
+  "widthPx": 1092,
+  "heightPx": 1092,
+  "cells": [
+   2.0,
+   2.0
+  ],
+  "kind": "motif_decal",
+  "tileable": false,
+  "note": "two gears in rock chunk; transparent"
+ },
+ {
+  "file": "rock_motif_boulders_big.png",
+  "widthPx": 1092,
+  "heightPx": 1092,
+  "cells": [
+   2.0,
+   2.0
+  ],
+  "kind": "motif_decal",
+  "tileable": false,
+  "note": "boulder pile; transparent"
+ }
+]

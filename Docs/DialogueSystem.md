@@ -46,6 +46,7 @@ xls を保存 → メニュー **NeverNight > 会話シナリオを再インポ�
   `Command | Arg1 | Arg2 | ... | Text(I列) | ...`。セリフ本文は必ず **I列 (Text)** に書くこと。
   外部からコピペするときに3列目 (Arg2) にセリフが入ると、エラーは出ないのに
   「テキストなしのキャラ表示コマンド」扱いになり、会話が一瞬で終わって何も表示されなくなる
+- Claude が xls に書き込む時は、必ず バックアップ → NPOI で書き込み → 読み戻し検証 (Text=I列、Arg2 に入れない、既存行が変わっていない) → 再インポート の順で行う
 - xls が壊れた場合はテンプレートの
   `Assets/Utage/Templates/Template/Template/Scenarios/Template.xls` をコピーして復元する
   (プロジェクトルートに `Dialogue_backup.xls` のバックアップもある)
@@ -63,17 +64,54 @@ xls を保存 → メニュー **NeverNight > 会話シナリオを再インポ�
 
 プレイヤーが近づくと「話す」プロンプトが出て、E キーで会話が始まる。
 
+任意 (2026-10-03 追加、未設定なら従来どおり毎回 `Scenario Label`):
+- `Repeat Label` + `Talked Flag`: 初回の会話の終わりに Talked Flag (GameProgress) が立ち、2 回目以降は Repeat Label を再生する
+- `Reward Thread`: 初回の会話の終わりに糸を渡す (Talked Flag があれば一度きり)
+
+鍛冶師 (`Blacksmith`) も場面ごとのラベル (`_lockedLabel` / `_lockedRepeatLabel` / `_grantLabel` / `_forgeLabel` / `_afterLabel`) で Utage 会話を再生できる (Docs/Area1/Gimmicks.md)。
+
+### エリア1 のラベル (2026-10-03, Start シートの末尾)
+
+| ラベル | 話者 | 使う所 |
+|---|---|---|
+| `A1_Doll_First` / `A1_Doll_Repeat` | 迷子の人形 | A1_H 迷子センター (初回の終わりに糸 50) |
+| `A1_MapSellerU4_First` / `A1_MapSellerU4_Repeat` | 地図売り | A1_U4 観覧車の足元 |
+| `A1_MapSellerD5_First` / `A1_MapSellerD5_Repeat` | 地図売り | A1_D5 蒸気管の迷路 |
+| `A1_Smith_Locked` / `A1_Smith_LockedRepeat` | 木馬の鍛冶師 | A1_H 鍛冶師: 中ボス撃破前 (初回 / 2 回目以降) |
+| `A1_Smith_Forge` | 木馬の鍛冶師 | 有償の鍛冶強化 (糸 30) の申し出。会話の後に糸を払って強化 |
+| `A1_Smith_Grant` | 木馬の鍛冶師 | 赤ハサミを渡す時。会話の後に取得通知 |
+| `A1_Smith_After` | 木馬の鍛冶師 | 赤ハサミも鍛冶強化も済んだ後 |
+| `A1_Gramine_Meet` | ？？？ / 慈 / グラミネ | A1_B1 グラミネ 1 戦目: 闘技場に入ってゲートが閉まった直後、戦闘前。一度きり (会話の後にフラグ `A1_Gramine_Met`)。終わるまでボスは攻撃しない (2026-10-10) |
+| `A1_Gramine_Retreat` | グラミネ / 慈 / シネレア | A1_B1: HP 半分 → 流れ弾がスピーカー①を壊した後。会話の後にグラミネが飛び去る (= 勝ち扱い・扉開放) (2026-10-10) |
+
+ボスの会話は `GramineBossBehaviour` の `_introDialogueLabel` / `_introDialogueFlag` (一度きり) / `_retreatDialogueLabel` で流す (会話中は GamePause で FixedUpdate が止まるのでボスの行動も止まる。別の会話の再生中・ロード中は空くまで待ってから流す)。
+
+ラベル名はシーン (ビルダーのレシピ `Docs/Area1/SceneScripts/build_A1_*.cs`) が参照しているので、名前を変える時はレシピも直してシーンを作り直す。
+
 ### スクリプトから呼ぶ場合
 
 ```csharp
 DialogueService.Play("Shop_Greeting");                    // 再生するだけ
 DialogueService.Play("Shop_Greeting", () => { /*終了時*/ }); // 終了コールバック付き
 bool playing = DialogueService.IsPlaying;                  // 再生中か
+bool busy = DialogueService.IsBusy;                        // 再生中 or DialogueScene のロード中
+bool canTalk = DialogueService.CanStartFromInteract;       // NPC の CanInteract 用 (busy でなく、閉じてから 0.35 秒経った)
 ```
 
-- DialogueScene が未ロードでも自動で Additive ロードされる (Build Settings 登録済みが前提)
+- 会話は同時に 1 つだけ。再生中・ロード中の `Play` は警告ログを出して無視する (2026-10-03, §7)
+- 会話で話す IInteractable (`NpcTalkPoint` / `Blacksmith` など) の `CanInteract` は `DialogueService.CanStartFromInteract` にする
+  (`IsPlaying` だと、最初の会話のシーンのロード中や閉じた直後にもう一度話しかけられてしまう)
+- 会話の終わりのコールバックから続けて `Play` するのは可 (鍛冶師の 解禁前の会話 → 鍛冶強化の申し出)。クールダウンはインタラクトだけに掛かる
+- 会話中はゲーム側の Screen Space - Overlay の UI (HUD・StageUI など、sortingOrder 100 未満) を隠し、終わったら戻す (§7)
+
+- DialogueScene は**ゲーム起動時に先読みして常駐**する (2026-10-08, §7 末尾)。会話を始める時にロード待ちは無い。
+  先読みが無効・間に合わない時は従来どおり初回の `Play` で Additive ロードされる (Build Settings 登録済みが前提)
 - 再生中は GamePause で時間停止、終了で自動解除
-- 文字送り・改ページは **マウスクリック** (キー送りは未実装)
+- 会話を開いたフレームには、ゲームのボタンでは文字送りしない (開いたインタラクトの E / 上入力で 1 ページ目が飛ばないように)
+- 文字送り・改ページは **マウスクリック** に加えて、キーボード **Enter / テンキー Enter / Space / J / E**、パッド **South (×/A) / West (□/X) / 上入力** (= ゲームの決定・ジャンプ・攻撃・インタラクト) (2026-10-03)。
+  宴の公式の入力の差し替え口 `Utage.InputUtil.SetInputStrategy` に `Assets/Scripts/Dialogue/DialogueInputStrategy.cs` (宴の `InputSystemStrategy` を継承し `IsInputNextButton` を広げる) を入れている。
+  `UtageDialogueScene` が会話のたびに `DialogueInputStrategy.Install()` する (宴の初期化 (BeforeSceneLoad) と順番が決まらないため)。会話中 (`DialogueService.IsPlaying`) 以外は宴の既定のまま。
+  テストプレイの仮想入力 (`PlayerInputSource.Override` の Attack / Interact / Jump のタップ) でも送れる (ボットは会話中これで読み進める)。
 
 ---
 
@@ -154,3 +192,102 @@ DialogueScene に適用済みの調整 (参考):
 - **会話が表示されない** → コンソールの赤エラーを確認して Claude Code に相談 (DialogueScene の調整が壊れている場合は MCP 経由で再調整する)
 - **ラベルが見つからないという警告** → 再インポート忘れ。「NeverNight > 会話シナリオを再インポート」を実行
 - **インポートで例外** → `Dialogue.xls` の破損を疑う。テンプレートからコピーで復元 (上記 §1 注意欄)
+
+### 2026-10-03 のバグ修正: 会話が表示されない / 会話を 2 つ開ける
+
+ユーザー報告「描画順の問題で会話シーンが表示されないのと、2 枚会話シーンを開くことができます」。A1_H (PlayerScene 常駐 + UI シーン群) の人形・鍛冶師で再現して確認した。
+
+**原因**
+
+1. **DialogueScene の二重ロード** (2 枚開ける): 最初の会話では DialogueScene を Additive でロードするが、ロード中 (数フレーム) は
+   `DialogueService.IsPlaying` が false のままだったので、NPC の `CanInteract` も true のまま。その間にもう一度インタラクトすると
+   (E の連打・2 つの NPC など) `LoadSceneAsync` がもう一度走り、DialogueScene が 2 つ並んだ
+2. **会話が見えない** (1 の結果): `UtageDialogueScene` はゲーム側カメラの cullingMask から Utage / UtageUI レイヤーを外すが、
+   「自分の `_overlayCameras` 以外の全カメラ」を対象にしていたため、DialogueScene が 2 つあると **互いの宴カメラの cullingMask を 0 にし合い**、
+   メインカメラのスタックに載った宴カメラが何も描かなくなった (ゲームは会話中のポーズで止まったまま、画面には何も出ない)。
+   ユーザーのエディタに残っていた状態 (DialogueScene ×2、宴カメラ全部 mask=0) と、修正前の再現 (人形に 2 回続けて話す) で同じ
+3. **描画順** (1 枚でも起きる): HUD・StageUI などゲーム側の UI は Screen Space - Overlay キャンバスで、URP では
+   **カメラスタック (宴の会話 UI) より必ず手前に描かれる** (sortingOrder では下に回せない)。HUD の左下の枠・ミニマップ・体力などが
+   会話の黒背景とメッセージウィンドウの上に重なっていた
+4. (付随) 会話を連打で閉じた直後に、同じ NPC の会話がすぐ開き直せた
+
+**修正**
+
+- `DialogueService`: ロード中を `IsLoading` で持ち、ロード中の要求は完了後にまとめて実行 (2 回目の `LoadSceneAsync` はしない)。
+  再生中・開始待ちの `Play` は無視。`IsBusy` / `CanStartFromInteract` (閉じてから `ReopenCooldown` = 0.35 秒) を追加。静的状態はプレイ開始時にリセット
+- `UtageDialogueScene`:
+  - Utage レイヤーを外す対象から DialogueScene のカメラを除外 (自分以外の DialogueScene のカメラも消さない)
+  - それでも二重にロードされた時は、後から来た方が Start で自分のシーンをアンロードする (保険)
+  - 会話中はゲーム側の Screen Space - Overlay キャンバス (sortingOrder 100 未満。FadeCanvas 500 は残す) を `Canvas.enabled = false` で隠し、終わりに戻す
+  - 会話の終わりの後始末 (カメラスタック・UI・ポーズ) を 1 か所にまとめ、会話中にシーンが破棄されても後始末する
+- `NpcTalkPoint` / `Blacksmith`: `CanInteract` を `DialogueService.CanStartFromInteract` に
+- `DialogueInputStrategy`: 会話を開いたフレームにはゲームのボタンで送らない
+- Debug Panel / DialogueTestDriver: `IsBusy` で無効化
+
+**確認 (プレイモード, A1_H)**: 人形に 2 回続けてインタラクト → 修正前は DialogueScene ×2・画面に何も出ない
+(`Assets/Screenshots/Dialogue/before_double_open.png`)、修正後は 1 つだけで会話が表示され HUD は隠れる (`after_double_open.png`)。
+E を 2 フレームに 1 回連打 → 閉じてから 0.35 秒は開き直さない、糸 50 は一度だけ、HUD は戻る。鍛冶師も同様 (`after_smith.png`)、
+解禁前の会話 → 鍛冶強化の申し出の連続再生は従来どおり。DialogueScene を手動で二重ロードしても後の方が消え、会話は表示される。
+
+**黒背景 → 半透明に (2026-10-03 ユーザー決定, PendingChanges 24)**: DialogueScene の `Canvas-BackGround/Image` (ClearCamera の Screen Space - Camera, 全画面) を
+不透明の黒 (α1) から **黒 α0.45** にした。宴のカメラ (ClearCamera / SpriteCamera / UICamera) はどれも URP の Overlay・Clear Flags = Nothing で
+メインカメラのスタックに載るので、会話中 (ポーズ, timeScale 0) もメインカメラが描いたステージが暗く透けて見える。会話中に HUD などを隠すのは従来どおり。
+確認: A1_H の人形と会話 → ステージと人形が暗く見え、メッセージウィンドウの文字は読める (`Assets/Screenshots/Area1/decide3_dialogue_doll.png`)。
+濃さを変える時はこの Image の色のアルファだけを変える (シーンを開いて直接)。
+
+
+### 2026-10-03 追補: 「DialogueScene が二重にロード」「There are 2 event systems」の警告
+
+シーン遷移を繰り返した後にコンソールにこの 2 つの警告が出ていた件を調査した。
+
+**調査結果**
+
+- PlayerScene 方式の通常プレイ (はじめから A1_T1 → T2 → T1 → T2 → T1 → T2 → T3 → T4 → B1 → A1_H、人形と会話 → B1 へ出て戻る → もう一度会話、
+  セーブ復帰・リトライ (PlayerScene ごと読み直し)、話しかけた同じフレームでの遷移) では **DialogueScene は常に 1 つ**、EventSystem も 1 つ
+  (ゲーム側のシーンには EventSystem が無く、DialogueScene の 1 つだけ)。警告は出ない。`DialogueService` の静的状態も遷移では失われない
+  (遷移は Additive の入れ替えで、DialogueScene は降ろされない)
+- エディタログ (Editor.log) に残っていた警告は 2 回とも、上の修正の確認で **DialogueScene を意図的に二重ロードしたテスト** の直後のもの。
+  1 回目は保険 (後の方のアンロード) を入れる前のコードで、2 つ目の EventSystem が残ったまま「There are 2 event systems」が毎フレーム 5000 回以上出ていた
+  (コンソールを消していなかったので遷移後に見えていた)
+- ただし、実際に二重ロードになる経路が 2 つあった:
+  1. **テストプレイのワープ一覧に DialogueScene が出ていた**。「ステージ = PlayerScene でも、名前が UI で終わるシーンでもないもの」という規約で判定していたが、
+     DialogueScene は名前が UI で終わらない。オーバーレイの「その他のシーン」→ DialogueScene → デフォルト入口で
+     `StageLoader.TransitionTo("DialogueScene")` が走り、**2 つ目の DialogueScene がステージとして Additive ロード**され (両方の警告が出る)、
+     元のステージも降ろされて足場の無い状態になっていた
+  2. `StageLoader.FindLoadedStage` (エディタでステージを直接開いて再生した時) も同じ判定で、DialogueScene をエディタで一緒に開いていると
+     それを現在のステージと見なしうる (次の遷移で DialogueScene が「旧ステージ」として降ろされる)
+- 保険が動いた時も、2 つ目の EventSystem はアンロードまでの数フレーム有効だった (`There can be only one active Event System` + `There are 2 event systems` が出る)
+
+**修正**
+
+- `StageLoader.IsStageSceneName(name)` を追加 (PlayerScene・名前が UI で終わるシーン・`DialogueService.SceneName` を除く)。
+  `FindLoadedStage` と `TestPlayActions.StageScenes` (デバッグパネル・テストプレイのワープ一覧) はこれで判定し、`TransitionTo` はステージ以外を警告して拒否する
+- `UtageDialogueScene` を `[DefaultExecutionOrder(-10000)]` にし、二重ロードの 2 つ目は Awake で自分以外のルート (EventSystem・AdvEngine など) を
+  すぐ非アクティブにする (同じシーンの EventSystem の OnEnable より先に止まるので EventSystem の警告は出ない)。アンロードは従来どおり Start で。
+  EventSystem の重複判定も「このシーン以外に EventSystem があるか」に直した
+
+**確認 (プレイモード)**: 上の通常プレイの手順を通しでコンソールの警告 0 件、各段階のシーン一覧は PlayerScene + UI 9 つ + ステージ (+ 会話後は DialogueScene 1 つ)、
+会話は表示 → 送り → 閉じる (糸の受け渡し・2 回目の短い会話も従来どおり)。`TestPlayActions.Warp("DialogueScene")` は拒否 (遷移せず警告 1 件)、
+ワープ一覧に DialogueScene が出ない。DialogueScene を手動で二重ロード → 「二重にロード」の警告 1 件だけで EventSystem の警告は出ず、後の方が消えて会話も正常。
+
+(付記・未修正) 会話中に遷移すると、遷移先のステージ (StageInfo / SceneTransitionZone) が `GamePause.Reset` するため会話中なのにポーズが外れる。
+通常は会話中に遷移できない (時間が止まっている) ので実害は小さいが、テスト用の強制遷移では起きる。
+
+### 2026-10-08: 起動時の先読みと常駐 (PendingChanges 46)
+
+ユーザー指示「会話の Utage はゲーム起動時に読み込んでおくように」。
+
+- `DialogueService.PreloadAtBoot` (`[RuntimeInitializeOnLoadMethod(AfterSceneLoad)]` = 最初のシーン (タイトル / エディタで開いたステージ) の Awake の後) が
+  `Preload()` を呼び、DialogueScene を Additive ロード → `UtageDialogueScene.Boot()` で宴のエンジン (AdvEngine) を起動しておく (シナリオ・設定の読み込み)。
+  タイトルから起動して約 0.2 秒 (3 フレーム目) で起動済み (`DialogueService.IsReady`)。止めたい時は `DialogueService.PreloadOnBoot = false` (プレイごとに true に戻る)。
+- ロードが終わったら中身 (ルート) を **DontDestroyOnLoad へ移し、空になった DialogueScene は降ろす** (`DialogueService.MakeResident`)。
+  死亡リトライ・はじめから/つづきからの PlayerScene の読み直し (`LoadScene` Single)・タイトルへ戻るでも消えない (以前はこれらで消えて、次の会話で読み直していた)。
+- 待機中は何も描かれず入力も取らない: 宴のカメラはメインカメラのスタックに載せた時 (会話中) しか描かれない。宴の入力の差し替え (`DialogueInputStrategy`) は会話中だけ効く。
+  以前の「初回の会話の後は常駐」と同じ待機状態を起動時から作っているだけ。
+- 常駐中に別のシーンがロードされたら (`SceneManager.sceneLoaded`)、新しいゲーム側カメラから Utage/UtageUI レイヤーを外し、
+  ゲーム側に EventSystem があれば宴の EventSystem を止める (今は DialogueScene にしか EventSystem が無いので、宴のものが 1 つだけ有効)。
+- 「自分の物」の判定 (カメラのレイヤーを外さない・会話中に隠さないキャンバス) は、シーンではなく覚えたルート (`RememberOwnRoots`) で見る (DontDestroyOnLoad へ移った後も正しく判定するため)。
+- 以前の修正はそのまま: 二重ロードの防止 (常駐中は `_controller` を使い、2 つ目の DialogueScene は Awake で止めて降ろす)・宴カメラの Overlay 接続・会話中の Overlay UI の非表示・0.35 秒の再オープン待ち・ゲームのボタンでの文字送り。
+- 確認 (プレイモード, `Docs/Area1/SceneScripts/playtest_batch6.cs`): タイトルの直後に DontDestroyOnLoad に常駐・起動済み、タイトル画面に何も出ない (`batch6_title_preloaded`)。
+  A1_H の人形に立ち止まって話しかけると 0.05 秒後には再生中 (ロード無し, `batch6_talk_opened_instantly`)、死亡 → リトライ後 (`batch6_talk_after_retry`)・タイトルへ戻って開始し直した後も同じ常駐のまま即座に開く。EventSystem は常に 1 つ。
+

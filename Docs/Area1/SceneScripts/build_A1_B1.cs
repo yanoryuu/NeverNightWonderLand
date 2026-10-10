@@ -1,0 +1,85 @@
+using UnityEngine;
+using static NeverNight.StageBuild.Area1StageBuilder;
+
+// A1_B1 (部屋名なし。2026-10-10 ユーザー決定「部屋に名前は付けない」) (B1 ボス部屋。ボス = グラミネ 1 戦目) + 「第1スピーカー室」(S1)
+// 先に別の呼び出しで OpenOrCreate("A1_B1") を実行しておくこと。
+public static class BuildB1
+{
+    // 奥の壁に半分埋まった大歯車 (背景の飾り。岩 (0) の裏、暗く沈める)
+    static void BgGear(float x, float y, float scale, float rot = 0f)
+    {
+        var g = Prop("platforms/gear_platform.png", x, y, scale, -7, false, new Color(0.3f, 0.26f, 0.4f));
+        g.transform.rotation = Quaternion.Euler(0, 0, rot);
+    }
+
+    // 天井から吊った灯
+    static void HangLamp(float x, float ceilingY, float scale = 0.7f)
+    {
+        var l = Prop("props/boss_door_lamp_on.png", x, ceilingY - scale * 0.45f, scale, OrderProp, false, new Color(1f, 0.82f, 0.58f));
+        l.transform.rotation = Quaternion.Euler(0, 0, 180f);
+    }
+
+    public static string Run()
+    {
+        var log = BuildBase("A1_B1");
+
+        // ================= B1 (x165..207, y-63..-30): 平らで広い四角い部屋。床 y-57 (左の通路 y-57..-48 の下端)
+        Ground(165, 207, -57, 6);
+        Solid(204, -57, 207, -54);      // 右奥の段 (S1 への通路 y-54..-45 の床)
+
+        // 背景: 閉ざされた改札の列 (奥の飾り、当たり無し)
+        var gateTint = new Color(0.42f, 0.36f, 0.5f);
+        for (var x = 174f; x <= 198f; x += 6f)
+            Prop("props/fence_gate.png", x, -57f, 0.9f, -6, false, gateTint);
+        foreach (var x in new[] { 171f, 186f, 201f })
+            Prop("props/boss_door_lamp_on.png", x, -37.5f, 0.7f, OrderProp, false, new Color(1f, 0.6f, 0.55f));
+
+        // ボス: 「グラミネ第1のボス」の 1 戦目 (2026-10-10, Docs/EnemySpec.md。部屋の名前は付けない (area1_layout.json の name は空)、ボス名はグラミネに統一)。入ると左の扉が閉まる。
+        // 入ると会話 A1_Gramine_Meet (一度きり, フラグ A1_Gramine_Met) → 戦闘。HP が半分になると流れ弾 (ナイフ) が S1 のスピーカー① を壊し、
+        // 会話 A1_Gramine_Retreat の後に飛び去る (RetreatAtThreshold) = 勝ち扱い (BossArena が OnRetreated でフラグ A1_Boss1・扉開放)。
+        // 仮ボス (Enemy ×2 + Heavy) を BossRoom で置いてから UseGramineBoss で差し替える (位置・糸の数は引き継ぐ)
+        var b1Arena = BossRoom(new RectInt(168, -57, 35, 24), "A1_Boss1", new Vector2(192f, -55f), false,
+            new[] { new RectInt(165, -57, 2, 9) },
+            "グラミネは奥へ去っていった",
+            threadDrop: 20);   // ボスの糸 20 本 → 12 粒 (PendingChanges 18。撤退時も同じ数を落とす)
+        var boss = UseGramineBoss(b1Arena, BossFightMode.RetreatAtThreshold).GetComponent<GramineBossBehaviour>();
+        Set(boss, "_introDialogueLabel", "A1_Gramine_Meet");
+        Set(boss, "_introDialogueFlag", "A1_Gramine_Met");
+        Set(boss, "_retreatDialogueLabel", "A1_Gramine_Retreat");
+
+        // 撃破でスピーカー室への扉 (シャッター) が開く
+        // 開き戸 (Drive「door」, PendingChanges 42): その場で開いて開いた扉が残る (岩 (0) の裏)
+        FlagSwingDoor("S1Door", new RectInt(207, -54, 3, 9), "A1_Boss1", -1);
+
+        // ================= S1 (x210..228, y-57..-36): 第1スピーカー室。床 y-54
+        Ground(210, 228, -54);
+        // 壁沿いの棚を登ると、スピーカーの据わった高い渡り廊下 (下は通り抜けられる)
+        OneWay(211, 215, -51);
+        OneWay(216, 220, -48);
+        OneWay(213, 226, -45);
+        var speaker = SpeakerAt(221.5f, -45f, "A1_Speaker1", 1);
+        Set(speaker.GetComponent<BreakableSpeaker>(), "_breakMessage",
+            "スピーカー①を壊した! 音楽の一部が止んだ…… 拠点の奥の大扉に灯がひとつ点いた (1/3)");
+        // 撤退の瞬間にグラミネの流れ弾がスピーカー①を壊す (ForceBreak: フラグ・壊れた絵・大扉の灯はプレイヤーが壊した時と同じ)
+        Set(boss, "_retreatBreakTarget", speaker.GetComponent<BreakableSpeaker>());
+        Set(boss, "_retreatBreakMessage", "グラミネの流れ弾がスピーカー①を壊した…… 拠点の奥の大扉に灯がひとつ点いた (1/3)");
+        var broken = Prop(SpeakerBrokenArt(1), 221.5f, -45f, 1f, OrderProp);
+        broken.SetActive(false);
+        var act = NewObject("SpeakerBrokenFlag", new Vector2(221.5f, -43f), LayerDefault, "Gimmicks");
+        AddComp<FlagActivator>(act, ("_flags", new[] { "A1_Speaker1" }), ("_showWhenSet", new Object[] { broken }));
+        // 渡り廊下の支柱 (飾り)
+        var post = NewObject("CatwalkPost", new Vector2(224.5f, -49.5f), LayerDefault, "Props");
+        AddSprite(post, Art("tiles/tile_ladder.png"), OrderProp, new Vector2(1f, 9f), new Color(0.7f, 0.65f, 0.8f));
+
+        // ================= ヒント
+        // 案内文はチュートリアルの操作説明 (キーの説明) だけ残す。呼びかけ・攻略助言・場所の説明は削除 (2026-10-03 ユーザー決定, Docs/UI/UIAssignment.md「案内文」)
+
+        // ---- 飾り (奥の大歯車・吊り灯)
+        BgGear(165.5f, -36f, 3f, 8f); BgGear(207f, -33f, 2.4f, 20f); BgGear(186f, -30.5f, 2f);
+        HangLamp(215f, -36f); HangLamp(224.5f, -36f);
+
+        // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
+        log += Depth("A1_B1") + "\n";
+        return log + Finish();
+    }
+}

@@ -9,6 +9,14 @@ public abstract class AirborneState : PlayerState
 
     public override void LogicUpdate()
     {
+        // 梯子: 上 + ジャンプで掴まる / 上端で下 + ジャンプで掴まって降りる (大ジャンプの溜め・すり抜け床から降りるより優先)
+        if (Player.TryGrabLadder(out var ladder, out var fromTop))
+        {
+            Player.LadderState.SetLadder(ladder, fromTop);
+            StateMachine.ChangeState(Player.LadderState);
+            return;
+        }
+
         // 落下攻撃 (スキル): 空中で下+攻撃。通常の空中攻撃より優先する
         if (Player.HasSkill(PlayerSkill.GroundSlam)
             && Player.VerticalInput < -0.5f && Player.TryConsumeAttack())

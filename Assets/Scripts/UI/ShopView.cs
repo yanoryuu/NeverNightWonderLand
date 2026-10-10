@@ -4,7 +4,7 @@ using UnityEngine;
 
 /// <summary>
 /// ショップ画面 (拠点)。ShopKeeper のインタラクトから開き、糸を消費してアイテムを購入する。
-/// UI はシーン上で事前配置した MenuPanelView を参照する (実行時生成なし)。
+/// ShopUI シーン (Additive) に置かれ、UI はプレハブ上で事前配置した MenuPanelView を参照する (実行時生成なし)。
 /// 品揃えと価格は _lineup で設定する。所持数は各アイテムの最大数まで。
 /// </summary>
 public class ShopView : MonoBehaviour
@@ -22,7 +22,7 @@ public class ShopView : MonoBehaviour
     [Tooltip("メニューに使う日本語フォント")]
     [SerializeField] private TMP_FontAsset _font;
 
-    [Tooltip("メニューパネル (シーン上で事前配置)")]
+    [Tooltip("メニューパネル (プレハブ上で事前配置)")]
     [SerializeField] private MenuPanelView _menu;
 
     [Tooltip("品揃え")]
@@ -77,7 +77,8 @@ public class ShopView : MonoBehaviour
             var count = _inventory.GetCount(item);
             var label = $"{item.DisplayName}  糸{sale.Price}  (所持 {count}/{item.MaxCount})";
             var canBuy = count < item.MaxCount && _inventory.Thread.CurrentValue >= sale.Price;
-            entries.Add(new MenuPanelView.Entry(label, () => Purchase(sale), canBuy));
+            // 品物の絵 (ItemDefinition のアイコン)。買えない時は灰色の絵 (アイテム画面の 0 個と同じ)
+            entries.Add(new MenuPanelView.Entry(label, () => Purchase(sale), canBuy, canBuy ? item.Icon : item.IconEmpty));
         }
 
         entries.Add(new MenuPanelView.Entry("やめる", CloseMenu));

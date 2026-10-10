@@ -56,6 +56,21 @@ public class EnemyConsts : ScriptableObject
     [Tooltip("被弾フラッシュの時間 (sec)")]
     [SerializeField] private float _hitFlashTime = 0.1f;
 
+    [Tooltip("プレイヤーの攻撃が当たった時のヒットストップ (実時間 sec)。0 で止めない")]
+    [SerializeField] private float _hitStopTime = 0.06f;
+
+    [Tooltip("ブレイクさせた・倒した時のヒットストップ (実時間 sec)")]
+    [SerializeField] private float _heavyHitStopTime = 0.12f;
+
+    [Tooltip("裁断が決まった時のヒットストップ (実時間 sec)")]
+    [SerializeField] private float _finisherHitStopTime = 0.2f;
+
+    [Tooltip("裁断が決まった時の画面揺れの強さ (ワールド単位)")]
+    [SerializeField] private float _finisherShakeAmplitude = 0.35f;
+
+    [Tooltip("裁断が決まった時の画面揺れの長さ (実時間 sec)")]
+    [SerializeField] private float _finisherShakeTime = 0.35f;
+
     [Header("死亡")]
     [Tooltip("死亡演出(フェード)の時間 (sec)")]
     [SerializeField] private float _deathFadeTime = 0.4f;
@@ -83,6 +98,11 @@ public class EnemyConsts : ScriptableObject
     public float KnockbackOnHit => _knockbackOnHit;
     public float HitStunTime => _hitStunTime;
     public float HitFlashTime => _hitFlashTime;
+    public float HitStopTime => _hitStopTime;
+    public float HeavyHitStopTime => _heavyHitStopTime;
+    public float FinisherHitStopTime => _finisherHitStopTime;
+    public float FinisherShakeAmplitude => _finisherShakeAmplitude;
+    public float FinisherShakeTime => _finisherShakeTime;
 
     public float DeathFadeTime => _deathFadeTime;
 

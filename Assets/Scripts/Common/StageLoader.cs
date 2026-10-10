@@ -10,7 +10,7 @@ using UnityEngine.SceneManagement;
 /// (タイトルからの開始・死亡リトライ)。
 /// 起動時のステージは GameSession.PendingStage → ロード済みステージ
 /// (エディタでステージシーンを直接開いて再生した場合) → 既定ステージ の順で決まる。
-/// UI シーンは「名前が UI で終わる」規約でステージと見分ける。
+/// UI シーンは「名前が UI で終わる」規約でステージと見分ける (会話の DialogueScene も除く, <see cref="IsStageSceneName"/>)。
 /// </summary>
 public class StageLoader : MonoBehaviour
 {
@@ -27,6 +27,9 @@ public class StageLoader : MonoBehaviour
     private string _pendingEntranceId; // 次のステージで使う入り口 Id (TransitionTo で指定)
     private bool _isLoading;           // ロード中の多重遷移防止
 
+    /// <summary>ステージのロード (暗転を含む) 中か。</summary>
+    public bool IsLoading => _isLoading;
+
     private void Awake()
     {
         Instance = this;
@@ -36,6 +39,14 @@ public class StageLoader : MonoBehaviour
     {
         if (Instance == this)
             Instance = null;
+    }
+
+    private void Update()
+    {
+        // 累計プレイ時間 (実時間)。セーブ画面に表示する。
+        // ポーズ・メニュー (ポーズ / 拠点 / ショップ / アイテム画面 / セーブスロット等、MenuPanelView.AnyOpen に数えるもの) の間は止める
+        if (!MenuPanelView.AnyOpen)
+            GameSession.PlayTimeSeconds += Time.unscaledDeltaTime;
     }
 
     private void Start()
@@ -72,6 +83,13 @@ public class StageLoader : MonoBehaviour
     {
         if (_isLoading || string.IsNullOrEmpty(stageName) || stageName == CurrentStageName)
             return false;
+
+        if (!IsStageSceneName(stageName))
+        {
+            // DialogueScene などをステージとして読むと、二重ロード (EventSystem 2 つ) になり元のステージも降ろされる
+            Debug.LogWarning($"[{nameof(StageLoader)}] '{stageName}' はステージではないため遷移しません。", this);
+            return false;
+        }
 
         _pendingEntranceId = entranceId;
 
@@ -116,7 +134,13 @@ public class StageLoader : MonoBehaviour
             {
                 var old = SceneManager.GetSceneByName(unloadAfter);
                 if (old.IsValid() && old.isLoaded)
+                {
+                    // 全ステージが共通のワールド座標なので、旧ステージの岩 (当たり) が新ステージの入り口と重なることがある。
+                    // 非同期の破棄を待つ間に押し出されないよう、旧ステージの物は先に止めておく (縦の遷移の到着ずれ対策)
+                    foreach (var root in old.GetRootGameObjects())
+                        root.SetActive(false);
                     SceneManager.UnloadSceneAsync(old);
+                }
             }
 
             var scene = SceneManager.GetSceneByName(stageName);
@@ -144,6 +168,7 @@ public class StageLoader : MonoBehaviour
         GameSession.PendingStage = stageName;
         GamePause.Reset();
         DefeatedEnemyRegistry.Clear(); // 全リセットでは倒した敵も復活する
+        BrokenCrateRegistry.Clear();   // 壊した木箱も元に戻る (セーブからの復帰は全部の箱が元どおり)
 
         if (Application.CanStreamedLevelBeLoaded(PlayerSceneName))
         {
@@ -156,13 +181,24 @@ public class StageLoader : MonoBehaviour
         }
     }
 
-    /// <summary>ロード済みシーンからステージ (PlayerScene でも UI シーンでもないもの) を探す。</summary>
+    /// <summary>
+    /// ステージのシーン名か (PlayerScene・UI シーン (名前が UI で終わる)・会話の DialogueScene 以外)。
+    /// DialogueScene は名前が UI で終わらないが、DialogueService が常駐させる UI 側のシーン。
+    /// ステージとして扱うと遷移で二重にロードされる (Docs/DialogueSystem.md §7)。
+    /// </summary>
+    public static bool IsStageSceneName(string sceneName) =>
+        !string.IsNullOrEmpty(sceneName)
+        && sceneName != PlayerSceneName
+        && sceneName != DialogueService.SceneName
+        && !sceneName.EndsWith("UI");
+
+    /// <summary>ロード済みシーンからステージ (<see cref="IsStageSceneName"/>) を探す。</summary>
     private static Scene FindLoadedStage()
     {
         for (var i = 0; i < SceneManager.sceneCount; i++)
         {
             var scene = SceneManager.GetSceneAt(i);
-            if (!scene.isLoaded || scene.name == PlayerSceneName || scene.name.EndsWith("UI"))
+            if (!scene.isLoaded || !IsStageSceneName(scene.name))
                 continue;
 
             return scene;
@@ -190,7 +226,11 @@ public class StageLoader : MonoBehaviour
 
         var spawn = FindSpawnPoint(stageScene, entranceId);
         if (spawn != null)
+        {
             player.transform.position = spawn.transform.position;
+            // 入り口が梯子の途中 (縦の移動で梯子を伝って来た) なら掴まった状態で始める
+            player.AttachToLadderOnArrival();
+        }
     }
 
     /// <summary>

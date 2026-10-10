@@ -2,7 +2,7 @@ using R3;
 using UnityEngine;
 
 /// <summary>
-/// プレイヤー近傍のインタラクト対象を検出し、E 入力で実行する。
+/// プレイヤー近傍のインタラクト対象を検出し、E 入力 (パッドは上) で実行する。立ち止まっている時だけ (PlayerController.CanInteractNow)。
 /// ステートマシンの外で完結する(移動やジャンプを阻害しない)。
 /// 現在の対象は ReactiveProperty で公開し、InteractPromptView がプロンプト表示に使う。
 /// </summary>
@@ -36,15 +36,37 @@ public class PlayerInteractor : MonoBehaviour
 
         _current.Value = FindNearestInteractable();
 
-        if (_current.Value != null && _controller.TryConsumeInteract())
+        // 立ち止まっている時だけ受け付ける (パッドはインタラクト = 上入力なので、走りながら上に触れて
+        // 会話・拠点・扉などに入ってしまわないように。素通りする時は何も起きない = ホロウナイトと同じ感触)
+        if (_current.Value != null && _controller.TryConsumeInteract() && _controller.CanInteractNow)
             _current.Value.Interact(gameObject);
+    }
+
+    /// <summary>
+    /// インタラクト範囲内にある T (例: SavePoint) を探す (最寄りでなくてもよい。無ければ null)。
+    /// ポーズの「セーブ」の有効判定 (拠点の近くか) に使う。
+    /// </summary>
+    public T FindInRange<T>() where T : class
+    {
+        foreach (var hit in OverlapInteractRange())
+        {
+            var found = hit.GetComponentInParent<T>();
+            if (found != null)
+                return found;
+        }
+
+        return null;
+    }
+
+    private Collider2D[] OverlapInteractRange()
+    {
+        var consts = _controller.Consts;
+        return Physics2D.OverlapCircleAll(transform.position, consts.InteractRadius, consts.InteractableLayer);
     }
 
     private IInteractable FindNearestInteractable()
     {
-        var consts = _controller.Consts;
-        var hits = Physics2D.OverlapCircleAll(
-            transform.position, consts.InteractRadius, consts.InteractableLayer);
+        var hits = OverlapInteractRange();
 
         IInteractable nearest = null;
         var nearestSqr = float.MaxValue;

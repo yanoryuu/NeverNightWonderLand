@@ -11,6 +11,14 @@ public abstract class GroundedState : PlayerState
 
     public override void LogicUpdate()
     {
+        // 梯子: 上 + ジャンプで掴まる / 上端で下 + ジャンプで掴まって降りる (大ジャンプの溜め・すり抜け床から降りるより優先)
+        if (Player.TryGrabLadder(out var ladder, out var fromTop))
+        {
+            Player.LadderState.SetLadder(ladder, fromTop);
+            StateMachine.ChangeState(Player.LadderState);
+            return;
+        }
+
         // パリィ (スキル): 方向入力なしでダッシュ (通常ダッシュより優先)
         if (Player.HasSkill(PlayerSkill.Parry)
             && Mathf.Abs(Player.MoveInput) < 0.01f && Mathf.Abs(Player.VerticalInput) < 0.01f

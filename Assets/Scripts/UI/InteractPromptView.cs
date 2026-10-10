@@ -5,6 +5,8 @@ using UnityEngine;
 /// インタラクトプロンプト (「[E] レバーを引く」)。
 /// PlayerInteractor の現在対象を毎フレーム確認し、対象の PromptAnchor 位置に表示する。
 /// ワールド空間の TextMeshPro を想定。シーンに1つ置く。
+/// プレイヤーに頭の上のボタン表示 (<see cref="InteractButtonPrompt"/>) が付いている時は出さない
+/// (表示を 1 つにそろえる。PendingChanges 48。今は Test シーンにだけ置かれている)。
 /// </summary>
 public class InteractPromptView : MonoBehaviour
 {
@@ -29,7 +31,7 @@ public class InteractPromptView : MonoBehaviour
             return;
 
         var current = _interactor.Current.CurrentValue;
-        var visible = current != null && current.CanInteract;
+        var visible = current != null && current.CanInteract && !_interactor.TryGetComponent<InteractButtonPrompt>(out _);
         _root.SetActive(visible);
 
         if (visible)

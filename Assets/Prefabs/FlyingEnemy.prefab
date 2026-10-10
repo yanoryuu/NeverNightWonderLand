@@ -108,10 +108,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 6879028451009213352}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 100, y: 100}
+  m_SizeDelta: {x: -2, y: -2}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &3340460589824485252
 CanvasRenderer:
@@ -183,10 +183,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 5993189751282801068}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 100, y: 100}
+  m_SizeDelta: {x: -2, y: -2}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4070911087553510590
 CanvasRenderer:
@@ -618,6 +618,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _consts: {fileID: 11400000, guid: cd3929950c7d0e04d80f2bd1b9ad7472, type: 2}
+  _threadDropOverride: 0
+  _visual: {fileID: 0}
+  _visualFacesLeft: 0
+  _hitFlashColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!114 &4868579200280597869
 MonoBehaviour:
   m_ObjectHideFlags: 0

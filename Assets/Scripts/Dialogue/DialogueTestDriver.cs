@@ -33,13 +33,13 @@ public class DialogueTestDriver : MonoBehaviour
         GUILayout.Label("<b>会話デバッグ</b>", new GUIStyle(GUI.skin.label) { richText = true, fontSize = 16 });
         if (_labelsLoading)
             GUILayout.Label("ラベル一覧を読み込み中...");
-        else if (DialogueService.IsPlaying)
+        else if (DialogueService.IsBusy)
             GUILayout.Label($"再生中: {_playingLabel} (クリックで文字送り)");
         else
             GUILayout.Label("ラベルを選んで再生してください");
         GUILayout.Space(4f);
 
-        GUI.enabled = !DialogueService.IsPlaying;
+        GUI.enabled = !DialogueService.IsBusy;
 
         _scroll = GUILayout.BeginScrollView(_scroll);
         foreach (var label in _scenarioLabels)

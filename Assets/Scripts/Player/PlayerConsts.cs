@@ -179,6 +179,20 @@ public class PlayerConsts : ScriptableObject
     [Tooltip("落下速度の上限 (units/sec)")]
     [SerializeField] private float _maxFallSpeed = 20f;
 
+    [Header("梯子")]
+    [Tooltip("梯子を上り下りする速度 (units/sec)")]
+    [SerializeField] private float _ladderClimbSpeed = 4.5f;
+
+    [Tooltip("上入力とジャンプ (梯子の上では下入力とジャンプ) を「同時」とみなす猶予 (sec)。どちらを先に押してもよい")]
+    [SerializeField] private float _ladderGrabWindow = 0.1f;
+
+    [Tooltip("見た目の体の中心の横のずれ (units, 右向きの時。左向きでは反転)。ルート (= 物理の位置) から見た Spine の体の中心。" +
+             "梯子では体の中心が梯子の中心に来るようにルートをこのぶん逆へずらす。インタラクトのボタン表示もここを中心にする")]
+    [SerializeField] private float _visualBodyOffsetX = -0.3f;
+
+    [Tooltip("インタラクト (会話・拠点・扉など) を受け付ける水平速度の上限 (units/sec)。走りながら上を押しても会話に入らない")]
+    [SerializeField] private float _interactMaxSpeed = 0.5f;
+
     [Header("ジャンプ補助")]
     [Tooltip("地面を離れてからジャンプ入力を受け付ける猶予 (sec)")]
     [SerializeField] private float _coyoteTime = 0.1f;
@@ -296,6 +310,10 @@ public class PlayerConsts : ScriptableObject
     public float HealDuration => _healDuration;
 
     public float InteractRadius => _interactRadius;
+    public float InteractMaxSpeed => _interactMaxSpeed;
+    public float LadderClimbSpeed => _ladderClimbSpeed;
+    public float LadderGrabWindow => _ladderGrabWindow;
+    public float VisualBodyOffsetX => _visualBodyOffsetX;
     public LayerMask InteractableLayer => _interactableLayer;
 
     public int RefillThreadCost => _refillThreadCost;

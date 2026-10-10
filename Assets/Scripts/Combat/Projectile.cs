@@ -34,7 +34,8 @@ public class Projectile : MonoBehaviour
     {
         _rb = GetComponent<Rigidbody2D>();
         _collider = GetComponent<Collider2D>();
-        _sprite = GetComponent<SpriteRenderer>();
+        // 絵はルートか子 (まち針・ミシン針は子 "Art" に傾けた絵を置き、ルートは当たりと向きだけ)
+        _sprite = GetComponentInChildren<SpriteRenderer>();
         _collider.isTrigger = true;
         _rb.freezeRotation = true;
     }

@@ -1,0 +1,710 @@
+[
+ {
+  "file": "tiles/tile_crack_wall.png",
+  "kind": "tile",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1,
+   1
+  ],
+  "pivot": "center",
+  "note": "breaks when hit"
+ },
+ {
+  "file": "tiles/tile_slam_block.png",
+  "kind": "tile",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1,
+   1
+  ],
+  "pivot": "center",
+  "note": "ground slam"
+ },
+ {
+  "file": "tiles/tile_rush_block.png",
+  "kind": "tile",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1,
+   1
+  ],
+  "pivot": "center",
+  "note": "charge rush"
+ },
+ {
+  "file": "tiles/tile_super_block.png",
+  "kind": "tile",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1,
+   1
+  ],
+  "pivot": "center",
+  "note": "super jump from below"
+ },
+ {
+  "file": "tiles/tile_spikes.png",
+  "kind": "tile",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1,
+   1
+  ],
+  "pivot": "bottom",
+  "note": "spikes up, transparent"
+ },
+ {
+  "file": "tiles/tile_ladder.png",
+  "kind": "tile",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1,
+   1
+  ],
+  "pivot": "center",
+  "note": "tiles vertically"
+ },
+ {
+  "file": "tiles/tile_conveyor.png",
+  "kind": "tile",
+  "widthPx": 546,
+  "heightPx": 182,
+  "cells": [
+   1,
+   0.3333333333333333
+  ],
+  "pivot": "center",
+  "note": "tiles horizontally"
+ },
+ {
+  "file": "platforms/lift_platform.png",
+  "kind": "platform",
+  "widthPx": 1638,
+  "heightPx": 546,
+  "cells": [
+   3,
+   1
+  ],
+  "pivot": "center",
+  "note": ""
+ },
+ {
+  "file": "platforms/gondola_platform.png",
+  "kind": "platform",
+  "widthPx": 1638,
+  "heightPx": 1092,
+  "cells": [
+   3,
+   2
+  ],
+  "pivot": "center",
+  "note": ""
+ },
+ {
+  "file": "platforms/gondola_upside_down.png",
+  "kind": "platform",
+  "widthPx": 1638,
+  "heightPx": 1092,
+  "cells": [
+   3,
+   2
+  ],
+  "pivot": "center",
+  "note": ""
+ },
+ {
+  "file": "platforms/coffee_cup_platform.png",
+  "kind": "platform",
+  "widthPx": 2184,
+  "heightPx": 1092,
+  "cells": [
+   4,
+   2
+  ],
+  "pivot": "center",
+  "note": ""
+ },
+ {
+  "file": "platforms/gear_platform.png",
+  "kind": "platform",
+  "widthPx": 2184,
+  "heightPx": 2184,
+  "cells": [
+   4,
+   4
+  ],
+  "pivot": "center",
+  "note": ""
+ },
+ {
+  "file": "platforms/piston.png",
+  "kind": "platform",
+  "widthPx": 1092,
+  "heightPx": 2184,
+  "cells": [
+   2,
+   4
+  ],
+  "pivot": "center",
+  "note": ""
+ },
+ {
+  "file": "platforms/steam_vent.png",
+  "kind": "platform",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1,
+   1
+  ],
+  "pivot": "bottom",
+  "note": ""
+ },
+ {
+  "file": "platforms/steam_puff.png",
+  "kind": "platform",
+  "widthPx": 546,
+  "heightPx": 1638,
+  "cells": [
+   1,
+   3
+  ],
+  "pivot": "bottom",
+  "note": ""
+ },
+ {
+  "file": "props/speaker_intact.png",
+  "kind": "prop",
+  "widthPx": 1638,
+  "heightPx": 2184,
+  "cells": [
+   3,
+   4
+  ],
+  "pivot": "bottom",
+  "note": ""
+ },
+ {
+  "file": "props/speaker_broken.png",
+  "kind": "prop",
+  "widthPx": 1638,
+  "heightPx": 2184,
+  "cells": [
+   3,
+   4
+  ],
+  "pivot": "bottom",
+  "note": ""
+ },
+ {
+  "file": "props/boss_door.png",
+  "kind": "prop",
+  "widthPx": 2184,
+  "heightPx": 3276,
+  "cells": [
+   4,
+   6
+  ],
+  "pivot": "bottom",
+  "note": ""
+ },
+ {
+  "file": "props/boss_door_lamp_on.png",
+  "kind": "prop",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1,
+   1
+  ],
+  "pivot": "center",
+  "note": ""
+ },
+ {
+  "file": "props/carousel.png",
+  "kind": "prop",
+  "widthPx": 5460,
+  "heightPx": 4368,
+  "cells": [
+   10,
+   8
+  ],
+  "pivot": "bottom",
+  "note": ""
+ },
+ {
+  "file": "props/bench_save.png",
+  "kind": "prop",
+  "widthPx": 1638,
+  "heightPx": 819,
+  "cells": [
+   3,
+   1.5
+  ],
+  "pivot": "bottom",
+  "note": ""
+ },
+ {
+  "file": "props/shop_stall.png",
+  "kind": "prop",
+  "widthPx": 2184,
+  "heightPx": 2184,
+  "cells": [
+   4,
+   4
+  ],
+  "pivot": "bottom",
+  "note": ""
+ },
+ {
+  "file": "props/anvil_smith.png",
+  "kind": "prop",
+  "widthPx": 1092,
+  "heightPx": 1092,
+  "cells": [
+   2,
+   2
+  ],
+  "pivot": "bottom",
+  "note": ""
+ },
+ {
+  "file": "props/treasure_chest.png",
+  "kind": "prop",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1,
+   1
+  ],
+  "pivot": "bottom",
+  "note": ""
+ },
+ {
+  "file": "props/heart_pin.png",
+  "kind": "prop",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1,
+   1
+  ],
+  "pivot": "center",
+  "note": ""
+ },
+ {
+  "file": "props/thread_spool.png",
+  "kind": "prop",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1,
+   1
+  ],
+  "pivot": "center",
+  "note": ""
+ },
+ {
+  "file": "props/zipline_station.png",
+  "kind": "prop",
+  "widthPx": 1092,
+  "heightPx": 1638,
+  "cells": [
+   2,
+   3
+  ],
+  "pivot": "bottom",
+  "note": ""
+ },
+ {
+  "file": "props/elevator_cabin.png",
+  "kind": "prop",
+  "widthPx": 1638,
+  "heightPx": 1638,
+  "cells": [
+   3,
+   3
+  ],
+  "pivot": "center",
+  "note": ""
+ },
+ {
+  "file": "props/fence_gate.png",
+  "kind": "prop",
+  "widthPx": 1092,
+  "heightPx": 2184,
+  "cells": [
+   2,
+   4
+  ],
+  "pivot": "bottom",
+  "note": ""
+ },
+ {
+  "file": "npc/npc_lost_doll.png",
+  "kind": "npc",
+  "widthPx": 819,
+  "heightPx": 819,
+  "cells": [
+   1.5,
+   1.5
+  ],
+  "pivot": "bottom",
+  "note": ""
+ },
+ {
+  "file": "npc/npc_map_seller.png",
+  "kind": "npc",
+  "widthPx": 1092,
+  "heightPx": 1365,
+  "cells": [
+   2,
+   2.5
+  ],
+  "pivot": "bottom",
+  "note": ""
+ },
+ {
+  "file": "props/ferris_wheel_bg.png",
+  "kind": "prop",
+  "widthPx": 2829,
+  "heightPx": 3000,
+  "cells": [
+   5.18,
+   5.49
+  ],
+  "pivot": "center",
+  "note": "far background layer"
+ },
+ {
+  "file": "bg/bg_night_sky.png",
+  "kind": "bg",
+  "widthPx": 3840,
+  "heightPx": 2160,
+  "cells": [
+   7.03,
+   3.96
+  ],
+  "pivot": "center",
+  "note": "opaque"
+ },
+ {
+  "file": "bg/bg_underground.png",
+  "kind": "bg",
+  "widthPx": 3840,
+  "heightPx": 2160,
+  "cells": [
+   7.03,
+   3.96
+  ],
+  "pivot": "center",
+  "note": "opaque"
+ },
+ {
+  "file": "bg/bg_park_silhouette.png",
+  "kind": "bg",
+  "widthPx": 3840,
+  "heightPx": 1080,
+  "cells": [
+   7.03,
+   1.98
+  ],
+  "pivot": "bottom",
+  "note": "transparent sky"
+ },
+ {
+  "file": "props/cargo_crate.png",
+  "kind": "prop",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1,
+   1
+  ],
+  "pivot": "center",
+  "note": "breakable crate (Crate/CrateStack, BreakableBox). gpt-image-2 on green, keyed + cropped"
+ },
+ {
+  "file": "hall/organ_pipes.png",
+  "kind": "prop",
+  "widthPx": 1217,
+  "heightPx": 982,
+  "cells": [
+   2.23,
+   1.8
+  ],
+  "pivot": "bottom",
+  "note": "A1_AB/A1_FP (gpt-image-2, chroma key)"
+ },
+ {
+  "file": "hall/stage_curtain.png",
+  "kind": "prop",
+  "widthPx": 875,
+  "heightPx": 1536,
+  "cells": [
+   1.6,
+   2.81
+  ],
+  "pivot": "top",
+  "note": "A1_AB/A1_FP (gpt-image-2, chroma key)"
+ },
+ {
+  "file": "hall/music_note.png",
+  "kind": "prop",
+  "widthPx": 654,
+  "heightPx": 874,
+  "cells": [
+   1.2,
+   1.6
+  ],
+  "pivot": "center",
+  "note": "A1_AB/A1_FP (gpt-image-2, chroma key)"
+ },
+ {
+  "file": "hall/speaker_stack.png",
+  "kind": "prop",
+  "widthPx": 642,
+  "heightPx": 1484,
+  "cells": [
+   1.18,
+   2.72
+  ],
+  "pivot": "bottom",
+  "note": "A1_AB/A1_FP (gpt-image-2, chroma key)"
+ },
+ {
+  "file": "hall/park_gate.png",
+  "kind": "prop",
+  "widthPx": 1304,
+  "heightPx": 992,
+  "cells": [
+   2.39,
+   1.82
+  ],
+  "pivot": "bottom",
+  "note": "A1_AB/A1_FP (gpt-image-2, chroma key)"
+ },
+ {
+  "file": "hall/red_scissors.png",
+  "kind": "prop",
+  "widthPx": 742,
+  "heightPx": 908,
+  "cells": [
+   1.36,
+   1.66
+  ],
+  "pivot": "center",
+  "note": "A1_AB/A1_FP (gpt-image-2, chroma key)"
+ },
+ {
+  "file": "hall/inscription_plaque.png",
+  "kind": "prop",
+  "widthPx": 562,
+  "heightPx": 942,
+  "cells": [
+   1.03,
+   1.73
+  ],
+  "pivot": "bottom",
+  "note": "A1_AB/A1_FP (gpt-image-2, chroma key)"
+ },
+ {
+  "file": "hall/chandelier.png",
+  "kind": "prop",
+  "widthPx": 998,
+  "heightPx": 940,
+  "cells": [
+   1.83,
+   1.72
+  ],
+  "pivot": "top",
+  "note": "A1_AB/A1_FP (gpt-image-2, chroma key)"
+ },
+ {
+  "file": "hall/avenue_tree.png",
+  "kind": "prop",
+  "widthPx": 766,
+  "heightPx": 1424,
+  "cells": [
+   1.4,
+   2.61
+  ],
+  "pivot": "bottom",
+  "note": "A1_AB/A1_FP (gpt-image-2, chroma key)"
+ },
+ {
+  "file": "hall/spotlight.png",
+  "kind": "prop",
+  "widthPx": 521,
+  "heightPx": 881,
+  "cells": [
+   0.95,
+   1.61
+  ],
+  "pivot": "top",
+  "note": "A1_AB/A1_FP (gpt-image-2, chroma key)"
+ },
+ {
+  "file": "props/falling_weight.png",
+  "kind": "prop",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1,
+   1
+  ],
+  "pivot": "center",
+  "note": "A1_W8 FallingObjectSpawner: iron counterweight with yellow/black warning stripe + lifting ring (gpt-image-2, green screen + chroma key, SceneScripts/chroma_slice.py single, 2026-10-04 PendingChanges 35)"
+ },
+ {
+  "file": "debris/debris_rock_01.png",
+  "kind": "debris",
+  "widthPx": 306,
+  "heightPx": 319,
+  "cells": [
+   0.56,
+   0.58
+  ],
+  "pivot": "center",
+  "note": "break debris part: light-grey stone chip, tinted in-game (hidden wall / rush / super blocks). BreakDebrisCatalog (Resources), drawn at 0.55-0.8x (gpt-image-2 sheet, green screen + chroma key, sliced by SceneScripts/chroma_slice.py sheet, 2026-10-04 PendingChanges 36)"
+ },
+ {
+  "file": "debris/debris_rock_02.png",
+  "kind": "debris",
+  "widthPx": 215,
+  "heightPx": 245,
+  "cells": [
+   0.39,
+   0.45
+  ],
+  "pivot": "center",
+  "note": "break debris part: light-grey stone chip, tinted in-game (hidden wall / rush / super blocks). BreakDebrisCatalog (Resources), drawn at 0.55-0.8x (gpt-image-2 sheet, green screen + chroma key, sliced by SceneScripts/chroma_slice.py sheet, 2026-10-04 PendingChanges 36)"
+ },
+ {
+  "file": "debris/debris_rock_03.png",
+  "kind": "debris",
+  "widthPx": 289,
+  "heightPx": 208,
+  "cells": [
+   0.53,
+   0.38
+  ],
+  "pivot": "center",
+  "note": "break debris part: light-grey stone chip, tinted in-game (hidden wall / rush / super blocks). BreakDebrisCatalog (Resources), drawn at 0.55-0.8x (gpt-image-2 sheet, green screen + chroma key, sliced by SceneScripts/chroma_slice.py sheet, 2026-10-04 PendingChanges 36)"
+ },
+ {
+  "file": "debris/debris_rock_04.png",
+  "kind": "debris",
+  "widthPx": 107,
+  "heightPx": 110,
+  "cells": [
+   0.2,
+   0.2
+  ],
+  "pivot": "center",
+  "note": "break debris part: light-grey stone chip, tinted in-game (hidden wall / rush / super blocks). BreakDebrisCatalog (Resources), drawn at 0.55-0.8x (gpt-image-2 sheet, green screen + chroma key, sliced by SceneScripts/chroma_slice.py sheet, 2026-10-04 PendingChanges 36)"
+ },
+ {
+  "file": "debris/debris_slam_01.png",
+  "kind": "debris",
+  "widthPx": 272,
+  "heightPx": 293,
+  "cells": [
+   0.5,
+   0.54
+  ],
+  "pivot": "center",
+  "note": "break debris part: orange riveted block shard (GroundSlam block). BreakDebrisCatalog (Resources), drawn at 0.55-0.8x (gpt-image-2 sheet, green screen + chroma key, sliced by SceneScripts/chroma_slice.py sheet, 2026-10-04 PendingChanges 36)"
+ },
+ {
+  "file": "debris/debris_slam_02.png",
+  "kind": "debris",
+  "widthPx": 290,
+  "heightPx": 278,
+  "cells": [
+   0.53,
+   0.51
+  ],
+  "pivot": "center",
+  "note": "break debris part: orange riveted block shard (GroundSlam block). BreakDebrisCatalog (Resources), drawn at 0.55-0.8x (gpt-image-2 sheet, green screen + chroma key, sliced by SceneScripts/chroma_slice.py sheet, 2026-10-04 PendingChanges 36)"
+ },
+ {
+  "file": "debris/debris_slam_03.png",
+  "kind": "debris",
+  "widthPx": 352,
+  "heightPx": 132,
+  "cells": [
+   0.64,
+   0.24
+  ],
+  "pivot": "center",
+  "note": "break debris part: orange riveted block shard (GroundSlam block). BreakDebrisCatalog (Resources), drawn at 0.55-0.8x (gpt-image-2 sheet, green screen + chroma key, sliced by SceneScripts/chroma_slice.py sheet, 2026-10-04 PendingChanges 36)"
+ },
+ {
+  "file": "debris/debris_slam_04.png",
+  "kind": "debris",
+  "widthPx": 137,
+  "heightPx": 131,
+  "cells": [
+   0.25,
+   0.24
+  ],
+  "pivot": "center",
+  "note": "break debris part: orange riveted block shard (GroundSlam block). BreakDebrisCatalog (Resources), drawn at 0.55-0.8x (gpt-image-2 sheet, green screen + chroma key, sliced by SceneScripts/chroma_slice.py sheet, 2026-10-04 PendingChanges 36)"
+ },
+ {
+  "file": "debris/debris_wood_01.png",
+  "kind": "debris",
+  "widthPx": 373,
+  "heightPx": 277,
+  "cells": [
+   0.68,
+   0.51
+  ],
+  "pivot": "center",
+  "note": "break debris part: wood plank/splinter shard (crate). BreakDebrisCatalog (Resources), drawn at 0.55-0.8x (gpt-image-2 sheet, green screen + chroma key, sliced by SceneScripts/chroma_slice.py sheet, 2026-10-04 PendingChanges 36)"
+ },
+ {
+  "file": "debris/debris_wood_02.png",
+  "kind": "debris",
+  "widthPx": 307,
+  "heightPx": 192,
+  "cells": [
+   0.56,
+   0.35
+  ],
+  "pivot": "center",
+  "note": "break debris part: wood plank/splinter shard (crate). BreakDebrisCatalog (Resources), drawn at 0.55-0.8x (gpt-image-2 sheet, green screen + chroma key, sliced by SceneScripts/chroma_slice.py sheet, 2026-10-04 PendingChanges 36)"
+ },
+ {
+  "file": "debris/debris_wood_03.png",
+  "kind": "debris",
+  "widthPx": 343,
+  "heightPx": 344,
+  "cells": [
+   0.63,
+   0.63
+  ],
+  "pivot": "center",
+  "note": "break debris part: wood plank/splinter shard (crate). BreakDebrisCatalog (Resources), drawn at 0.55-0.8x (gpt-image-2 sheet, green screen + chroma key, sliced by SceneScripts/chroma_slice.py sheet, 2026-10-04 PendingChanges 36)"
+ },
+ {
+  "file": "debris/debris_wood_04.png",
+  "kind": "debris",
+  "widthPx": 228,
+  "heightPx": 237,
+  "cells": [
+   0.42,
+   0.43
+  ],
+  "pivot": "center",
+  "note": "break debris part: wood plank/splinter shard (crate). BreakDebrisCatalog (Resources), drawn at 0.55-0.8x (gpt-image-2 sheet, green screen + chroma key, sliced by SceneScripts/chroma_slice.py sheet, 2026-10-04 PendingChanges 36)"
+ }
+]

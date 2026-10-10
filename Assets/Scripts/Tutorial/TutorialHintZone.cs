@@ -5,6 +5,8 @@ using UnityEngine;
 /// TutorialManager の逐次シーケンスと違い、ゾーン単位で独立して動くため
 /// シーンをまたぐチュートリアルに使える。案内文はキーボード用とパッド用を持ち、
 /// InputDeviceTracker の最終入力デバイスに追従して出し直す。
+/// 表示先 (TutorialMessageView) は UI シーン (StageUI) に常駐している
+/// (GameField_old の旧ステージは自前の SceneUI のものを優先する。UIViewLookup 参照)。
 /// </summary>
 [RequireComponent(typeof(Collider2D))]
 public class TutorialHintZone : MonoBehaviour
@@ -15,7 +17,7 @@ public class TutorialHintZone : MonoBehaviour
     [Tooltip("パッド操作時の案内文 (空ならキーボード用と同じ)")]
     [SerializeField, TextArea] private string _gamepadText;
 
-    [Tooltip("表示先のメッセージビュー。未設定ならシーンから検索する")]
+    [Tooltip("表示先のメッセージビュー。未設定なら同じシーン → UI シーン (StageUI) の順に検索する")]
     [SerializeField] private TutorialMessageView _message;
 
     [Tooltip("ゾーンから出たらメッセージを隠すか")]
@@ -23,12 +25,23 @@ public class TutorialHintZone : MonoBehaviour
 
     private bool _playerInside;
 
+    /// <summary>
+    /// 表示先を解決する。UI シーンはステージより後にロードされることがある
+    /// (ステージを直接開いて再生した場合) ので、Awake ではなく使う時に探す。
+    /// </summary>
+    private TutorialMessageView Message
+    {
+        get
+        {
+            if (_message == null)
+                _message = UIViewLookup.Find<TutorialMessageView>(this);
+            return _message;
+        }
+    }
+
     private void Awake()
     {
         GetComponent<Collider2D>().isTrigger = true;
-
-        if (_message == null)
-            _message = FindFirstObjectByType<TutorialMessageView>();
     }
 
     private void OnEnable()
@@ -39,6 +52,11 @@ public class TutorialHintZone : MonoBehaviour
     private void OnDisable()
     {
         InputDeviceTracker.OnChanged -= OnDeviceChanged;
+
+        // ステージの入れ替えで消える時は、UI シーンに残る表示を片付ける
+        if (_playerInside && _message != null)
+            _message.Hide();
+        _playerInside = false;
     }
 
     private void OnTriggerEnter2D(Collider2D other)
@@ -56,8 +74,8 @@ public class TutorialHintZone : MonoBehaviour
             return;
 
         _playerInside = false;
-        if (_hideOnExit && _message != null)
-            _message.Hide();
+        if (_hideOnExit && Message != null)
+            Message.Hide();
     }
 
     private void OnDeviceChanged(InputDeviceKind _)
@@ -68,11 +86,12 @@ public class TutorialHintZone : MonoBehaviour
 
     private void Render()
     {
-        if (_message == null)
+        var message = Message;
+        if (message == null)
             return;
 
         var useGamepad = InputDeviceTracker.Current == InputDeviceKind.Gamepad
                          && !string.IsNullOrEmpty(_gamepadText);
-        _message.Show(useGamepad ? _gamepadText : _keyboardText);
+        message.Show(useGamepad ? _gamepadText : _keyboardText);
     }
 }

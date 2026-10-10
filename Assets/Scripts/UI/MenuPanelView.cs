@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
-using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 /// <summary>
 /// キーボード/パッド操作の汎用メニューパネル (ポーズ・拠点・ゲームオーバー・リザルト・タイトルが共用)。
@@ -20,11 +20,15 @@ public class MenuPanelView : MonoBehaviour
         public readonly Action OnSelect;
         public readonly bool Enabled;
 
-        public Entry(string label, Action onSelect, bool enabled = true)
+        /// <summary>行の左に出すアイコン (任意。行のアイコン _rowIcons を事前配置したメニューだけ表示される)。</summary>
+        public readonly Sprite Icon;
+
+        public Entry(string label, Action onSelect, bool enabled = true, Sprite icon = null)
         {
             Label = label;
             OnSelect = onSelect;
             Enabled = enabled;
+            Icon = icon;
         }
     }
 
@@ -32,6 +36,22 @@ public class MenuPanelView : MonoBehaviour
 
     /// <summary>いずれかのメニューが開いているか (ポーズトグルの多重防止用)。</summary>
     public static bool AnyOpen => _openCount > 0;
+
+    /// <summary>
+    /// 最後にメニューが閉じたフレーム。閉じたのと同じ押下 (Esc など) で別のメニュー (ポーズ等) が
+    /// 開いてしまわないよう、開く側がこのフレームを避ける。
+    /// </summary>
+    public static int LastClosedFrame { get; private set; } = -1;
+
+    /// <summary>MenuPanelView 以外のメニュー (ImageMenuView / SaveSlotView / ItemMenuView) の開閉を AnyOpen に反映する。</summary>
+    public static void NotifyOpened() => _openCount++;
+
+    /// <summary><see cref="NotifyOpened"/> と対で呼ぶ。</summary>
+    public static void NotifyClosed()
+    {
+        _openCount = Mathf.Max(0, _openCount - 1);
+        LastClosedFrame = Time.frameCount;
+    }
 
     /// <summary>Esc / B での「戻る」を受け付けるか (ゲームオーバー等では false)。</summary>
     public bool AllowCancel { get; set; } = true;
@@ -54,6 +74,13 @@ public class MenuPanelView : MonoBehaviour
     [Tooltip("行テキスト (上から順に事前配置。項目数がこれを超えた分は表示されない)")]
     [SerializeField] private TMP_Text[] _rows;
 
+    [Tooltip("行のアイコン (任意。_rows と同じ順に事前配置。ショップの品物の絵など)。" +
+             "どれかの項目にアイコンがある時は、全行のラベルを _iconLabelX から書き始める")]
+    [SerializeField] private Image[] _rowIcons;
+
+    [Tooltip("アイコンがある時のラベルの書き出し位置 (行の左端からの px。TMP の <pos>)")]
+    [SerializeField] private float _iconLabelX = 92f;
+
     [Header("行の色")]
     [SerializeField] private Color _normalColor = Color.white;
     [SerializeField] private Color _selectedColor = new(1f, 0.85f, 0.3f);
@@ -63,6 +90,7 @@ public class MenuPanelView : MonoBehaviour
     private int _index;
     private bool _initialized;
     private bool _isValid;
+    private int _openedFrame = -1; // 開いたのと同じ押下で決定/戻るが走らないように (他メニューからの戻り)
 
     #region Setup
 
@@ -121,7 +149,8 @@ public class MenuPanelView : MonoBehaviour
             _body.text = body ?? "";
     }
 
-    public void SetEntries(IReadOnlyList<Entry> entries)
+    /// <summary>項目を設定する。selectIndex が有効な項目ならそこを選択、それ以外は最初の有効な項目。</summary>
+    public void SetEntries(IReadOnlyList<Entry> entries, int selectIndex = -1)
     {
         if (!_isValid)
             return;
@@ -144,7 +173,9 @@ public class MenuPanelView : MonoBehaviour
                 _rows[i].gameObject.SetActive(i < _entries.Count);
         }
 
-        _index = FirstEnabledIndex();
+        _index = selectIndex >= 0 && selectIndex < _entries.Count && _entries[selectIndex].Enabled
+            ? selectIndex
+            : FirstEnabledIndex();
         Render();
     }
 
@@ -154,6 +185,7 @@ public class MenuPanelView : MonoBehaviour
             return;
 
         IsOpen = true;
+        _openedFrame = Time.frameCount;
         _openCount++;
         _root.SetActive(true);
         Render();
@@ -165,46 +197,34 @@ public class MenuPanelView : MonoBehaviour
             return;
 
         IsOpen = false;
-        _openCount = Mathf.Max(0, _openCount - 1);
+        NotifyClosed();
         if (_root != null)
             _root.SetActive(false);
     }
 
     #endregion
 
+    private void OnDisable()
+    {
+        // シーン破棄などで閉じずに消えた時も AnyOpen を戻す
+        if (IsOpen)
+        {
+            IsOpen = false;
+            NotifyClosed();
+        }
+    }
+
     #region Navigation
 
     private void Update()
     {
-        if (!IsOpen || _entries.Count == 0)
+        if (!IsOpen || _entries.Count == 0 || Time.frameCount == _openedFrame)
             return;
 
-        // プレイヤー不在のシーン (タイトル等) でもデバイス切替を追跡できるようにする
-        InputDeviceTracker.Poll();
-
-        var move = 0;
-        var submit = false;
-        var cancel = false;
-
-        var keyboard = Keyboard.current;
-        if (keyboard != null)
-        {
-            if (keyboard.wKey.wasPressedThisFrame || keyboard.upArrowKey.wasPressedThisFrame) move -= 1;
-            if (keyboard.sKey.wasPressedThisFrame || keyboard.downArrowKey.wasPressedThisFrame) move += 1;
-            submit |= keyboard.enterKey.wasPressedThisFrame
-                      || keyboard.spaceKey.wasPressedThisFrame
-                      || keyboard.jKey.wasPressedThisFrame;
-            cancel |= keyboard.escapeKey.wasPressedThisFrame;
-        }
-
-        var gamepad = Gamepad.current;
-        if (gamepad != null)
-        {
-            if (gamepad.dpad.up.wasPressedThisFrame) move -= 1;
-            if (gamepad.dpad.down.wasPressedThisFrame) move += 1;
-            submit |= gamepad.buttonSouth.wasPressedThisFrame;
-            cancel |= gamepad.buttonEast.wasPressedThisFrame;
-        }
+        var input = MenuInput.Read();
+        var move = input.Move;
+        var submit = input.Submit;
+        var cancel = input.Cancel;
 
         if (move != 0)
         {
@@ -251,6 +271,22 @@ public class MenuPanelView : MonoBehaviour
 
     private void Render()
     {
+        var anyIcon = false;
+        if (_rowIcons != null && _rowIcons.Length > 0)
+        {
+            foreach (var e in _entries)
+                anyIcon |= e.Icon != null;
+            for (var i = 0; i < _rowIcons.Length; i++)
+            {
+                var icon = _rowIcons[i];
+                if (icon == null)
+                    continue;
+                var sprite = i < _entries.Count ? _entries[i].Icon : null;
+                icon.gameObject.SetActive(sprite != null);
+                icon.sprite = sprite;
+            }
+        }
+
         for (var i = 0; i < _entries.Count; i++)
         {
             if (_rows[i] == null)
@@ -258,7 +294,7 @@ public class MenuPanelView : MonoBehaviour
 
             var selected = i == _index;
             var entry = _entries[i];
-            _rows[i].text = (selected ? "▶ " : "　 ") + entry.Label;
+            _rows[i].text = (selected ? "▶ " : "　 ") + (anyIcon ? $"<pos={_iconLabelX:0}>" : "") + entry.Label;
             _rows[i].color = !entry.Enabled
                 ? _disabledColor
                 : selected ? _selectedColor : _normalColor;

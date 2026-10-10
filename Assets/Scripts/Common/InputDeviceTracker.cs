@@ -62,6 +62,9 @@ public static class InputDeviceTracker
                || gamepad.rightTrigger.wasPressedThisFrame
                || gamepad.startButton.wasPressedThisFrame
                || gamepad.selectButton.wasPressedThisFrame
+               || gamepad.leftStickButton.wasPressedThisFrame
+               || gamepad.rightStickButton.wasPressedThisFrame
+               || (gamepad is UnityEngine.InputSystem.DualShock.DualShockGamepad ds && ds.touchpadButton.wasPressedThisFrame)
                || gamepad.dpad.up.wasPressedThisFrame
                || gamepad.dpad.down.wasPressedThisFrame
                || gamepad.dpad.left.wasPressedThisFrame

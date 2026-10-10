@@ -3,10 +3,24 @@ using UnityEngine;
 /// <summary>
 /// 移動部品: 初期位置を中心に巡回し、範囲の端や壁で反転する。
 /// 常に IsActive なので、優先度の低いフォールバック移動として一番下に置く。
+/// 任意で「足場の端で引き返す」を付けられる (既定は無効 = 従来どおり。既存プレハブ互換のため)。
 /// </summary>
 public class PatrolMotion : EnemyMotionBase
 {
+    [Tooltip("足場の端で引き返す (落ちない) か")]
+    [SerializeField] private bool _turnAtLedge = false;
+
+    [Tooltip("足場の端の判定に使う地面レイヤー。未設定なら Ground")]
+    [SerializeField] private LayerMask _groundLayer;
+
     private int _moveDir = 1;
+    private Collider2D _body;
+
+    protected override void Awake()
+    {
+        base.Awake();
+        _body = GetComponent<Collider2D>();
+    }
 
     public override void PhysicsTick()
     {
@@ -20,6 +34,14 @@ public class PatrolMotion : EnemyMotionBase
         // 壁に当たって動けていなければ反転する
         if (Enemy.HitWallLastStep)
             _moveDir = -_moveDir;
+
+        // 足場の端で引き返す (接地している時だけ)
+        if (_turnAtLedge)
+        {
+            var ground = EnemyMotionUtil.GroundOrDefault(_groundLayer);
+            if (EnemyMotionUtil.IsGrounded(_body, ground) && !EnemyMotionUtil.HasGroundAhead(_body, _moveDir, ground))
+                _moveDir = -_moveDir;
+        }
 
         Enemy.Move(_moveDir * consts.MoveSpeed);
     }

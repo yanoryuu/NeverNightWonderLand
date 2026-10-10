@@ -4,6 +4,7 @@ using UnityEngine;
 
 /// <summary>
 /// レバーなどから開けられるドア。Open で上へスライドして当たり判定を無効化する。
+/// 開き戸の絵 (_swingRenderer + _swingFrames) を設定した扉はスライドせず、その場でコマ送りして開いた扉を残す (<see cref="DoorSwing"/>)。
 /// </summary>
 public class Door : MonoBehaviour
 {
@@ -12,6 +13,12 @@ public class Door : MonoBehaviour
 
     [Tooltip("スライドにかける時間 (sec)")]
     [SerializeField] private float _slideDuration = 0.8f;
+
+    [Tooltip("開き戸の絵を描く SpriteRenderer (任意)。_swingFrames と組で使う")]
+    [SerializeField] private SpriteRenderer _swingRenderer;
+
+    [Tooltip("開き戸のコマ (閉 → 開 の順)。設定するとスライドせず、_slideDuration 秒でコマ送りして開く")]
+    [SerializeField] private Sprite[] _swingFrames = new Sprite[0];
 
     private bool _isOpen;
 
@@ -34,6 +41,19 @@ public class Door : MonoBehaviour
 
         foreach (var col in GetComponentsInChildren<Collider2D>())
             col.enabled = false;
+
+        if (DoorSwing.Has(_swingRenderer, _swingFrames))
+        {
+            if (instant)
+            {
+                DoorSwing.ShowOpen(_swingRenderer, _swingFrames);
+                OnOpened?.Invoke();
+                return;
+            }
+
+            DoorSwing.Play(_swingRenderer, _swingFrames, _slideDuration).OnComplete(() => OnOpened?.Invoke());
+            return;
+        }
 
         if (instant)
         {

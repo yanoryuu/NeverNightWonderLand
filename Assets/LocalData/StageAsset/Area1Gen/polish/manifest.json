@@ -1,0 +1,338 @@
+[
+ {
+  "file": "fountain_basin.png",
+  "widthPx": 3276,
+  "heightPx": 1092,
+  "cells": [
+   6.0,
+   2.0
+  ],
+  "tileable": false,
+  "pivot": "bottom",
+  "assembly_note": "bottom of basin on ground; tier stacks on center pedestal stub"
+ },
+ {
+  "file": "fountain_tier.png",
+  "widthPx": 2184,
+  "heightPx": 819,
+  "cells": [
+   4.0,
+   1.5
+  ],
+  "tileable": false,
+  "pivot": "bottom",
+  "assembly_note": "sits on basin pedestal; top stacks on its stub"
+ },
+ {
+  "file": "fountain_top.png",
+  "widthPx": 1092,
+  "heightPx": 1638,
+  "cells": [
+   2.0,
+   3.0
+  ],
+  "tileable": false,
+  "pivot": "bottom",
+  "assembly_note": "top of stack"
+ },
+ {
+  "file": "water_jet_column.png",
+  "widthPx": 546,
+  "heightPx": 1638,
+  "cells": [
+   1.0,
+   3.0
+  ],
+  "tileable": true,
+  "pivot": "top",
+  "assembly_note": "stack vertically; alpha-blended (additive-looking)"
+ },
+ {
+  "file": "water_splash.png",
+  "widthPx": 1092,
+  "heightPx": 546,
+  "cells": [
+   2.0,
+   1.0
+  ],
+  "tileable": false,
+  "pivot": "bottom",
+  "assembly_note": "place at water impact point"
+ },
+ {
+  "file": "water_sheet_fall.png",
+  "widthPx": 1092,
+  "heightPx": 1092,
+  "cells": [
+   2.0,
+   2.0
+  ],
+  "tileable": true,
+  "pivot": "top",
+  "assembly_note": "place under bowl rim; tile along X"
+ },
+ {
+  "file": "steam_column_seg.png",
+  "widthPx": 546,
+  "heightPx": 1092,
+  "cells": [
+   1.0,
+   2.0
+  ],
+  "tileable": true,
+  "pivot": "bottom",
+  "assembly_note": "stack vertically above base burst"
+ },
+ {
+  "file": "steam_base_burst.png",
+  "widthPx": 819,
+  "heightPx": 546,
+  "cells": [
+   1.5,
+   1.0
+  ],
+  "tileable": false,
+  "pivot": "bottom",
+  "assembly_note": "vent mouth"
+ },
+ {
+  "file": "steam_top_puff.png",
+  "widthPx": 819,
+  "heightPx": 819,
+  "cells": [
+   1.5,
+   1.5
+  ],
+  "tileable": false,
+  "pivot": "bottom",
+  "assembly_note": "cap of steam column"
+ },
+ {
+  "file": "water_body_tile.png",
+  "widthPx": 1092,
+  "heightPx": 1092,
+  "cells": [
+   2.0,
+   2.0
+  ],
+  "tileable": true,
+  "pivot": "center",
+  "assembly_note": "deep water fill under water_surface_strip; semi-transparent"
+ },
+ {
+  "file": "oil_body_tile.png",
+  "widthPx": 1092,
+  "heightPx": 1092,
+  "cells": [
+   2.0,
+   2.0
+  ],
+  "tileable": true,
+  "pivot": "center",
+  "assembly_note": "oil fill under oil_surface_strip; semi-transparent"
+ },
+ {
+  "file": "hall_wainscot.png",
+  "widthPx": 1638,
+  "heightPx": 819,
+  "cells": [
+   3.0,
+   1.5
+  ],
+  "tileable": true,
+  "pivot": "bottom",
+  "assembly_note": "lower wall paneling, tile along X, sits on floor"
+ },
+ {
+  "file": "hall_pilaster.png",
+  "widthPx": 546,
+  "heightPx": 1638,
+  "cells": [
+   1.0,
+   3.0
+  ],
+  "tileable": true,
+  "pivot": "center",
+  "assembly_note": "column, tile along Y"
+ },
+ {
+  "file": "water_surface_strip.png",
+  "widthPx": 2184,
+  "heightPx": 273,
+  "cells": [
+   4.0,
+   0.5
+  ],
+  "tileable": true,
+  "pivot": "top",
+  "assembly_note": "surface line at top edge; tile along X, water_body_tile below"
+ },
+ {
+  "file": "oil_surface_strip.png",
+  "widthPx": 2184,
+  "heightPx": 273,
+  "cells": [
+   4.0,
+   0.5
+  ],
+  "tileable": true,
+  "pivot": "top",
+  "assembly_note": "surface line at top edge; tile along X, oil_body_tile below"
+ },
+ {
+  "file": "lever_handle_red.png",
+  "widthPx": 546,
+  "heightPx": 1092,
+  "cells": [
+   1.0,
+   2.0
+  ],
+  "tileable": false,
+  "pivot": "bottom",
+  "assembly_note": "same silhouette as lever_01; handle recoloured"
+ },
+ {
+  "file": "lever_handle_teal.png",
+  "widthPx": 546,
+  "heightPx": 1092,
+  "cells": [
+   1.0,
+   2.0
+  ],
+  "tileable": false,
+  "pivot": "bottom",
+  "assembly_note": "same silhouette as lever_01; handle recoloured"
+ },
+ {
+  "file": "hall_wall_panel.png",
+  "widthPx": 1638,
+  "heightPx": 1638,
+  "cells": [
+   3.0,
+   3.0
+  ],
+  "tileable": true,
+  "pivot": "center",
+  "assembly_note": "wallpaper, tile in both axes (brightened toward plum)"
+ },
+ {
+  "file": "hall_wainscot_plum.png",
+  "widthPx": 1638,
+  "heightPx": 819,
+  "cells": [
+   3.0,
+   1.5
+  ],
+  "tileable": true,
+  "pivot": "bottom",
+  "assembly_note": "plum variant of hall_wainscot; tile along X"
+ },
+ {
+  "file": "hall_curtain_valance.png",
+  "widthPx": 2184,
+  "heightPx": 819,
+  "cells": [
+   4.0,
+   1.5
+  ],
+  "tileable": true,
+  "pivot": "top",
+  "assembly_note": "swagged valance, tile along X, rail at top edge (drawn procedurally in curtain palette)"
+ },
+ {
+  "file": "hall_light_sconce.png",
+  "widthPx": 546,
+  "heightPx": 819,
+  "cells": [
+   1.0,
+   1.5
+  ],
+  "tileable": false,
+  "pivot": "center",
+  "assembly_note": "wall-mounted; glow halo baked in; lamp_wall recoloured gold/pink"
+ },
+ {
+  "file": "sign_belt.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "tileable": false,
+  "pivot": "center",
+  "assembly_note": "small wall sign, belt/chevron icon"
+ },
+ {
+  "file": "sign_ladder.png",
+  "widthPx": 546,
+  "heightPx": 546,
+  "cells": [
+   1.0,
+   1.0
+  ],
+  "tileable": false,
+  "pivot": "center",
+  "assembly_note": "small wall sign, ladder icon"
+ },
+ {
+  "file": "gear_tooth_tread.png",
+  "widthPx": 1092,
+  "heightPx": 546,
+  "cells": [
+   2.0,
+   1.0
+  ],
+  "tileable": false,
+  "pivot": "bottom",
+  "assembly_note": "attach radially to a rotating gear; bright top edge = walkable surface (drawn in gear_platform colours)"
+ },
+ {
+  "file": "passing_gondola_far.png",
+  "widthPx": 1092,
+  "heightPx": 1092,
+  "cells": [
+   2.0,
+   2.0
+  ],
+  "tileable": false,
+  "pivot": "center",
+  "assembly_note": "mid-background; darkened/desaturated gondola_platform (hanger on top)"
+ },
+ {
+  "file": "bulb_string.png",
+  "widthPx": 2184,
+  "heightPx": 546,
+  "cells": [
+   4.0,
+   1.0
+  ],
+  "tileable": true,
+  "pivot": "top",
+  "assembly_note": "tile along X (4 swags per 4 cells); hang from top edge"
+ },
+ {
+  "file": "rim_segment_near.png",
+  "widthPx": 4368,
+  "heightPx": 1638,
+  "cells": [
+   8.0,
+   3.0
+  ],
+  "tileable": false,
+  "pivot": "center",
+  "assembly_note": "chunky arc of a ferris wheel rim (R~4200px, 55deg) with bulbs on the outer rail; centre it on the wheel arc and rotate to follow the rim"
+ },
+ {
+  "file": "hall_balcony_box.png",
+  "widthPx": 2184,
+  "heightPx": 1638,
+  "cells": [
+   4.0,
+   3.0
+  ],
+  "tileable": false,
+  "pivot": "bottom",
+  "assembly_note": "opera box: drawn rail/balusters + wallpaper interior + plum wainscot front + pilasters + valance; place characters behind the rail"
+ }
+]

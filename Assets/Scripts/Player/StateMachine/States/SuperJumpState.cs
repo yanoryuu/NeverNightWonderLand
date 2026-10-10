@@ -65,7 +65,7 @@ public class SuperJumpState : PlayerState
         {
             if (hit.TryGetComponent<SkillBreakable>(out var breakable))
             {
-                breakable.TryBreak(PlayerSkill.SuperJump);
+                breakable.TryBreak(PlayerSkill.SuperJump, Player.transform.position);
                 continue;
             }
 

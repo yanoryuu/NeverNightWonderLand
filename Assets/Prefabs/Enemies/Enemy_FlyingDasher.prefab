@@ -1,0 +1,168 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &4303682589378953959
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 2316347268388205211, guid: 03ed306566b38d346bfcb270b9a0bc5b, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2316347268388205211, guid: 03ed306566b38d346bfcb270b9a0bc5b, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2316347268388205211, guid: 03ed306566b38d346bfcb270b9a0bc5b, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2316347268388205211, guid: 03ed306566b38d346bfcb270b9a0bc5b, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2316347268388205211, guid: 03ed306566b38d346bfcb270b9a0bc5b, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2316347268388205211, guid: 03ed306566b38d346bfcb270b9a0bc5b, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2316347268388205211, guid: 03ed306566b38d346bfcb270b9a0bc5b, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2316347268388205211, guid: 03ed306566b38d346bfcb270b9a0bc5b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2316347268388205211, guid: 03ed306566b38d346bfcb270b9a0bc5b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2316347268388205211, guid: 03ed306566b38d346bfcb270b9a0bc5b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6441443267434100320, guid: 03ed306566b38d346bfcb270b9a0bc5b, type: 3}
+      propertyPath: m_Name
+      value: Enemy_FlyingDasher
+      objectReference: {fileID: 0}
+    - target: {fileID: 8547182982536813380, guid: 03ed306566b38d346bfcb270b9a0bc5b, type: 3}
+      propertyPath: _consts
+      value: 
+      objectReference: {fileID: 11400000, guid: 9d6a074106f444146bef1808249f0bba, type: 2}
+    m_RemovedComponents:
+    - {fileID: 7182248476563523687, guid: 03ed306566b38d346bfcb270b9a0bc5b, type: 3}
+    - {fileID: 7505618301579665281, guid: 03ed306566b38d346bfcb270b9a0bc5b, type: 3}
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6441443267434100320, guid: 03ed306566b38d346bfcb270b9a0bc5b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5032353887683286962}
+    - targetCorrespondingSourceObject: {fileID: 6441443267434100320, guid: 03ed306566b38d346bfcb270b9a0bc5b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7136831192689891211}
+    - targetCorrespondingSourceObject: {fileID: 6441443267434100320, guid: 03ed306566b38d346bfcb270b9a0bc5b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5731829349813245096}
+    - targetCorrespondingSourceObject: {fileID: 6441443267434100320, guid: 03ed306566b38d346bfcb270b9a0bc5b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8000480113992593698}
+  m_SourcePrefab: {fileID: 100100000, guid: 03ed306566b38d346bfcb270b9a0bc5b, type: 3}
+--- !u!1 &7123949164597802119 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6441443267434100320, guid: 03ed306566b38d346bfcb270b9a0bc5b, type: 3}
+  m_PrefabInstance: {fileID: 4303682589378953959}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &5032353887683286962
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7123949164597802119}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2749892d1e5127b4d9a2355ba5a75111, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _detectRange: 8
+  _loseRange: 12
+  _memoryTime: 2
+  _requireLineOfSight: 0
+  _obstacleLayer:
+    serializedVersion: 2
+    m_Bits: 0
+--- !u!114 &7136831192689891211
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7123949164597802119}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2712f9c900a946646b3e21bd79a6a19b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _phase: 0
+  _triggerRange: 7
+  _requireLineOfSight: 1
+  _windupTime: 0.5
+  _windupBackSpeed: 1.5
+  _dashSpeed: 14
+  _maxDashTime: 0.6
+  _dashDamage: 2
+  _driftTime: 0.8
+  _staggerTime: 1
+  _cooldown: 2
+  _groundLayer:
+    serializedVersion: 2
+    m_Bits: 0
+  _blinkRenderer: {fileID: 0}
+  _blinkColor: {r: 1, g: 0.45, b: 0.45, a: 1}
+  _blinkInterval: 0.08
+  _windupTrigger: DashWindup
+  _dashTrigger: Dash
+  _staggerTrigger: DashStagger
+  _endTrigger: DashEnd
+--- !u!114 &5731829349813245096
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7123949164597802119}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4568cb6188c8cd499f32d7fef62357e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _phase: 2
+  _aimHeight: 0.5
+  _keepDistance: 5
+  _standOffset: {x: 0, y: 0}
+  _keepHeight: 2.5
+  _retreatDistance: 0
+  _arriveRadius: 1
+--- !u!114 &8000480113992593698
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7123949164597802119}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee2b03fd5036a4547933c4c0197058d9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _phase: 1
+  _hoverAmplitude: 0.5
+  _hoverFrequency: 2

@@ -20,10 +20,14 @@ public sealed class PlayerItemInventoryModel : IDisposable
     private readonly Dictionary<ItemDefinition, ReactiveProperty<int>> _counts = new();
     private readonly ReactiveProperty<ItemDefinition>[] _slots;
     private readonly ReactiveProperty<int> _thread = new(0);
+    private readonly ReactiveProperty<int> _coins = new(0);
     private readonly Subject<Unit> _changed = new();
 
     /// <summary>素材「糸」の所持数の購読用。</summary>
     public ReadOnlyReactiveProperty<int> Thread => _thread;
+
+    /// <summary>コイン (収集品) の枚数の購読用。</summary>
+    public ReadOnlyReactiveProperty<int> Coins => _coins;
 
     /// <summary>入手できる全アイテム (メニューの一覧などに使う)。</summary>
     public IReadOnlyList<ItemDefinition> Catalog => _catalog;
@@ -72,6 +76,7 @@ public sealed class PlayerItemInventoryModel : IDisposable
         }
 
         _thread.Value = 0;
+        _coins.Value = 0;
         _changed.OnNext(Unit.Default);
     }
 
@@ -83,13 +88,27 @@ public sealed class PlayerItemInventoryModel : IDisposable
     /// <summary>スロットにセットされたアイテム。空なら null。</summary>
     public ItemDefinition GetSlotItem(ItemSlot slot) => _slots[(int)slot].Value;
 
-    /// <summary>スロットにアイテムをセットする (null で外す)。</summary>
+    /// <summary>
+    /// スロットにアイテムをセットする (null で外す)。
+    /// 同じアイテムは 2 つのスロットに入れない: 別のスロットに入っているアイテムをセットした時は、
+    /// 2 つのスロットの中身を入れ替える (UIAssignment.md「4回目の決定」7)。
+    /// </summary>
     public void SetSlot(ItemSlot slot, ItemDefinition item)
     {
         if (item != null && !_counts.ContainsKey(item))
             return;
 
-        _slots[(int)slot].Value = item;
+        var target = _slots[(int)slot];
+        if (item != null)
+        {
+            for (var i = 0; i < _slots.Length; i++)
+            {
+                if (i != (int)slot && _slots[i].Value == item)
+                    _slots[i].Value = target.Value; // 入れ替え (対象が空なら相手は空になる)
+            }
+        }
+
+        target.Value = item;
         _changed.OnNext(Unit.Default);
     }
 
@@ -133,13 +152,24 @@ public sealed class PlayerItemInventoryModel : IDisposable
 
     #region Thread / Refill
 
-    public void AddThread(int amount)
+    /// <summary>糸を増やす。notify = false なら入手通知の帯を出さない (敵の糸の粒: HUD の所持数だけ増える)。</summary>
+    public void AddThread(int amount, bool notify = true)
     {
         if (amount <= 0)
             return;
 
         _thread.Value += amount;
-        Notifier.Notify($"糸を {amount} 手に入れた (所持: {_thread.Value})");
+        if (notify)
+            Notifier.Notify($"糸を {amount} 手に入れた (所持: {_thread.Value})");
+    }
+
+    /// <summary>コインを増やす (通知は呼び出し側 = CoinPiece)。</summary>
+    public void AddCoins(int amount)
+    {
+        if (amount <= 0)
+            return;
+
+        _coins.Value += amount;
     }
 
     /// <summary>糸を消費する (ショップ購入用)。足りなければ false。</summary>
@@ -234,10 +264,21 @@ public sealed class PlayerItemInventoryModel : IDisposable
         if (data.slotItemIds != null)
         {
             for (var i = 0; i < _slots.Length && i < data.slotItemIds.Length; i++)
-                _slots[i].Value = FindByName(data.slotItemIds[i]);
+            {
+                var item = FindByName(data.slotItemIds[i]);
+                // 同じアイテムは 2 つのスロットに入れない (入れ替え導入前のセーブ: 先のスロットを残して後は空に)
+                for (var j = 0; j < i && item != null; j++)
+                {
+                    if (_slots[j].Value == item)
+                        item = null;
+                }
+
+                _slots[i].Value = item;
+            }
         }
 
         _thread.Value = Mathf.Max(0, data.thread);
+        _coins.Value = Mathf.Max(0, data.coins);
         _changed.OnNext(Unit.Default);
     }
 
@@ -260,6 +301,7 @@ public sealed class PlayerItemInventoryModel : IDisposable
     public void Dispose()
     {
         _thread.Dispose();
+        _coins.Dispose();
         _changed.Dispose();
         foreach (var count in _counts.Values)
             count.Dispose();
