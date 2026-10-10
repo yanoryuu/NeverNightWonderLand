@@ -563,7 +563,7 @@ MonoBehaviour:
   _idleAnimation: Itsuku_idle_normal
   _runAnimation: Itsuku_run
   _jumpAnimation: Itsuku_jump
-  _fallAnimation: Itsuku_jump
+  _fallAnimation: Itsuku_fall
   _attackAnimation: 
   _dashAnimation: Itsuku_rush
   _freezeIdleWhenShared: 1

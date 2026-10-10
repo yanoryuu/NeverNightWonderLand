@@ -121,6 +121,7 @@ public class PlayerController : MonoBehaviour
     private float _coyoteTimer;      // 地面を離れてからの残り猶予
     private float _jumpBufferTimer;  // 先行入力の残り時間
     private float _dashCooldownTimer;
+    private float _airComboCooldownTimer;   // 空中コンボを振り終えてから次の空中攻撃までの残り時間 (着地で解除)
     private float _specialCooldownTimer;    // 特殊攻撃の再使用までの残り時間
     private float _specialCooldownDuration; // 直近のクールダウン全長 (HUD の割合表示用)
 
@@ -429,6 +430,8 @@ public class PlayerController : MonoBehaviour
         if (_jumpBufferTimer > 0f) _jumpBufferTimer -= dt;
         if (_finisherBufferTimer > 0f) _finisherBufferTimer -= dt;
         if (_dashCooldownTimer > 0f) _dashCooldownTimer -= dt;
+        if (_isGrounded) _airComboCooldownTimer = 0f;
+        else if (_airComboCooldownTimer > 0f) _airComboCooldownTimer -= dt;
         if (_specialCooldownTimer > 0f) _specialCooldownTimer -= dt;
         if (_ladderGrabTimer > 0f) _ladderGrabTimer -= dt;
 
@@ -461,10 +464,16 @@ public class PlayerController : MonoBehaviour
     /// <summary>ジャンプ可能(コヨーテ中 かつ 先行入力あり)か。</summary>
     public bool HasBufferedJump() => _coyoteTimer > 0f && _jumpBufferTimer > 0f;
 
-    /// <summary>攻撃入力を消費する。攻撃すべきなら true。</summary>
+    /// <summary>
+    /// 攻撃入力を消費する。攻撃すべきなら true。
+    /// 空中でコンボを振り終えた直後は、間隔 (AirComboInterval) が明けるまで空中攻撃を出せない。
+    /// </summary>
     public bool TryConsumeAttack()
     {
         if (!_attackPressed)
+            return false;
+
+        if (!_isGrounded && _airComboCooldownTimer > 0f)
             return false;
 
         _attackPressed = false;
@@ -625,8 +634,12 @@ public class PlayerController : MonoBehaviour
             return false;
 
         _airJumpUsed = true;
+        DoubleJumpCount++;
         return true;
     }
+
+    /// <summary>二段ジャンプした回数。見た目側 (PlayerSpineVisual) が増えたのを見てモーションを流す。</summary>
+    public int DoubleJumpCount { get; private set; }
 
     #endregion
 
@@ -1556,6 +1569,39 @@ public class PlayerController : MonoBehaviour
     public void EndAttack()
     {
         _isAttacking = false;
+    }
+
+    /// <summary>近接コンボで振っている段 (0 始まり)。近接コンボ中でなければ -1。</summary>
+    public int MeleeSwingIndex { get; private set; } = -1;
+
+    /// <summary>振っている段の長さ (sec)。見た目側がモーションの再生速度を合わせるのに使う。</summary>
+    public float MeleeSwingDuration { get; private set; }
+
+    /// <summary>振り始めた段の通し番号。同じモーションが続いても振り直しを見分けられるようにする。</summary>
+    public int MeleeSwingCount { get; private set; }
+
+    /// <summary>近接コンボの 1 段を振り始めた時に呼ぶ (AttackState)。</summary>
+    public void NotifyMeleeSwing(int comboIndex, float duration)
+    {
+        MeleeSwingIndex = comboIndex;
+        MeleeSwingDuration = duration;
+        MeleeSwingCount++;
+    }
+
+    /// <summary>近接コンボを終えた時に呼ぶ (AttackState.Exit)。</summary>
+    public void ClearMeleeSwing()
+    {
+        MeleeSwingIndex = -1;
+    }
+
+    /// <summary>
+    /// 空中で近接コンボを終えた時に呼ぶ (AttackState.Exit)。次の空中攻撃まで間を空け、
+    /// コンボを連続で振って滞空し続けられないようにする。地上で終えた時は何もしない。
+    /// </summary>
+    public void StartAirComboCooldown()
+    {
+        if (!_isGrounded)
+            _airComboCooldownTimer = _consts.AirComboInterval;
     }
 
     /// <summary>特殊攻撃が発動可能か (装備済み かつ クールダウン明け)。</summary>

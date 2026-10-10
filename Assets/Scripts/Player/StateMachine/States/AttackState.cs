@@ -4,6 +4,7 @@
 /// (基本3、鍛冶強化で最大5) までコンボできる。
 /// 地上では攻撃モーション中も水平移動・重力は適用される(移動しながら攻撃可能)。
 /// 空中で振り始めた段はその場に滞空する (落下しながら振らない)。
+/// 空中でコンボを終えると、着地するか AirComboInterval が明けるまで次の空中攻撃は出せない。
 /// 向きは固定し、攻撃判定は各段の HitDelay 経過時に一度だけ出す。
 /// モーション終了後に現在の状況へ応じた locomotion ステートへ戻る。
 /// </summary>
@@ -30,6 +31,8 @@ public class AttackState : PlayerState
     public override void Exit()
     {
         Player.EndAttack();
+        Player.ClearMeleeSwing();
+        Player.StartAirComboCooldown();
     }
 
     /// <summary>コンボ1段ぶんのスイングを開始する。</summary>
@@ -38,6 +41,7 @@ public class AttackState : PlayerState
         _profile = Player.CurrentMeleeProfile;
         _timer = _profile.Duration;
         _hitDone = false;
+        Player.NotifyMeleeSwing(_comboIndex, _profile.Duration);
 
         _airStall = !Player.IsGrounded;
         if (_airStall)
