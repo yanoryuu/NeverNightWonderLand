@@ -239,6 +239,9 @@ public class PlayerConsts : ScriptableObject
     [SerializeField] private Vector2 _parryRangeSize = new Vector2(2f, 2.2f);
 
     [Header("近接コンボ / 鍛冶強化")]
+    [Tooltip("空中でコンボを振り終えてから、次の空中攻撃を出せるまでの時間 (sec)。着地するとすぐ解除される。短いと空中コンボを繰り返して滞空し続けられる")]
+    [SerializeField] private float _airComboInterval = 0.6f;
+
     [Tooltip("初期状態の最大コンボ数")]
     [SerializeField] private int _baseMaxCombo = 3;
 
@@ -363,6 +366,7 @@ public class PlayerConsts : ScriptableObject
     public Vector2 ParryRangeOffset => _parryRangeOffset;
     public Vector2 ParryRangeSize => _parryRangeSize;
 
+    public float AirComboInterval => _airComboInterval;
     public int BaseMaxCombo => _baseMaxCombo;
     public int MaxComboCap => _maxComboCap;
     public int ForgeAttackBonus => _forgeAttackBonus;

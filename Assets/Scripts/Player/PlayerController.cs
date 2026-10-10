@@ -123,6 +123,7 @@ public class PlayerController : MonoBehaviour
     private float _coyoteTimer;      // 地面を離れてからの残り猶予
     private float _jumpBufferTimer;  // 先行入力の残り時間
     private float _dashCooldownTimer;
+    private float _airComboCooldownTimer;   // 空中コンボを振り終えてから次の空中攻撃までの残り時間 (着地で解除)
     private float _specialCooldownTimer;    // 特殊攻撃の再使用までの残り時間
     private float _specialCooldownDuration; // 直近のクールダウン全長 (HUD の割合表示用)
 
@@ -489,6 +490,8 @@ public class PlayerController : MonoBehaviour
         if (_jumpBufferTimer > 0f) _jumpBufferTimer -= dt;
         if (_finisherBufferTimer > 0f) _finisherBufferTimer -= dt;
         if (_dashCooldownTimer > 0f) _dashCooldownTimer -= dt;
+        if (_isGrounded) _airComboCooldownTimer = 0f;
+        else if (_airComboCooldownTimer > 0f) _airComboCooldownTimer -= dt;
         if (_specialCooldownTimer > 0f) _specialCooldownTimer -= dt;
 
         // 降り抜け中のすり抜け床: 時間が経ったら衝突を戻す
@@ -516,10 +519,16 @@ public class PlayerController : MonoBehaviour
     /// <summary>ジャンプ可能(コヨーテ中 かつ 先行入力あり)か。</summary>
     public bool HasBufferedJump() => _coyoteTimer > 0f && _jumpBufferTimer > 0f;
 
-    /// <summary>攻撃入力を消費する。攻撃すべきなら true。</summary>
+    /// <summary>
+    /// 攻撃入力を消費する。攻撃すべきなら true。
+    /// 空中でコンボを振り終えた直後は、間隔 (AirComboInterval) が明けるまで空中攻撃を出せない。
+    /// </summary>
     public bool TryConsumeAttack()
     {
         if (!_attackPressed)
+            return false;
+
+        if (!_isGrounded && _airComboCooldownTimer > 0f)
             return false;
 
         _attackPressed = false;
@@ -1130,6 +1139,16 @@ public class PlayerController : MonoBehaviour
     public void EndAttack()
     {
         _isAttacking = false;
+    }
+
+    /// <summary>
+    /// 空中で近接コンボを終えた時に呼ぶ (AttackState.Exit)。次の空中攻撃まで間を空け、
+    /// コンボを連続で振って滞空し続けられないようにする。地上で終えた時は何もしない。
+    /// </summary>
+    public void StartAirComboCooldown()
+    {
+        if (!_isGrounded)
+            _airComboCooldownTimer = _consts.AirComboInterval;
     }
 
     /// <summary>特殊攻撃が発動可能か (装備済み かつ クールダウン明け)。</summary>

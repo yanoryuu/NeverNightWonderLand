@@ -745,7 +745,7 @@ public class CombatTunerWindow : EditorWindow
         foreach (var name in new[]
         {
             "_parryWindow", "_parryRecovery", "_parrySuccessInvincible",
-            "_baseMaxCombo", "_maxComboCap", "_forgeAttackBonus",
+            "_baseMaxCombo", "_maxComboCap", "_airComboInterval", "_forgeAttackBonus",
             "_slamFallSpeed", "_skillChargeTime", "_superJumpHeight", "_chargeRushSpeed",
         })
         {
