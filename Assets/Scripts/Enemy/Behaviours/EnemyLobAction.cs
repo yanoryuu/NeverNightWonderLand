@@ -78,6 +78,19 @@ public class EnemyLobAction : EnemyActionBase
     [Tooltip("点滅の間隔 (sec)")]
     [SerializeField] private float _blinkInterval = 0.08f;
 
+    [Header("見た目 (投げる時の伸び縮み。アニメの無い 1 枚絵用)")]
+    [Tooltip("伸び縮みさせる絵の Transform (足元が原点の子 Visual)。未設定なら伸び縮みしない")]
+    [SerializeField] private Transform _squashTarget;
+
+    [Tooltip("予備動作の終わりに縮んだ形 (横, 縦 の倍率)")]
+    [SerializeField] private Vector2 _windupSquash = new Vector2(1.08f, 0.9f);
+
+    [Tooltip("投げた瞬間に伸びた形 (横, 縦 の倍率)")]
+    [SerializeField] private Vector2 _throwStretch = new Vector2(0.93f, 1.1f);
+
+    [Tooltip("伸びた形から元の形に戻る時間 (sec)")]
+    [SerializeField] private float _stretchReturnTime = 0.22f;
+
     [Header("Animator トリガー (無ければ無視される)")]
     [SerializeField] private string _windupTrigger = "ThrowWindup";
     [SerializeField] private string _throwTrigger = "Throw";
@@ -95,6 +108,10 @@ public class EnemyLobAction : EnemyActionBase
     private float _readyTime;
     private bool _wasDetected;
 
+    private Vector3 _squashBaseScale = Vector3.one;
+    private Vector2 _squashFrom = Vector2.one; // 戻り始めの形
+    private float _squashReturnTimer = -1f;    // 0 以上 = 元の形へ戻っている途中
+
     /// <summary>予備動作中か。</summary>
     public bool IsWindingUp => _winding;
 
@@ -108,7 +125,52 @@ public class EnemyLobAction : EnemyActionBase
         _body = GetComponent<Collider2D>();
         _visual = EnemyTelegraphBlink.ResolveVisual(this, _blinkRenderer);
         _blink = new EnemyTelegraphBlink(_visual, _blinkColor, _blinkInterval);
+        if (_squashTarget == transform)
+            _squashTarget = null; // 本体を伸び縮みさせると当たり判定まで変わるので、子の絵だけにする
+        if (_squashTarget != null)
+            _squashBaseScale = _squashTarget.localScale;
     }
+
+    private void Update()
+    {
+        if (_squashTarget == null)
+            return;
+
+        if (_winding)
+        {
+            // 予備動作: 投げる前にぐっと縮む
+            var t = Mathf.Clamp01(_timer / Mathf.Max(0.01f, _windupTime));
+            ApplySquash(Vector2.Lerp(Vector2.one, _windupSquash, 1f - (1f - t) * (1f - t)));
+        }
+        else if (_squashReturnTimer >= 0f)
+        {
+            _squashReturnTimer += Time.deltaTime;
+            var t = Mathf.Clamp01(_squashReturnTimer / Mathf.Max(0.01f, _stretchReturnTime));
+            ApplySquash(Vector2.Lerp(_squashFrom, Vector2.one, t * t * (3f - 2f * t)));
+            if (t >= 1f)
+                _squashReturnTimer = -1f;
+        }
+    }
+
+    private void ApplySquash(Vector2 factor) =>
+        _squashTarget.localScale = new Vector3(_squashBaseScale.x * factor.x, _squashBaseScale.y * factor.y,
+            _squashBaseScale.z);
+
+    /// <summary>今の形から元の形へ戻し始める (投げた時は伸びた形から)。</summary>
+    private void ReturnSquash(Vector2 from)
+    {
+        if (_squashTarget == null)
+            return;
+        _squashFrom = from;
+        _squashReturnTimer = 0f;
+        ApplySquash(from);
+    }
+
+    private Vector2 CurrentSquash =>
+        _squashTarget == null
+            ? Vector2.one
+            : new Vector2(_squashTarget.localScale.x / Mathf.Max(0.0001f, _squashBaseScale.x),
+                _squashTarget.localScale.y / Mathf.Max(0.0001f, _squashBaseScale.y));
 
     private void Start()
     {
@@ -217,6 +279,7 @@ public class EnemyLobAction : EnemyActionBase
         _blink.Stop();
         _readyTime = Time.time + _cooldown;
         Animation?.SetTrigger(_throwTrigger);
+        ReturnSquash(_throwStretch);
 
         var from = Muzzle;
         var target = PlayerFeet;
@@ -256,9 +319,12 @@ public class EnemyLobAction : EnemyActionBase
 
     private void Cancel(bool startCooldown)
     {
+        var wasWinding = _winding;
         _winding = false;
         _timer = 0f;
         _blink.Stop();
+        if (wasWinding)
+            ReturnSquash(CurrentSquash);
         if (startCooldown)
             _readyTime = Time.time + _cooldown;
     }

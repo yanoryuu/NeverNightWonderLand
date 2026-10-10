@@ -12,10 +12,12 @@ using UnityEngine.SceneManagement;
 /// 敵とプレイヤーは物理衝突しない設定なので、当たり判定は物理コールバックに頼らず毎ステップ自前で行う
 /// (壁・床: 進む分の CircleCast / プレイヤー: Bounds の重なり / 爆発: <see cref="BossKit.HitPlayerCircle"/>)。
 /// プレハブ (任意) に付けて使うか、プレハブ未設定なら <see cref="Spawn"/> が小さな丸い仮表示を作る。
+/// 絵 (プレハブの _flyingSprite ほか) がある時: 飛行中 = 粒が転がる / 予告 = 粒 ⇔ 割れた粒を交互 /
+/// 爆発 = はじける絵を順に出して大きくしながら消す / 斬られた = 割れた粒で小さくなって消える。
 /// </summary>
 public class EnemyLobBomb : MonoBehaviour, IDamageable
 {
-    private enum Phase { Flying, Fuse, Exploding }
+    private enum Phase { Flying, Fuse, Exploding, Sliced }
 
     [Tooltip("地形・プレイヤーへの当たり判定の半径 (units)。仮表示の大きさ (直径) にも使う")]
     [SerializeField] private float _radius = 0.18f;
@@ -47,6 +49,31 @@ public class EnemyLobBomb : MonoBehaviour, IDamageable
 
     [Tooltip("寿命 (sec)。着地しないまま落ち続けた時に消す")]
     [SerializeField] private float _maxLifetime = 5f;
+
+    [Header("絵 (未設定なら今までどおり、丸い仮表示を点滅させて消す)")]
+    [Tooltip("飛んでいる間・着地直後の絵 (粒)")]
+    [SerializeField] private Sprite _flyingSprite;
+
+    [Tooltip("予告の点滅で粒と交互に出す絵 (粒が割れる)。斬られて消える時にも使う")]
+    [SerializeField] private Sprite _crackSprite;
+
+    [Tooltip("爆発の絵 (はじけ始め → ポップコーン → 大きくはじける の順)。空なら爆発で絵を消す (閃光の円だけ)")]
+    [SerializeField] private Sprite[] _burstSprites;
+
+    [Tooltip("飛行中・予告中の絵の大きさ (絵を描く SpriteRenderer の localScale)")]
+    [SerializeField] private float _visualScale = 1.1f;
+
+    [Tooltip("飛行中の回転の速さ (度/sec。進む向きに転がるように回す)")]
+    [SerializeField] private float _spinSpeed = 540f;
+
+    [Tooltip("爆発の絵を出しておく時間 (sec)。この間に絵を順に切り替えて大きくし、後半で消す")]
+    [SerializeField] private float _burstTime = 0.26f;
+
+    [Tooltip("爆発の絵の大きさ (始め → 終わり)。爆発半径の円に合う大きさにする")]
+    [SerializeField] private Vector2 _burstScale = new Vector2(1.6f, 3.1f);
+
+    [Tooltip("斬られた時に割れた絵で小さくなって消える時間 (sec)")]
+    [SerializeField] private float _slicedTime = 0.15f;
 
     // 予告・閃光の描画順 (投げた敵の絵より手前。着地後の爆弾は予告の円のさらに手前)
     private const int MarkOrderOffset = 1;
@@ -86,6 +113,11 @@ public class EnemyLobBomb : MonoBehaviour, IDamageable
 
     /// <summary>着地して爆発待ちか (テスト・デバッグ用)。</summary>
     public bool IsLanded => _phase == Phase.Fuse;
+
+    /// <summary>絵が設定されているか (無ければ丸い仮表示の動き)。</summary>
+    private bool HasArt => _flyingSprite != null && _sprite != null;
+
+    private bool HasBurstArt => HasArt && _burstSprites != null && _burstSprites.Length > 0;
 
     /// <summary>
     /// 爆弾を生成して投げる。prefab が null なら小さな丸い仮表示を作る。
@@ -160,6 +192,11 @@ public class EnemyLobBomb : MonoBehaviour, IDamageable
 
         col.isTrigger = true;
         _sprite = GetComponentInChildren<SpriteRenderer>();
+        if (HasArt)
+        {
+            _sprite.sprite = _flyingSprite;
+            _sprite.transform.localScale = Vector3.one * _visualScale;
+        }
     }
 
     /// <summary>投げる (Spawn から呼ばれる。プレハブを自前で Instantiate した時は直接呼んでもよい)。</summary>
@@ -281,6 +318,12 @@ public class EnemyLobBomb : MonoBehaviour, IDamageable
         _velocity = Vector2.zero;
         transform.position = at;
         _rb.position = at;
+        if (HasArt)
+        {
+            // 転がっていた粒を起こして止める (割れる絵が正しい向きで出るように)
+            _sprite.transform.localRotation = Quaternion.identity;
+            _sprite.sprite = _flyingSprite;
+        }
 
         // 着地点に爆発範囲の円の予告
         _mark = BossKit.CreateMarker("PopcornMark", BossKit.CircleSprite, _markColor, at,
@@ -304,13 +347,26 @@ public class EnemyLobBomb : MonoBehaviour, IDamageable
 
         switch (_phase)
         {
+            case Phase.Flying:
+            {
+                // 進む向きに転がるように回す (絵がある時だけ)
+                if (HasArt && _spinSpeed != 0f)
+                {
+                    var dir = _velocity.x < 0f ? 1f : -1f;
+                    _sprite.transform.Rotate(0f, 0f, dir * _spinSpeed * Time.deltaTime);
+                }
+                break;
+            }
+
             case Phase.Fuse:
             {
                 _timer += Time.deltaTime;
-                // 爆発が近づくほど速く点滅させる (爆弾と予告の円)
+                // 爆発が近づくほど速く点滅させる (爆弾と予告の円)。絵がある時は粒 ⇔ 割れた粒を交互に出す
                 var rate = Mathf.Lerp(5f, 16f, Mathf.Clamp01(_timer / Mathf.Max(0.01f, _fuseTime)));
                 var on = Mathf.Repeat(_timer * rate, 1f) < 0.5f;
-                if (_sprite != null)
+                if (HasArt)
+                    _sprite.sprite = on || _timer < 0.05f || _crackSprite == null ? _flyingSprite : _crackSprite;
+                else if (_sprite != null)
                     _sprite.enabled = on || _timer < 0.05f;
                 if (_mark != null)
                     _mark.color = on ? _markBlinkColor : _markColor;
@@ -330,21 +386,62 @@ public class EnemyLobBomb : MonoBehaviour, IDamageable
                     _flash.color = c;
                     _flash.transform.localScale = Vector3.one * (_explosionRadius * 2f * Mathf.Lerp(0.85f, 1.05f, t));
                 }
-                if (_timer >= _flashTime)
+                if (HasBurstArt)
+                    TickBurst();
+                if (_timer >= ExplodingTime)
+                    Destroy(gameObject);
+                break;
+            }
+
+            case Phase.Sliced:
+            {
+                // 割れた粒が小さくなって消える
+                _timer += Time.deltaTime;
+                var t = Mathf.Clamp01(_timer / Mathf.Max(0.01f, _slicedTime));
+                _sprite.transform.localScale = Vector3.one * (_visualScale * Mathf.Lerp(1.15f, 0.2f, t));
+                var c = _sprite.color;
+                c.a = 1f - t * t;
+                _sprite.color = c;
+                if (t >= 1f)
                     Destroy(gameObject);
                 break;
             }
         }
     }
 
+    /// <summary>爆発の演出の長さ (閃光と爆発の絵の長い方)。</summary>
+    private float ExplodingTime => HasBurstArt ? Mathf.Max(_flashTime, _burstTime) : _flashTime;
+
+    /// <summary>爆発の絵: 絵を順に切り替えながら大きくし、後半で薄くして消す。</summary>
+    private void TickBurst()
+    {
+        var t = Mathf.Clamp01(_timer / Mathf.Max(0.01f, _burstTime));
+        var frame = Mathf.Min(_burstSprites.Length - 1, (int)(t * _burstSprites.Length));
+        if (_burstSprites[frame] != null)
+            _sprite.sprite = _burstSprites[frame];
+        // 始めに勢いよく膨らみ、後はゆっくり (ease-out)
+        var grow = 1f - (1f - t) * (1f - t);
+        _sprite.transform.localScale = Vector3.one * Mathf.Lerp(_burstScale.x, _burstScale.y, grow);
+        var c = _sprite.color;
+        c.a = t < 0.55f ? 1f : Mathf.Clamp01(1f - (t - 0.55f) / 0.45f);
+        _sprite.color = c;
+    }
+
     private void Explode(Vector2 at)
     {
-        if (_phase == Phase.Exploding)
+        if (_phase == Phase.Exploding || _phase == Phase.Sliced)
             return;
 
         _phase = Phase.Exploding;
         _timer = 0f;
-        if (_sprite != null)
+        if (HasBurstArt)
+        {
+            // 爆発の絵 (はじけるポップコーン) に切り替える。並び順は閃光の円の手前 (下で合わせる)
+            _sprite.enabled = true;
+            _sprite.transform.localRotation = Quaternion.identity;
+            TickBurst();
+        }
+        else if (_sprite != null)
             _sprite.enabled = false;
         var col = GetComponent<Collider2D>();
         if (col != null)
@@ -364,16 +461,36 @@ public class EnemyLobBomb : MonoBehaviour, IDamageable
 
         if (_particleMaterial != null)
             SpawnParticles(at);
+        if (HasBurstArt)
+            _sprite.sortingOrder = _flash.sortingOrder + 1; // パーティクルの順を決めた後で、絵を閃光の手前へ
         if (_shakeAmplitude > 0f)
             CameraShake.Shake(_shakeAmplitude, _shakeTime);
     }
 
-    /// <summary>プレイヤーの攻撃 (近接・飛び道具・設置物) が当たったら、爆発せずに消える。</summary>
+    /// <summary>
+    /// プレイヤーの攻撃 (近接・飛び道具・設置物) が当たったら、爆発せずに消える。
+    /// 絵がある時は割れた粒の絵で小さくなって消える (その間は当たり判定なし・その場で止まる)。
+    /// </summary>
     public void TakeDamage(in DamageInfo info)
     {
-        if (_phase == Phase.Exploding)
+        if (_phase == Phase.Exploding || _phase == Phase.Sliced)
             return;
-        Destroy(gameObject);
+        if (!HasArt || _slicedTime <= 0f)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        _phase = Phase.Sliced;
+        _timer = 0f;
+        _velocity = Vector2.zero;
+        var col = GetComponent<Collider2D>();
+        if (col != null)
+            col.enabled = false;
+        BossKit.DestroyMarker(_mark);
+        _mark = null;
+        _sprite.enabled = true;
+        _sprite.sprite = _crackSprite != null ? _crackSprite : _flyingSprite;
     }
 
     private void OnDestroy()

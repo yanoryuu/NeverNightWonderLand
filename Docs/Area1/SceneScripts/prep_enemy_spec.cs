@@ -7,7 +7,7 @@ using UnityEngine;
 //   プレハブ: Assets/Prefabs/Enemies/<名前>.prefab
 //     地上 1〜4・7 = Enemy.prefab (野良ウマの絵) の Variant / 飛行 5・6 = FlyingEnemy.prefab の Variant /
 //     ボス = Enemy.prefab の Variant ×2 (地上の仮ボスと同じ仮の四角 = BossRoom の KeepPlaceholderLook と同じ処置)
-//   見た目 (絵・色) は変えない。部品の並び順 = CompositeEnemyBehaviour の優先度。
+//   見た目 (絵・色) は変えない (7 ポップコーン投げだけは専用の絵 popduck + ポップコーンの爆弾 PopcornBomb.prefab にする)。部品の並び順 = CompositeEnemyBehaviour の優先度。
 // run_script --file Docs/Area1/SceneScripts/prep_enemy_spec.cs --entry PrepEnemySpec.Run
 //   (7 ポップコーン投げだけ作り直す: --entry PrepEnemySpec.RunPopcorn)
 public static class PrepEnemySpec
@@ -127,6 +127,8 @@ public static class PrepEnemySpec
         // 爆発パーティクルの素材 = URP 既定の ParticlesUnlit (スピーカーの爆発と同じ。新しい絵は使わない)
         var particles = AssetDatabase.LoadAssetAtPath<Material>(
             "Packages/com.unity.render-pipelines.universal/Runtime/Materials/ParticlesUnlit.mat");
+        var bomb = PopcornBomb();
+        var duck = PopcornSprite(DuckArt, DuckPpu, DuckPivot);
         Variant("Enemy_PopcornThrower", false, popcorn, go =>
         {
             go.AddComponent<CompositeEnemyBehaviour>();
@@ -134,8 +136,119 @@ public static class PrepEnemySpec
             Set(go.AddComponent<ChaseMotion>(), ("_phase", (int)EnemyPhaseFilter.AlertOnly), ("_stopAtLedge", true),
                 ("_keepDistance", 6f), ("_retreatDistance", 3f), ("_retreatSpeed", 2f));
             Set(go.AddComponent<PatrolMotion>(), ("_phase", (int)EnemyPhaseFilter.SearchOnly), ("_turnAtLedge", true));
-            Set(go.AddComponent<EnemyLobAction>(), ("_phase", (int)EnemyPhaseFilter.Always), ("_explosionMaterial", particles));
+            var lob = go.AddComponent<EnemyLobAction>();
+            Set(lob, ("_phase", (int)EnemyPhaseFilter.Always), ("_explosionMaterial", particles));
+
+            // 見た目: 野良ウマの絵+アニメ → ポップコーン頭のアヒルの 1 枚絵 (左向き。アニメ無し)
+            var vis = go.transform.Find("Visual");
+            if (duck == null || vis == null)
+            {
+                Log.AppendLine($"WARN popduck の絵 ({DuckArt}) か Visual が無いので、見た目は野良ウマのまま");
+                return;
+            }
+
+            var anim = vis.GetComponent<Animator>();
+            if (anim != null)
+                Object.DestroyImmediate(anim, true);
+            var enemyAnim = go.GetComponent<EnemyAnimator>();
+            if (enemyAnim != null)
+                Object.DestroyImmediate(enemyAnim, true);
+
+            // 絵の原点 (pivot) = 足元の中央。当たり判定の下端 (y = -0.5、床+0.6 に置いた時の接地面) に合わせる
+            vis.localPosition = new Vector3(0f, -0.5f, 0f);
+            var sr = vis.GetComponent<SpriteRenderer>();
+            sr.sprite = duck;
+            sr.flipX = false;
+            Set(go.GetComponent<EnemyController>(), ("_visualFacesLeft", true));
+            // 当たり判定: 胴体に合わせて細く高く。下端は今までどおり -0.5 (エリア1 の配置 = 床+0.6 で接地)
+            var box = go.GetComponent<BoxCollider2D>();
+            box.size = new Vector2(0.6f, 1.1f);
+            box.offset = new Vector2(0f, 0.05f);
+            Set(lob, ("_squashTarget", vis), ("_muzzleOffset", new Vector2(0.25f, 0.2f)));
+            if (bomb != null)
+                Set(lob, ("_bombPrefab", bomb));
         });
+    }
+
+    // ---- ポップコーン投げの絵 (Assets/LocalData/Character/)
+    const string DuckArt = "Assets/LocalData/Character/popduck.png";
+    // 1 枚絵 2894x4093 の見えている部分の高さ 3082px → 1.23 units (プレイヤー (当たり判定 1.2) と同じくらい。野良ウマは 1.66)
+    const float DuckPpu = 2500f;
+    // 足元の中央 (足の下端 y=3525px、胴体の中央 x≈1560px)
+    static readonly Vector2 DuckPivot = new(0.539f, 0.139f);
+    const string BombArtDir = "Assets/LocalData/Character/popbomb";
+    const string BombPrefabPath = Dir + "/PopcornBomb.prefab";
+
+    /// <summary>絵を Sprite (単体・指定 PPU・指定 pivot) で取り込み直して返す (設定が同じなら何もしない)。</summary>
+    static Sprite PopcornSprite(string path, float ppu, Vector2 pivot)
+    {
+        var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+        if (importer == null)
+            return null;
+        var settings = new TextureImporterSettings();
+        importer.ReadTextureSettings(settings);
+        var pivotChanged = settings.spriteAlignment != (int)SpriteAlignment.Custom || settings.spritePivot != pivot;
+        if (importer.textureType != TextureImporterType.Sprite || importer.spriteImportMode != SpriteImportMode.Single
+            || !Mathf.Approximately(importer.spritePixelsPerUnit, ppu) || pivotChanged)
+        {
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.ReadTextureSettings(settings);
+            settings.spriteAlignment = (int)SpriteAlignment.Custom;
+            settings.spritePivot = pivot;
+            settings.spritePixelsPerUnit = ppu;
+            importer.SetTextureSettings(settings);
+            importer.SaveAndReimport();
+            Log.AppendLine($"import {path}: PPU {ppu} pivot {pivot}");
+        }
+        return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+    }
+
+    /// <summary>
+    /// ポップコーン (EnemyLobBomb) のプレハブを作る/更新する。絵 popbomb_1〜5 (1 セル 546px, PPU 546, 中央 pivot):
+    /// 1 = 粒 (飛行・着地) / 2 = 割れた粒 (予告の点滅で 1 と交互・斬られた時) / 3〜5 = 爆発。
+    /// </summary>
+    static EnemyLobBomb PopcornBomb()
+    {
+        var frames = new Sprite[5];
+        for (var i = 0; i < frames.Length; i++)
+            frames[i] = PopcornSprite($"{BombArtDir}/popbomb_{i + 1}.png", 546f, new Vector2(0.5f, 0.5f));
+        if (System.Array.IndexOf(frames, null) >= 0)
+        {
+            Log.AppendLine($"WARN ポップコーンの絵 ({BombArtDir}/popbomb_1〜5.png) が揃っていないので、爆弾は仮表示のまま");
+            return null;
+        }
+
+        var root = new GameObject("PopcornBomb");
+        try
+        {
+            var lobBomb = root.AddComponent<EnemyLobBomb>();
+            var vis = new GameObject("Visual");
+            vis.transform.SetParent(root.transform, false);
+            var sr = vis.AddComponent<SpriteRenderer>();
+            sr.sprite = frames[0];
+            // 素材は敵の絵 (Enemy.prefab の Visual) と同じにする (ライティングの見え方を揃える)
+            var enemyVisual = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy.prefab")
+                .transform.Find("Visual")?.GetComponent<SpriteRenderer>();
+            if (enemyVisual != null)
+                sr.sharedMaterial = enemyVisual.sharedMaterial;
+
+            Set(lobBomb, ("_flyingSprite", frames[0]), ("_crackSprite", frames[1]));
+            var so = new SerializedObject(lobBomb);
+            var burst = so.FindProperty("_burstSprites");
+            burst.arraySize = 3;
+            for (var i = 0; i < 3; i++)
+                burst.GetArrayElementAtIndex(i).objectReferenceValue = frames[i + 2];
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, BombPrefabPath, out var ok);
+            Log.AppendLine($"prefab {BombPrefabPath} ok={ok}");
+            return prefab != null ? prefab.GetComponent<EnemyLobBomb>() : null;
+        }
+        finally
+        {
+            Object.DestroyImmediate(root);
+        }
     }
 
     static EnemyConsts Consts(string name, int hp, int guard, float move, float chase, float range, int contact, float breakDuration = -1f)
