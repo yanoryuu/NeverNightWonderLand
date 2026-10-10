@@ -21,6 +21,7 @@ public class PlayerHealth : MonoBehaviour, IDamageable
     private PlayerHealthModel _model;
     private bool _ownsModel;
     private float _invincibleTimer;
+    private PlayerHealEffect _healEffect;
 
     /// <summary>現在 HP の購読用 (HUD の Presenter が Subscribe する)。</summary>
     public ReadOnlyReactiveProperty<int> Hp => _model.Hp;
@@ -108,7 +109,16 @@ public class PlayerHealth : MonoBehaviour, IDamageable
         if (_controller.IsDead)
             return;
 
+        var before = _model.Hp.CurrentValue;
         _model.Heal(amount);
+
+        // HP が実際に増えた時だけ、体から緑色の光の粒を出す
+        if (_model.Hp.CurrentValue > before)
+        {
+            if (_healEffect == null && !TryGetComponent(out _healEffect))
+                _healEffect = gameObject.AddComponent<PlayerHealEffect>();
+            _healEffect.Play(_controller);
+        }
     }
 
     /// <summary>無敵時間を付与する (パリィ成功時など。既に長い無敵が残っていれば維持)。</summary>

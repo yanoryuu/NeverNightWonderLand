@@ -140,6 +140,12 @@ public class PlayerConsts : ScriptableObject
     [Tooltip("回復モーションの継続時間 (sec)。この間は移動不可")]
     [SerializeField] private float _healDuration = 0.5f;
 
+    [Tooltip("回復した時に体から出す光の粒の素材 (URP の ParticlesUnlit)。空なら演出を出さない")]
+    [SerializeField] private Material _healParticleMaterial;
+
+    [Tooltip("回復した時に体から出す光の粒の色")]
+    [SerializeField] private Color _healParticleColor = new Color(0.4f, 1f, 0.5f, 1f);
+
     [Header("インタラクト")]
     [Tooltip("インタラクト対象を検出する半径 (units)")]
     [SerializeField] private float _interactRadius = 1.5f;
@@ -325,6 +331,8 @@ public class PlayerConsts : ScriptableObject
     public float HealChargePerHit => _healChargePerHit;
     public int HealAmount => _healAmount;
     public float HealDuration => _healDuration;
+    public Material HealParticleMaterial => _healParticleMaterial;
+    public Color HealParticleColor => _healParticleColor;
 
     public float InteractRadius => _interactRadius;
     public float InteractMaxSpeed => _interactMaxSpeed;
