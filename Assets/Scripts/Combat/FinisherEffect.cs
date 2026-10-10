@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 /// <summary>
 /// 裁断が決まった瞬間の演出 (ICEY の処刑演出が参考)。すべて実時間で進むのでヒットストップ中も動く。
@@ -39,7 +38,6 @@ public static class FinisherEffect
     private const float RumbleTime = 0.22f;
 
     private static Runner _runner;
-    private static Coroutine _rumbleStop;
     private static Sprite _whiteSprite;
     private static Sprite _slashSprite;
 
@@ -52,7 +50,7 @@ public static class FinisherEffect
     {
         EnsureRunner();
         CameraShake.Shake(shakeAmplitude, shakeTime);
-        Rumble();
+        PadRumble.Play(RumbleLow, RumbleHigh, RumbleTime);
 
         var facing = player != null ? player.Facing : 1;
         // 振り下ろし: 前方が下がる斜めの線
@@ -361,23 +359,6 @@ public static class FinisherEffect
 
     #endregion
 
-    #region 振動
-
-    private static void Rumble()
-    {
-        if (InputDeviceTracker.Current != InputDeviceKind.Gamepad)
-            return;
-        var pad = Gamepad.current;
-        if (pad == null)
-            return;
-        pad.SetMotorSpeeds(RumbleLow, RumbleHigh);
-        if (_rumbleStop != null)
-            _runner.StopCoroutine(_rumbleStop);
-        _rumbleStop = _runner.StartCoroutine(_runner.StopRumble(pad, RumbleTime));
-    }
-
-    #endregion
-
     #region 共通
 
     private static void EnsureRunner()
@@ -431,17 +412,6 @@ public static class FinisherEffect
 
     private sealed class Runner : MonoBehaviour
     {
-        public IEnumerator StopRumble(Gamepad pad, float seconds)
-        {
-            yield return new WaitForSecondsRealtime(seconds);
-            if (pad != null)
-                pad.SetMotorSpeeds(0f, 0f);
-        }
-
-        private void OnDisable()
-        {
-            Gamepad.current?.SetMotorSpeeds(0f, 0f);
-        }
     }
 
     #endregion

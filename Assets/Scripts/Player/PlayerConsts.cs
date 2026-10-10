@@ -107,6 +107,17 @@ public class PlayerConsts : ScriptableObject
     [Tooltip("被弾硬直の時間 (sec)")]
     [SerializeField] private float _hurtDuration = 0.3f;
 
+    [Tooltip("被弾時のパッド振動: 低周波 (左) モーターの強さ 0〜1")]
+    [Range(0f, 1f)]
+    [SerializeField] private float _hurtRumbleLow = 0.6f;
+
+    [Tooltip("被弾時のパッド振動: 高周波 (右) モーターの強さ 0〜1")]
+    [Range(0f, 1f)]
+    [SerializeField] private float _hurtRumbleHigh = 0.4f;
+
+    [Tooltip("被弾時のパッド振動の長さ (実時間 sec)。0 で振動しない")]
+    [SerializeField] private float _hurtRumbleTime = 0.12f;
+
     [Tooltip("被弾後の無敵時間 (sec)")]
     [SerializeField] private float _invincibleTime = 1f;
 
@@ -303,6 +314,9 @@ public class PlayerConsts : ScriptableObject
 
     public int MaxHp => _maxHp;
     public float HurtDuration => _hurtDuration;
+    public float HurtRumbleLow => _hurtRumbleLow;
+    public float HurtRumbleHigh => _hurtRumbleHigh;
+    public float HurtRumbleTime => _hurtRumbleTime;
     public float InvincibleTime => _invincibleTime;
     public Vector2 KnockbackVelocity => _knockbackVelocity;
     public float RespawnDelay => _respawnDelay;
