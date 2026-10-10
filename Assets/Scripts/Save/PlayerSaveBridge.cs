@@ -55,6 +55,7 @@ public class PlayerSaveBridge : MonoBehaviour
 
         _subscribed = true;
         GameProgress.Changed += OnProgressChanged;
+        MapExploration.Changed += OnProgressChanged; // 新しい部屋に入った (踏破記録)
         if (_progression != null)
         {
             _progression.OnUpgradeGranted += OnUpgradeGranted;
@@ -80,6 +81,7 @@ public class PlayerSaveBridge : MonoBehaviour
             return;
 
         GameProgress.Changed -= OnProgressChanged;
+        MapExploration.Changed -= OnProgressChanged;
         if (_progression != null)
         {
             _progression.OnUpgradeGranted -= OnUpgradeGranted;
@@ -191,6 +193,7 @@ public class PlayerSaveBridge : MonoBehaviour
         _inventory?.LoadFrom(data);
         _attackLoadout?.LoadFrom(data);
         GameProgress.LoadFrom(data);
+        MapExploration.LoadFrom(data);
 
         // 適用で起きた変化はセーブと同じ内容なので書き込まない。このプレイの続きなら、以後の変化はセーブへ書き込む
         _autosaveDirty = false;
@@ -249,11 +252,15 @@ public class PlayerSaveBridge : MonoBehaviour
     private static string CurrentStageName() =>
         StageLoader.Instance != null ? StageLoader.Instance.CurrentStageName : SceneManager.GetActiveScene().name;
 
-    /// <summary>場所の表示名: StageInfo の部屋名 → 旧ステージの AreaTitleView の名前 → シーン名。</summary>
+    /// <summary>
+    /// 場所の表示名: StageInfo の部屋名 → 旧ステージの AreaTitleView の名前 → シーン名。
+    /// StageInfo があって部屋名が空 (名前を付けない部屋。例: A1_B1 のボス部屋) なら空のまま
+    /// (セーブ画面は章「第n章 エリア名」だけを出す。シーン名は出さない)。
+    /// </summary>
     private static string CurrentPlaceName()
     {
-        if (StageInfo.Current != null && !string.IsNullOrEmpty(StageInfo.Current.AreaName))
-            return StageInfo.Current.AreaName;
+        if (StageInfo.Current != null)
+            return StageInfo.Current.AreaName ?? "";
 
         foreach (var title in FindObjectsByType<AreaTitleView>(FindObjectsSortMode.None))
         {
@@ -291,6 +298,7 @@ public class PlayerSaveBridge : MonoBehaviour
         data.thread = _inventory != null ? _inventory.Thread.CurrentValue : 0;
         data.coins = _inventory != null ? _inventory.Coins.CurrentValue : 0;
         data.progressFlags = GameProgress.Collect();
+        data.visitedRooms = MapExploration.Collect();
 
         if (_inventory != null)
         {

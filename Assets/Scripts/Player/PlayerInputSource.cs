@@ -36,6 +36,9 @@ public struct PlayerInputFrame
     /// <summary>アイテム画面を開く/閉じる (Tab / Select(View))。ItemMenuView が読む。</summary>
     public bool ItemMenuPressed;
 
+    /// <summary>全体マップを開く/閉じる (M / タッチパッド・R3)。MapScreenPresenter が読む。</summary>
+    public bool MapPressed;
+
     /// <summary>アイテム使用 (L1/[I] ホールド + 方向) で押されたスロット。無ければ null。</summary>
     public ItemSlot? ItemSlot;
 }
@@ -110,10 +113,53 @@ public static class PlayerInputSource
         }
     }
 
+    private static bool _hasLatched;
+    private static PlayerInputFrame _latched;
+
+    /// <summary>
+    /// ヒットストップ中など PlayerController が入力を読まないフレームで呼ぶ。そのフレームの「押された」を溜めておき、
+    /// 次の <see cref="ReadForPlayer"/> で合成する (止まっている間の押下が消えないように)。
+    /// 合成後の値が消費通知に渡るので、テストプレイの記録にも押下が残る。
+    /// </summary>
+    public static void LatchPresses()
+    {
+        var f = Current;
+        _latched.JumpPressed |= f.JumpPressed;
+        _latched.DashPressed |= f.DashPressed;
+        _latched.AttackPressed |= f.AttackPressed;
+        _latched.SpecialPressed |= f.SpecialPressed;
+        _latched.FinisherPressed |= f.FinisherPressed;
+        _latched.HealPressed |= f.HealPressed;
+        _latched.InteractPressed |= f.InteractPressed;
+        _latched.GrapplePressed |= f.GrapplePressed;
+        _latched.ItemSlot ??= f.ItemSlot;
+        _hasLatched = true;
+    }
+
+    /// <summary>溜めた押下を捨てる (メニューのポーズ中など、解除後に持ち越したくない時)。</summary>
+    public static void ClearLatchedPresses()
+    {
+        _hasLatched = false;
+        _latched = default;
+    }
+
     /// <summary>PlayerController 用: このフレームの入力を読み、消費を通知する。</summary>
     public static PlayerInputFrame ReadForPlayer()
     {
         var frame = Current;
+        if (_hasLatched)
+        {
+            frame.JumpPressed |= _latched.JumpPressed;
+            frame.DashPressed |= _latched.DashPressed;
+            frame.AttackPressed |= _latched.AttackPressed;
+            frame.SpecialPressed |= _latched.SpecialPressed;
+            frame.FinisherPressed |= _latched.FinisherPressed;
+            frame.HealPressed |= _latched.HealPressed;
+            frame.InteractPressed |= _latched.InteractPressed;
+            frame.GrapplePressed |= _latched.GrapplePressed;
+            frame.ItemSlot ??= _latched.ItemSlot;
+            ClearLatchedPresses();
+        }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         ConsumedByPlayer?.Invoke(frame);
 #endif
@@ -163,6 +209,7 @@ public static class PlayerInputSource
             f.GrapplePressed = keyboard.fKey.wasPressedThisFrame;
             f.PausePressed = keyboard.escapeKey.wasPressedThisFrame;
             f.ItemMenuPressed = keyboard.tabKey.wasPressedThisFrame;
+            f.MapPressed = keyboard.mKey.wasPressedThisFrame;
         }
 
         var gamepad = Gamepad.current;
@@ -207,6 +254,10 @@ public static class PlayerInputSource
             f.GrapplePressed |= gamepad.leftTrigger.wasPressedThisFrame;
             f.PausePressed |= gamepad.startButton.wasPressedThisFrame;
             f.ItemMenuPressed |= gamepad.selectButton.wasPressedThisFrame;
+
+            // 全体マップ = タッチパッド (PS。Select/View はアイテム画面が使う) / R3 (タッチパッドの無いパッド用)
+            f.MapPressed |= gamepad.rightStickButton.wasPressedThisFrame
+                            || (gamepad is UnityEngine.InputSystem.DualShock.DualShockGamepad ds && ds.touchpadButton.wasPressedThisFrame);
 
             // インタラクト = 上入力 (十字キー上 / 左スティック上) — ホロウナイトと同じ
             f.InteractPressed |= (!itemHeld && gamepad.dpad.up.wasPressedThisFrame)

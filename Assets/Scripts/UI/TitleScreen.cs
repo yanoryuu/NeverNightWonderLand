@@ -97,6 +97,7 @@ public class TitleScreen : MonoBehaviour
             GameSession.RunSlotChosen = true;     // 拠点で休んだ時にこのスロットへ書く (上書きはスロット画面で確認済み)
             GameSession.ClearRespawnBench();      // 拠点で休むまで、死亡リトライは部屋の入り口から
             GameProgress.Clear();
+            MapExploration.Clear();
             // PlayerScene を土台に開始ステージを Additive で重ねる (PlayerScene 未登録なら旧方式)
             StageLoader.LoadWithPlayerScene(_startSceneName);
         }, () => ShowMenu(0), showBackground: false);

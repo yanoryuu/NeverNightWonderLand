@@ -49,6 +49,9 @@ public class SaveData
     /// <summary>進行フラグ (中ボス撃破など。GameProgress が管理)。</summary>
     public string[] progressFlags;
 
+    /// <summary>地図の踏破記録 (入ったことのある部屋の ID。MapExploration が管理)。旧セーブは null = 踏破なし。</summary>
+    public string[] visitedRooms;
+
     // ---- スロット一覧の表示用 (ロード画面) ----
 
     /// <summary>セーブ日時 (ISO 8601。DateTime.ToString("o"))。空なら旧形式 (ファイル更新日時で代用)。</summary>
