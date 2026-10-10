@@ -1,5 +1,6 @@
 using UnityEditor;
 using UnityEngine;
+using Foe = NeverNight.StageBuild.GroundFoe;   // 種類 (GroundFoe() と同名なので別名で)
 using static NeverNight.StageBuild.Area1StageBuilder;
 
 // A1_FP 「噴水広場」(FP x306..378 y0..36, 屋外) + 「正門前の並木道」(FP2 x381..447 y0..30, 屋外)
@@ -165,11 +166,16 @@ public static class BuildFP
         // 案内文はチュートリアルの操作説明 (キーの説明) だけ残す。呼びかけ・攻略助言・場所の説明は削除 (2026-10-03 ユーザー決定, Docs/UI/UIAssignment.md「案内文」)
 
         // 敵を少し増やす (2026-10-03 PendingChanges 8: 部屋の意図に合わせる。位置は enemy_probe.cs の候補から)
-        Enemy(328f, 3.6f, name: "PlazaWalker");          // 噴水広場の床 (x319..336)
+        GroundFoe(Foe.Stomper, 328f, 3f, "PlazaStomper");   // 2026-10-10 (PlazaWalker を置換)
+        GroundFoe(Foe.PopcornThrower, 377f, 9f, "TerracePopcorn");  // 2026-10-10 段 y9 (x372..381)
+        GroundFoe(Foe.Charger, 418f, 9f, "AvenueCharger");          // 2026-10-10 FP2 並木道 y9 (x381..431)。計画の 414 では東の突き当たり (x431) まで突進が届かず壁でふらつかないので 418
+        // ↑ PlazaStomper = 噴水広場の床 (x319..336)
         Enemy(410f, 18f, true, name: "AvenueFlyer");      // 並木道の上空 (正門のアーチの上 = 二段ジャンプの所は避ける)
 
         // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
         log += Depth("A1_FP") + "\n";
+        // 雰囲気 (§15): 作り直しで消えないよう StageAtmosphere をレシピで置く (2026-10-10)
+        log += Atmosphere("A1_FP") + "\n";
         return log + Finish();
     }
 }

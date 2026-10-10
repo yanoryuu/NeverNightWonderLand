@@ -1,5 +1,6 @@
 using UnityEditor;
 using UnityEngine;
+using Foe = NeverNight.StageBuild.GroundFoe;   // 種類 (GroundFoe() と同名なので別名で)
 using static NeverNight.StageBuild.Area1StageBuilder;
 
 // A1_U1 「メリーの吹き抜け」(U1, 拠点の真上の縦穴) + 「閉園の柵」(U2e, 屋外)
@@ -90,10 +91,12 @@ public static class BuildU1
 
         // 敵を少し増やす (2026-10-03 PendingChanges 8: 部屋の意図に合わせる。位置は enemy_probe.cs の候補から)
         Enemy(265f, -9f, true, name: "ShaftFlyer");      // 吹き抜けの途中 (支柱を登る間の空中戦)
-        Enemy(285f, 3.6f, name: "FenceWalker");          // 閉園の柵の前の床 (x281..290)
+        GroundFoe(Foe.Bundled, 285f, 3f, "FenceBundled");  // 2026-10-10 (FenceWalker を置換)。閉園の柵の前の床 (x281..290)
 
         // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
         log += Depth("A1_U1") + "\n";
+        // 雰囲気 (§15): 作り直しで消えないよう StageAtmosphere をレシピで置く (2026-10-10)
+        log += Atmosphere("A1_U1") + "\n";
         return log + Finish();
     }
 }

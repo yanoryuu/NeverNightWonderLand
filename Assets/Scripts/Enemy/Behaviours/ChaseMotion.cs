@@ -7,6 +7,11 @@ using UnityEngine;
 /// 未発見では IsActive が false になるので、下に置いた移動部品 (巡回など) に切り替わる。
 /// 任意で「振り向きの遅れ」(飛び越えて背後を取れる) と「足場の端で止まる」を付けられる
 /// (既定はどちらも無効 = 従来どおりの挙動。既存プレハブ互換のため)。
+/// 任意で「間合いを取る」動き (地上版。FloatingChaseMotion の _keepDistance / _retreatDistance と同じ考え方) にできる
+/// (_keepDistance / _retreatDistance が 0 なら従来どおりまっすぐ追う):
+/// - プレイヤーとの横の距離が _keepDistance より遠ければ寄る (ChaseSpeed)
+/// - _retreatDistance より近づかれたら後ずさり (_retreatSpeed。向きはプレイヤーへ向けたまま)
+/// - その間は止まってプレイヤーの方を向く。足場の端の扱いは _stopAtLedge に従う (後ずさりでも落ちない)
 /// </summary>
 public class ChaseMotion : EnemyMotionBase
 {
@@ -19,12 +24,28 @@ public class ChaseMotion : EnemyMotionBase
     [Tooltip("足場の端の判定に使う地面レイヤー。未設定なら Ground")]
     [SerializeField] private LayerMask _groundLayer;
 
+    [Header("間合い (地上。どちらも 0 なら従来どおりまっすぐ追う)")]
+    [Tooltip("プレイヤーとの横の距離がこれより遠ければ寄る (units)。0 で使わない")]
+    [SerializeField] private float _keepDistance = 0f;
+
+    [Tooltip("プレイヤーがこれより近づいたら後ずさりする (横の距離, units)。0 で使わない")]
+    [SerializeField] private float _retreatDistance = 0f;
+
+    [Tooltip("後ずさりの速さ (units/sec)。0 なら ChaseSpeed")]
+    [SerializeField] private float _retreatSpeed = 0f;
+
+    [Tooltip("間合いの遊び (units)。寄る/後ずさりを止める距離をこれだけずらして、境目で震えないようにする")]
+    [SerializeField] private float _spacingTolerance = 0.4f;
+
     private Rigidbody2D _rb;
     private Collider2D _body;
     private int _facing;           // 今向いている方向 (0 = 不明)
     private float _turnTimer;      // 振り向き中の経過時間
     private float _lastTickTime = -1f;
     private bool _keepFacingOnResume; // 被弾明けはノックバックの速度で向きを読み直さない
+    private int _spacingMove;         // 間合い: 今の動き (+1 寄る / -1 後ずさり / 0 止まる)
+
+    private bool UsesSpacing => _keepDistance > 0f || _retreatDistance > 0f;
 
     public override bool IsActive => Player != null && Enemy.IsPlayerDetected;
 
@@ -38,6 +59,12 @@ public class ChaseMotion : EnemyMotionBase
     public override void PhysicsTick()
     {
         var dir = Player.position.x >= transform.position.x ? 1 : -1;
+
+        if (UsesSpacing)
+        {
+            SpacingTick(dir);
+            return;
+        }
 
         // 従来の挙動 (オプション無し)
         if (_turnDelay <= 0f && !_stopAtLedge)
@@ -98,6 +125,53 @@ public class ChaseMotion : EnemyMotionBase
         }
 
         Enemy.Move(_facing * Enemy.Consts.ChaseSpeed);
+    }
+
+    /// <summary>
+    /// 間合いを取る動き: 遠ければ寄る / 近すぎれば後ずさり / その間は止まる。常にプレイヤーの方を向く。
+    /// 止まる・動き出す距離に遊び (_spacingTolerance) を持たせて、境目で行ったり来たりしないようにする。
+    /// </summary>
+    private void SpacingTick(int dir)
+    {
+        var dx = Mathf.Abs(Player.position.x - transform.position.x);
+        if (_facing != 0 && dx < 0.1f)
+            dir = _facing; // 真上/真下付近では向きを保つ
+        _facing = dir;
+
+        var tol = Mathf.Max(0f, _spacingTolerance);
+        switch (_spacingMove)
+        {
+            case 1: // 寄っている: 間合いまで来たら止まる
+                if (_keepDistance <= 0f || dx <= _keepDistance)
+                    _spacingMove = 0;
+                break;
+            case -1: // 後ずさり中: 少し余分に離れたら止まる
+                if (_retreatDistance <= 0f || dx >= _retreatDistance + tol)
+                    _spacingMove = 0;
+                break;
+        }
+
+        if (_spacingMove == 0)
+        {
+            if (_retreatDistance > 0f && dx < _retreatDistance)
+                _spacingMove = -1;
+            else if (_keepDistance > 0f && dx > _keepDistance + tol)
+                _spacingMove = 1;
+        }
+
+        var moveDir = _spacingMove * dir;
+        var speed = _spacingMove < 0 && _retreatSpeed > 0f ? _retreatSpeed : Enemy.Consts.ChaseSpeed;
+
+        // 足場の端: 進む先に地面が無ければ止まる (接地している時だけ)
+        if (moveDir != 0 && _stopAtLedge)
+        {
+            var ground = EnemyMotionUtil.GroundOrDefault(_groundLayer);
+            if (EnemyMotionUtil.IsGrounded(_body, ground) && !EnemyMotionUtil.HasGroundAhead(_body, moveDir, ground))
+                moveDir = 0;
+        }
+
+        Enemy.Move(moveDir * speed);
+        Enemy.Face(dir); // 後ずさりでもプレイヤーの方を向いたまま
     }
 
     public override void OnInterrupted()

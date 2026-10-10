@@ -112,6 +112,7 @@ unity command capture_scene_view --caller plugin --skill unity-cli --width 1600 
 | `ConveyorBelt(x0, x1, top, speed, reverseFlag)` | Conveyor (layer 10) |
 | `Lift(pos, offsets[], speed, wait, requiredFlag)` | 往復リフト (MovingPlatform) |
 | `Enemy(x, y, flying, scale, heavy, name)` | Enemy/FlyingEnemy プレハブ。y = 床+1 |
+| `GroundFoe(kind, x, floorY, name)` | (2026-10-10) 地上の雑魚 (Docs/EnemySpec.md)。`kind` = 名前空間直下の enum `NeverNight.StageBuild.GroundFoe` (`Chaser / Bundled / Charger / Stomper / PopcornThrower`) → `Assets/Prefabs/Enemies/Enemy_{kind}.prefab` (無ければ例外)。**floorY = 床の上面** (y = floorY + 0.6)、`Enemies` の子。メソッドと enum が同名なのでレシピでは `using Foe = NeverNight.StageBuild.GroundFoe;` として `GroundFoe(Foe.Chaser, 79f, -96f, "TutorialChaser")` と書く。Validate は地上の雑魚ごとに「下 1.5 以内に地面 (すり抜け床含む) があるか・埋まっていないか」を見る (無ければ WARN)。配置は §17 |
 | `BossRoom(arenaRect, flag, bossPos, flying, gateRects[], msg, followUpMessage="", followUpUnlessRed=false)` | BossArena + 仮ボス (2倍+Heavy) + 非アクティブのゲート。followUp = 撃破通知の後の一文 (赤ハサミ未入手時だけ等) |
 | `SpeakerAt(x, floorY, flag, design=1)` / `SavePointAt(x, floorY)` | スピーカー (Drive「speaker」の絵 1〜3 = `gimmick/speaker/speaker_0N_a/_b` を交互 (SpriteFlipbook)、壊れた絵は `Prop(SpeakerBrokenArt(N), ...)`。2026-10-08 PendingChanges 42。2026-10-10〜 壊れる瞬間は `SpeakerBreakEffect` (カメラを寄せる `CameraFocus` + ヒットストップ → スロー `GamePause.SlowMotion` 1.2 秒 + 爆発のパーティクル + 金属片 `BreakDebris` + 画面揺れ)、壊れた後は鳴っている絵を消して煙 (ループ) を出し続ける。再訪時も同じ。パーティクルの素材は URP の ParticlesUnlit を SpeakerAt が `_particleMaterial` に入れる) / セーブ (ベンチの絵) |
 | `BossRoom` の地上の仮ボス | `KeepPlaceholderLook` で仮の四角に戻す (雑魚の Enemy.prefab = 野良ウマの絵と分ける。PendingChanges 42) |
@@ -694,3 +695,48 @@ run_script --file Docs/Area1/SceneScripts/atmos_apply.cs --entry AtmosApply.Appl
 - **削除**: A1_FP の西の空の浮いた観覧車 `ferris_wheel_bg` (シーンとレシピから)。中景・遠景の素材からも観覧車・メリーゴーランドの影絵を除いた (A1_U1 / A1_U2 で目立たないように。全シーン共通)。
 - **環境パーティクルの素材** (§15 の宿題): `AtmosApply.OpenPlayer` → `AtmosApply.SetupPlayer` で `p_soft_dot / p_glow / p_ember / p_sparkle` に差し替え済み。粒の大きさは変えていない (スクショで大きすぎない)。
 - **注意**: プレイ中にエディタ用スクリプトを書き換えると再コンパイルでプレイが止まる (撮影中は書き換えない)。
+
+## 17. 新しい雑魚の配置 (2026-10-10)
+Docs/EnemySpec.md の地上の雑魚 (Chaser / Bundled / Charger / Stomper / PopcornThrower) を `GroundFoe()` でエリア1 に置いた。
+旧 Enemy.prefab の地上の敵を置き換え + 追加。ボス・闘技場の波・D3 の Clinger/Rat・浮遊する敵・T4 の重装甲は変えていない。y = 床の上面 + 0.6。
+
+| シーン | 敵 | 名前 | 位置 (x, y) | 床 | 扱い |
+|---|---|---|---|---|---|
+| A1_T2 | Chaser | TutorialChaser | (79, -95.4) | 穴の東の床 y-96 (x72..90) | WeakEnemy (81,-95) を置換 |
+| A1_T3 | Chaser | ShelfChaser | (110.5, -74.4) | 踊り場 y-75 (x106..114) | RackEnemy を置換 |
+| A1_T3 | Chaser | FloorChaser | (108.5, -95.4) | 一番下の床 y-96 | FloorEnemy を置換 |
+| A1_U1 | Bundled | FenceBundled | (285, 3.6) | 柵の前 y3 | FenceWalker を置換 |
+| A1_U2 | Stomper | WalkStomper | (228, 0.6) | 遊歩道 y0 (x198..243) | WalkWalker を置換 |
+| A1_W1 | Charger | BoardingCharger | (32, 0.6) | 乗り場の床 y0 (x3..54) | PlatformWalker を置換 |
+| A1_W1 | PopcornThrower | GirderPopcorn | (34.5, 9.6) | 鉄骨 y9 (x31..38) | 追加 |
+| A1_W2 | Bundled | HiddenBundled | (41, 63.6) | 隠し部屋 W2s y63 | HiddenRoomWalker を置換 |
+| A1_W5 | Chaser | FloorChaser | (35, 180.6) | いちばん下の床 y180 | FloorWalker を置換 |
+| A1_D2 | Bundled | BeltBundled | (206, -116.4) | 中央のベルト y-117 | BeltEnemy (206,-116) を置換 |
+| A1_D2 | PopcornThrower | IslandPopcorn | (218, -110.4) | 配管の足場 y-111 (x213..223) | IslandEnemy (218,-116 = 下の床) を置換 |
+| A1_D2 | Chaser | EastChaser | (234, -116.4) | 東のベルト y-117 | 追加 |
+| A1_D3 | Charger | PitCharger | (256.5, -197.4) | 縦穴の底 y-198 (x247..273) | 追加 |
+| A1_FP | Stomper | PlazaStomper | (328, 3.6) | 噴水広場 y3 (x305..341) | PlazaWalker を置換 |
+| A1_FP | PopcornThrower | TerracePopcorn | (377, 9.6) | 段 y9 | 追加 |
+| A1_FP (FP2) | Charger | AvenueCharger | **(418, 9.6)** | 並木道 y9 (x384..431) | 追加。計画の 414 では突進 (約 14) が東の突き当たり x431 に届かず壁でふらつかないので 418 に |
+
+FP2 (正門前の並木道) は A1_FP シーンの部屋 (別シーンではない)。
+
+### 作り直しの手順で分かったこと
+- **`Atmosphere()` をレシピに入れた**: 10 本のレシピは `StageAtmosphere` (§15) を置いていなかったので、作り直すと雰囲気の指定が消えていた。`Finish` の直前に `log += Atmosphere("A1_xx")` を足した。
+- **奥行き (§16) はレシピの後に別の呼び出しで `DepthApply.Apply`**: `Depth()` は床の高さを Raycast で測るが、レシピの同じ呼び出しの中では作り直した地形の当たりがまだ物理に入っておらず、屋外のシーン (U1 など) で層の高さが 3 ずれる。保存済みのシーンは depth_apply で作ったものなので、作り直したら `run_script --file Docs/Area1/SceneScripts/depth_apply.cs --entry DepthApply.Apply` を続けて流すと元と一致する。
+  ただし A1_U2 の前景の茂み `Bush_U2_2` だけは元 (y1.55) と違う y-1.45 になった (床 y0 を測る Raycast の距離がちょうど 7.5 で、浮動小数点の誤差で当たる/外れるが変わる。今回の方が床に合っている)。
+- 作り直し前後の比較は、全オブジェクトのパス・位置・部品・絵・タイルのハッシュを書き出して突き合わせた (fileID の振り直しは無視)。差分は敵まわりだけ + 次の 2 種類:
+  - A1_D2: 壁のポスター `RockDecor/Wall/decal_poster` (219.5,-114.9) が 1 枚増えた (飾りは敵の周り 1 マスを避けるので、IslandEnemy が配管の上へ移ったぶん空いた)。
+  - A1_D2 / A1_FP の看板の TextMeshPro に `TMP SubMesh [Yu Gothic UI ...]` (フォールバック字形の子) が付いた (動的フォント `JapaneseUI SDF` に無い字。TMP が自動で作る)。
+
+### 部品の不具合の修正 (Behaviours / EnemyPerception)
+- **足場の上のポップコーン投げが下のプレイヤーを見つけない**: `EnemyPerception` の視線判定が `Physics2D.Linecast` で、自分の乗っている鉄骨・配管 (すり抜け床, layer Ground) に遮られていた。`EnemyMotionUtil.HasLineOfSight` (すり抜け床は遮らない。`EnemyLobAction.CanSee` と同じ) に変更。
+- **足場の上から投げたポップコーンが自分の足場に着地する**: `EnemyLobBomb.PassOneWayAbove(y)` を追加し、`EnemyLobAction.Throw` が狙い (自機の足元) + 0.5 より高いすり抜け床は通り抜けるようにした。自機が同じ足場にいる時は今までどおり足場に着地する。W1 の鉄骨 (y9) から床 (y0) の自機へ投げて、床に着地 → 予告の円 → 爆発を確認。
+
+### プレイ確認 (`SceneScripts/playtest_enemies.cs` に追加: `Foes(秒)` / `FoesLog` / `Area(秒, x, y)` / `ChargeWall(名前, 自機x, y, 逃がすx, y)` / `ChargeLog`)
+- 全 10 シーンで 10 秒以上置いて、地上の雑魚が初期 y から落ちない・地形に埋まらない・巡回が ±3 に収まることを確認 (ベルトの上の D2 も流されない)。
+- Chaser (T2/T3/W5)・Bundled (U1/W2): 自機を見つけて追い、T2 では穴の縁 (x72.6) で止まって落ちない。
+- Charger: D3 の底で西の段差に突進して `Stagger`、FP2 (418) で東の突き当たりに突進して `Stagger`。**W1 は巡回範囲 (x29..35) から突進 (約 14) が壁 (x3 / x54) に届かないので、W1 では壁でふらつかない** (Brake で止まる)。
+- PopcornThrower: W1 の鉄骨・D2 の配管・FP の段から落ちない。D2 (自機 3〜4 下) と FP (同じ高さ) で投げてきて着地 → 予告の円 → 爆発、W1 は上の修正の後に床の自機へ届く。予告の円は床タイルより手前に描かれ隠れない (`Assets/Screenshots/Area1/foes_W1_lob_mark.png` / `foes_FP_lob_mark.png`)。
+- Stomper: U2 / FP で自機へ跳んで踏みつけ、FP では広場の東の縁 (x340.8) で止まり噴水の池へ跳び込まない。
+- スクショ: `Assets/Screenshots/Area1/foes_*.png`。

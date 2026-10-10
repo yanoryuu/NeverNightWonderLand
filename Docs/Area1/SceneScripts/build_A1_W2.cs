@@ -1,4 +1,5 @@
 using UnityEngine;
+using Foe = NeverNight.StageBuild.GroundFoe;   // 種類 (GroundFoe() と同名なので別名で)
 using static NeverNight.StageBuild.Area1StageBuilder;
 
 // A1_W2 「支柱の足場」(W2, 観覧車の支柱の中 x12..33 y33..102) + 「支柱の中の隠し部屋」(W2s x36..51 y57..72)
@@ -92,10 +93,12 @@ public static class BuildW2
         // 案内文はチュートリアルの操作説明 (キーの説明) だけ残す。呼びかけ・攻略助言・場所の説明は削除 (2026-10-03 ユーザー決定, Docs/UI/UIAssignment.md「案内文」)
 
         // 敵を少し増やす (2026-10-03 PendingChanges 8: 部屋の意図に合わせる。位置は enemy_probe.cs の候補から)
-        Enemy(41f, 63.6f, name: "HiddenRoomWalker");     // 隠し部屋 W2s の床 (ご褒美の番。浮遊する敵は 1 体のまま)
+        GroundFoe(Foe.Bundled, 41f, 63f, "HiddenBundled");  // 2026-10-10 (HiddenRoomWalker を置換)。隠し部屋 W2s の床 (ご褒美の番。浮遊する敵は 1 体のまま)
 
         // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
         log += Depth("A1_W2") + "\n";
+        // 雰囲気 (§15): 作り直しで消えないよう StageAtmosphere をレシピで置く (2026-10-10)
+        log += Atmosphere("A1_W2") + "\n";
         return log + Finish();
     }
 }

@@ -2,13 +2,14 @@ using System.Text;
 using UnityEditor;
 using UnityEngine;
 
-// Docs/EnemySpec.md の雑魚 6 種 + ボス「グラミネ第1のボス」の定数アセットとプレハブを作る/更新する (何度流してもよい)。
+// Docs/EnemySpec.md の雑魚 7 種 + ボス「グラミネ第1のボス」の定数アセットとプレハブを作る/更新する (何度流してもよい)。
 //   定数:     Assets/Prefabs/Enemies/EnemyConsts_<名前>.asset (既存 EnemyConsts.asset を複製して値を上書き)
 //   プレハブ: Assets/Prefabs/Enemies/<名前>.prefab
-//     地上 1〜4 = Enemy.prefab (野良ウマの絵) の Variant / 飛行 5・6 = FlyingEnemy.prefab の Variant /
+//     地上 1〜4・7 = Enemy.prefab (野良ウマの絵) の Variant / 飛行 5・6 = FlyingEnemy.prefab の Variant /
 //     ボス = Enemy.prefab の Variant ×2 (地上の仮ボスと同じ仮の四角 = BossRoom の KeepPlaceholderLook と同じ処置)
 //   見た目 (絵・色) は変えない。部品の並び順 = CompositeEnemyBehaviour の優先度。
 // run_script --file Docs/Area1/SceneScripts/prep_enemy_spec.cs --entry PrepEnemySpec.Run
+//   (7 ポップコーン投げだけ作り直す: --entry PrepEnemySpec.RunPopcorn)
 public static class PrepEnemySpec
 {
     const string Dir = "Assets/Prefabs/Enemies";
@@ -103,8 +104,38 @@ public static class PrepEnemySpec
             go.AddComponent<GramineBossBehaviour>();
         });
 
+        Popcorn();
+
         AssetDatabase.SaveAssets();
         return Log.ToString();
+    }
+
+    /// <summary>7 ポップコーン投げ (PopcornThrower) だけ作る/更新する。</summary>
+    public static string RunPopcorn()
+    {
+        Log.Clear();
+        Popcorn();
+        AssetDatabase.SaveAssets();
+        return Log.ToString();
+    }
+
+    // ---- 7 PopcornThrower: 地上。距離 6 を保ち (3 より近いと後ずさり・端で止まる)、ポップコーンを放物線で足元へ投げる
+    static void Popcorn()
+    {
+        //                         MaxHp Guard Move Chase Range Contact
+        var popcorn = Consts("PopcornThrower", 10, 3, 1.5f, 1.5f, 9f, 1);
+        // 爆発パーティクルの素材 = URP 既定の ParticlesUnlit (スピーカーの爆発と同じ。新しい絵は使わない)
+        var particles = AssetDatabase.LoadAssetAtPath<Material>(
+            "Packages/com.unity.render-pipelines.universal/Runtime/Materials/ParticlesUnlit.mat");
+        Variant("Enemy_PopcornThrower", false, popcorn, go =>
+        {
+            go.AddComponent<CompositeEnemyBehaviour>();
+            Set(go.AddComponent<EnemyPerception>(), ("_detectRange", 9f), ("_loseRange", 12f), ("_requireLineOfSight", true));
+            Set(go.AddComponent<ChaseMotion>(), ("_phase", (int)EnemyPhaseFilter.AlertOnly), ("_stopAtLedge", true),
+                ("_keepDistance", 6f), ("_retreatDistance", 3f), ("_retreatSpeed", 2f));
+            Set(go.AddComponent<PatrolMotion>(), ("_phase", (int)EnemyPhaseFilter.SearchOnly), ("_turnAtLedge", true));
+            Set(go.AddComponent<EnemyLobAction>(), ("_phase", (int)EnemyPhaseFilter.Always), ("_explosionMaterial", particles));
+        });
     }
 
     static EnemyConsts Consts(string name, int hp, int guard, float move, float chase, float range, int contact, float breakDuration = -1f)

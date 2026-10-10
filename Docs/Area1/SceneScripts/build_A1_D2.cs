@@ -1,5 +1,6 @@
 using UnityEditor;
 using UnityEngine;
+using Foe = NeverNight.StageBuild.GroundFoe;   // 種類 (GroundFoe() と同名なので別名で)
 using static NeverNight.StageBuild.Area1StageBuilder;
 
 // A1_D2 「搬送ベルトの通路」(D2 x168..252 y-117..-99) + 「錆びた配電室」(D2w x141..165 y-123..-105)
@@ -139,8 +140,9 @@ public static class BuildD2
         PipePlatform(239, 244, -114, Rust);
 
         // 敵 3: 島の上 / 中のベルトの上 / 浮遊 (東のベルトの上)
-        Enemy(218f, -116f, name: "IslandEnemy");
-        Enemy(206f, -116f, name: "BeltEnemy");
+        GroundFoe(Foe.PopcornThrower, 218f, -111f, "IslandPopcorn");  // 2026-10-10 パイプ -111 (x213..223) (IslandEnemy を置換)
+        GroundFoe(Foe.Bundled, 206f, -117f, "BeltBundled");          // 2026-10-10 (BeltEnemy を置換)
+        GroundFoe(Foe.Chaser, 234f, -117f, "EastChaser");            // 2026-10-10 東のベルト (追加)
         Enemy(229f, -108f, true, name: "FlyingEnemy");
 
         // ================= D2w 錆びた配電室 (床 y-123)
@@ -235,6 +237,8 @@ public static class BuildD2
 
         // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
         log += Depth("A1_D2") + "\n";
+        // 雰囲気 (§15): 作り直しで消えないよう StageAtmosphere をレシピで置く (2026-10-10)
+        log += Atmosphere("A1_D2") + "\n";
         return log + Finish();
     }
 }

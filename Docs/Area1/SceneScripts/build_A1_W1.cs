@@ -1,4 +1,5 @@
 using UnityEngine;
+using Foe = NeverNight.StageBuild.GroundFoe;   // 種類 (GroundFoe() と同名なので別名で)
 using static NeverNight.StageBuild.Area1StageBuilder;
 
 // A1_W1 「観覧車の乗り場」(W1, 屋外 x3..54 y0..30)
@@ -115,11 +116,15 @@ public static class BuildW1
 
         _ = cabin;
         // 敵を少し増やす (2026-10-03 PendingChanges 8: 部屋の意図に合わせる。位置は enemy_probe.cs の候補から)
-        Enemy(32f, 0.6f, name: "PlatformWalker");        // 乗り場の床 (x22..43)。登り始める前の地上
+        GroundFoe(Foe.Charger, 32f, 0f, "BoardingCharger");          // 2026-10-10 (PlatformWalker を置換)
+        GroundFoe(Foe.PopcornThrower, 34.5f, 9f, "GirderPopcorn");    // 2026-10-10 鉄骨 y9 (x31..38)
+        // ↑ BoardingCharger = 乗り場の床 (x22..43)。登り始める前の地上
         Enemy(16f, 12f, true, name: "BoardingFlyer");     // 足場の間の空中 (西の縦坑寄り)
 
         // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
         log += Depth("A1_W1") + "\n";
+        // 雰囲気 (§15): 作り直しで消えないよう StageAtmosphere をレシピで置く (2026-10-10)
+        log += Atmosphere("A1_W1") + "\n";
         return log + Finish();
     }
 }

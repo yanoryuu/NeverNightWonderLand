@@ -3,7 +3,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 
 // 敵の挙動テスト用シーン Assets/Scenes/Test/EnemyTestScene.unity を作り直す (何度流してもよい)。
-// Docs/EnemySpec.md の雑魚 6 種 (Assets/Prefabs/Enemies/, prep_enemy_spec.cs) を区画ごとに 1 体ずつ並べる。
+// Docs/EnemySpec.md の雑魚 7 種 (Assets/Prefabs/Enemies/, prep_enemy_spec.cs) を区画ごとに 1 体ずつ並べる。
 // 骨組みはエリア1 のステージと同じ (PlayerSceneBootstrap → PlayerScene / StageInfo / DamageFloaterSpawner / CameraLimit / SpawnDefault)。
 // 地形はグレーボックス (Ground レイヤーの BoxCollider2D + 四角の絵)。床の上面 y = 0。
 //   x  10 Chaser       : 高さ 2 の台 (x4..18) の上。下に降りたプレイヤーを追って台の端で止まる
@@ -12,6 +12,7 @@ using UnityEngine;
 //   x  85 Stomper      : 段差 (x92..96, 高さ 1.5)
 //   x 110 FlyingDasher : 浮遊 (y 4)
 //   x 135 FlyingShooter: 浮遊 (y 5)、視線を遮る壁 (x127, y 3..7) と浮き足場 (x140..144, y 3)
+//   x 172 PopcornThrower: 高さ 1 の台 (x166..178) の上。後ずさりで台の端に止まる。左の柱 (x158, 高さ 4) は視線切り・壁当たり用
 // run_script --file Docs/Area1/SceneScripts/build_EnemyTestScene.cs --entry BuildEnemyTest.Run
 public static class BuildEnemyTest
 {
@@ -44,14 +45,16 @@ public static class BuildEnemyTest
 
         // ---- 地形
         s_terrain = new GameObject("Terrain").transform;
-        Block("Floor", -8, -4, 152, 0);
+        Block("Floor", -8, -4, 190, 0);
         Block("WallL", -10, -4, -8, 16);
-        Block("WallR", 152, -4, 154, 16);
+        Block("WallR", 190, -4, 192, 16);
         Block("ChaserLedge", 4, 0, 18, 2);
         Block("ChargerPillar", 70, 0, 71, 2.5f);
         Block("StomperStep", 92, 0, 96, 1.5f);
         Block("ShooterCover", 127, 3, 128, 7);
         Block("FloatPlatform", 140, 3, 144, 3.5f);
+        Block("PopcornStage", 166, 0, 178, 1);
+        Block("PopcornPillar", 158, 0, 158.6f, 4);
 
         // ---- 敵
         var enemies = new GameObject("Enemies").transform;
@@ -61,6 +64,7 @@ public static class BuildEnemyTest
         Enemy(enemies, "Enemy_Stomper", 85f, 0.6f);
         Enemy(enemies, "Enemy_FlyingDasher", 110f, 4f);
         Enemy(enemies, "Enemy_FlyingShooter", 135f, 5f);
+        Enemy(enemies, "Enemy_PopcornThrower", 172f, 1.6f);
 
         EditorSceneManager.SaveScene(scene, ScenePath);
         if (prevActive.IsValid())
