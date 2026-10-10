@@ -14,7 +14,7 @@ namespace NeverNight.StageBuild
     /// ・地下 (背景が "Underground" のシーン): 既存の bg_underground の 1 枚絵を消し、
     ///   遠景の機械の大広間 (視差 0.93) → 霧 → 中景の配管の段 (0.6) → 霧 → (岩・部屋・地形) → 前景 (鎖・配管・歯車・鉄骨, 視差負) + 天井の口からの光の筋。
     /// ・夜空 (背景が "NightSky" のシーン): 既存の園内のシルエットを消し、
-    ///   夜空 → 遠景の園のスカイライン (0.9) → 霧 → 中景の並木と柵 (0.55, 地上のシーンだけ) → 霧 → (部屋の背景板 -90・地形) → 前景 (茂み・街灯・旗飾り)。
+    ///   夜空 → 遠景の園のスカイライン (0.9) → 霧 → 中景の並木と柵 (0.55, 地上のシーンだけ) → 霧 → (部屋の背景板 -90・地形) → 前景 (街灯)。
     /// 屋内の部屋の背景板 (OrderRoomBackdrop -90) より奥 (-100..-96) に全部の遠景・中景を置くので、屋内の部屋に空や並木は映らない。
     /// 手順と値は Docs/Area1/SceneBuildGuide.md §16。
     /// </summary>
@@ -24,6 +24,12 @@ namespace NeverNight.StageBuild
 
         /// <summary>奥行きの層の並び順。地下: 遠景 -100 / 霧 -99 / 中景 -98 / 霧 -97。夜空: 空 -100 / 遠景 -99 / 霧 -98 / 中景 -97 / 霧 -96。光の筋 -13 (環境パーティクル中景 -12 の奥・岩の塗り -10 の奥)。前景 25 (前景のパーティクル 30 の奥)。</summary>
         public const int OrderDepthShaft = -13, OrderDepthFore = 25;
+
+        /// <summary>地下の前景 (鎖・縦の配管) の視差。横は手前で速く (−0.3)、縦は画面に張り付く (1 = 上端・下端を見せない)。</summary>
+        private static readonly Vector2 ForeFactor = new Vector2(-0.3f, 1f);
+
+        /// <summary>屋外の前景 (街灯) の横の視差。床に立つ物なので、すべる幅の間の床が平らな所にだけ置く。</summary>
+        private const float SkyForeFx = -0.12f;
 
         private static string AtmosArt(string file) => Area1AssetPrep.AtmosArtDir + "/" + file;
 
@@ -183,6 +189,18 @@ namespace NeverNight.StageBuild
             return best;
         }
 
+        /// <summary>x ± half の間の床がどこも floor と同じ高さ (±0.3) か (段差・穴・壁が無いか)。floor + 0.9 から下へ測る (段差 1 以上は始点が地形の中になり不可)。</summary>
+        private static bool FlatFloor(float x, float half, float floor, RectInt r)
+        {
+            for (var sx = x - half; sx <= x + half + 0.01f; sx += 0.5f)
+            {
+                var f = FloorAt(sx, floor + 0.9f, floor - 3f, float.NaN);   // 0.9 上から (頭上のすり抜け床・足場は見ない)
+                if (float.IsNaN(f) || Mathf.Abs(f - floor) > 0.3f)
+                    return false;
+            }
+            return true;
+        }
+
         private static RectInt MainRect(Area1Layout.Room room) =>
             room.Rects.OrderByDescending(r => r.width * r.height).First();
 
@@ -267,6 +285,9 @@ namespace NeverNight.StageBuild
             }
 
             // ---- 前景: 部屋ごとに 1〜2 個 (画面の端寄り)。ボス部屋には置かない
+            // 縦の視差は 1 (= 画面に張り付く): 上から吊った鎖・縦に通った配管は、カメラが上下に動いても上端・下端が画面に入らない
+            // (以前は (-0.3,-0.12) で、部屋の中でカメラが上がると鎖の上端が見えて宙吊りになり、
+            //  角に置いた鉄骨・歯車は横にも動いて部屋の真ん中に浮いた。端の無い縦長の物だけを使う)。§16
             var fore = new GameObject("Fore").transform;
             fore.SetParent(root, false);
             var nFore = 0;
@@ -282,31 +303,17 @@ namespace NeverNight.StageBuild
                 var camY = Mathf.Min(r.yMin + 4f, r.center.y);
                 var camXL = Mathf.Min(r.xMin + 9.8f, r.center.x);
                 var camXR = Mathf.Max(r.xMax - 9.8f, r.center.x);
-                var fac = new Vector2(-0.3f, -0.12f);
-                // 左: 鎖 (天井から吊る) / 鉄骨 (左上の角) を交互
-                if (idx % 2 == 0)
+                var fac = ForeFactor;
+                // 左: 鎖 (画面の上の外から吊る。長さを交互に変える)
                 {
                     var a = new Vector2(camXL, camY);
                     var lay = DepthLayer(fore, "Chain_" + room.Id, a + new Vector2(-7.4f, 6.3f), fac, a);
-                    DepthSprite(lay, "Art", "ug_fore_chain.png", Vector2.zero, Vector2.one * 1.4f, OrderDepthFore, L.Fore);
-                }
-                else
-                {
-                    var a = new Vector2(camXL, camY + Mathf.Min(4f, r.height - 11f > 0 ? 4f : 0f));
-                    var lay = DepthLayer(fore, "Girder_" + room.Id, a + new Vector2(-8.6f, 5.6f), fac, a);
-                    DepthSprite(lay, "Art", "ug_fore_girder.png", Vector2.zero, Vector2.one * 1.5f, OrderDepthFore, L.Fore, null, null, true);
+                    DepthSprite(lay, "Art", "ug_fore_chain.png", Vector2.zero, Vector2.one * (idx % 2 == 0 ? 1.4f : 1.15f), OrderDepthFore, L.Fore);
                 }
                 nFore++;
                 if (r.width < 26)
                     continue;
-                // 右: 縦の配管 (画面の右端) / 歯車 (右上の角) を交互
-                if (idx % 2 == 0)
-                {
-                    var a = new Vector2(camXR, camY + (r.height > 14 ? 3f : 0f));
-                    var lay = DepthLayer(fore, "Gear_" + room.Id, a + new Vector2(10.4f, 6.8f), fac, a);
-                    DepthSprite(lay, "Art", "ug_fore_gear.png", Vector2.zero, Vector2.one * 1.35f, OrderDepthFore, L.Fore, null, null, false, 180f);
-                }
-                else
+                // 右: 縦の配管 (画面の右端、上下とも画面の外まで)
                 {
                     var a = new Vector2(camXR, camY);
                     var lay = DepthLayer(fore, "Pipe_" + room.Id, a + new Vector2(9.4f, 0f), fac, a);
@@ -378,10 +385,17 @@ namespace NeverNight.StageBuild
             var haze = DepthLayer(root, "Haze", anchor, new Vector2(0.96f, fyFar), anchor);
             FogBand(haze, "Haze", ground ? -6f : -5f, farW, ground ? 5f : 7.5f, OrderSky + 2, A(L.Fog, ground ? 0.25f : 0.42f), true);
 
-            // ---- 前景: 地上の屋外の部屋に茂み・街灯 (+ 広場に旗飾り)。ボス部屋には置かない
+            // ---- 前景: 地上の屋外の部屋に街灯。ボス部屋には置かない
+            // 茂み (park_fore_bush) は置かない: 上端を床面に合わせると全体が床の帯より下の岩の前に来て、
+            // 地面に埋まった黒い塊に見えた (2026-10-10 の点検)。
+            // 旗飾り (画面の上に吊る前景) は置かない: 屋外の部屋はどれも高さ 27 以上あり、カメラが上がると両端の切れた旗の列が
+            // 夜空の真ん中に浮いて見えた (2026-10-10 の点検)。広場の旗は各レシピの街灯の間の飾り (decal_bunting) で足りている。
+            // 街灯は床に立つ物なので、横の視差ですべる幅 (SkyForeFx × カメラが離れる距離) の間の床が平らな所にだけ置く
+            // (段差の前へすべると、段の壁の前・段の上の宙に浮いた街灯に見えた)。
             var fore = new GameObject("Fore").transform;
             fore.SetParent(root, false);
             var nFore = 0;
+            var nSkip = 0;
             var idx = 0;
             var add = PolishMat("A1_Additive");
             foreach (var room in rooms.Where(r => r.Outdoor && string.IsNullOrEmpty(r.Boss)))
@@ -389,23 +403,23 @@ namespace NeverNight.StageBuild
             {
                 if (r.width < 20 || r.yMin >= 40)
                     continue;
-                // 部屋の幅 30 ごとに 1 組 (茂み = 左寄り、街灯 = 右寄り)
+                // 部屋の幅 30 ごとに 1 本 (左右交互にずらす)
                 var pairs = Mathf.Max(1, Mathf.RoundToInt(r.width / 30f));
                 for (var p = 0; p < pairs; p++)
                 {
                     idx++;
                     var cx = Mathf.Lerp(r.xMin + 9.8f, r.xMax - 9.8f, pairs == 1 ? 0.5f : p / (float)(pairs - 1));
-                    var fac = new Vector2(-0.3f, 0f);
-                    // 茂み
-                    var bx = cx - 6.8f;
-                    var bf = FloorAt(bx, r.yMin + 4.5f, r.yMin - 3f, r.yMin);
-                    var a = new Vector2(cx, bf + 5.5f);
-                    var bush = DepthLayer(fore, $"Bush_{room.Id}_{p}", new Vector2(bx, bf - 1.45f), fac, a);   // 茂みの上端 = 床面 (足元を隠さない)
-                    DepthSprite(bush, "Art", "park_fore_bush.png", Vector2.zero, Vector2.one * 1.4f, OrderDepthFore, L.Fore, null, null, idx % 2 == 0);
-                    nFore++;
+                    var fac = new Vector2(SkyForeFx, 0f);
+                    // カメラが部屋の中で anchor から離れる最大の横の距離 → 前景がすべる幅
+                    var slide = Mathf.Abs(SkyForeFx) * Mathf.Max(cx - (r.xMin + 1.5f), r.xMax + 3f - cx);
                     // 街灯 (灯に光暈を加算で重ねる)
                     var lx = cx + (idx % 2 == 0 ? 7.6f : -8.6f);
                     var lf = FloorAt(lx, r.yMin + 4.5f, r.yMin - 3f, r.yMin);
+                    if (!FlatFloor(lx, 0.7f + slide, lf, r))
+                    {
+                        nSkip++;
+                        continue;
+                    }
                     var lamp = DepthLayer(fore, $"Lamp_{room.Id}_{p}", new Vector2(lx, lf - 1f), fac, new Vector2(cx, lf + 5.5f));
                     var ls = DepthSprite(lamp, "Art", "park_fore_lamp.png", Vector2.zero, Vector2.one * 2f, OrderDepthFore, L.Fore);
                     var globeY = (ls.sprite.rect.height - 95f) / Area1AssetPrep.PixelsPerUnit * 2f;
@@ -415,17 +429,8 @@ namespace NeverNight.StageBuild
                         new Color(1f, 0.9f, 0.7f, 0.9f), null, add);
                     nFore++;
                 }
-                // 広場 (幅 40 以上・高さ 14 以上) には画面の上に旗飾り
-                if (r.width >= 40 && r.height >= 14)
-                {
-                    var a = new Vector2(r.center.x, r.yMin + 5.5f);
-                    var bunt = DepthLayer(fore, "Bunting_" + room.Id, a + new Vector2(0f, 5.9f), new Vector2(-0.2f, -0.1f), a);
-                    DepthSprite(bunt, "Art", "park_fore_bunting.png", Vector2.zero, Vector2.one * 1.6f, OrderDepthFore,
-                        new Color(0.55f, 0.5f, 0.62f), new Vector2(r.width * 0.2f + 26f, Art(AtmosArt("park_fore_bunting.png")).bounds.size.y * 1.6f));
-                    nFore++;
-                }
             }
-            log.Append($" sky ground={ground} floor={floor} camRange={range:F0} fyFar={fyFar:F2} fore={nFore}");
+            log.Append($" sky ground={ground} floor={floor} camRange={range:F0} fyFar={fyFar:F2} fore={nFore} foreSkipped={nSkip}");
         }
 
         // ================================================================== シーン固有

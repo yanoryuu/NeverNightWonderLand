@@ -162,8 +162,9 @@ public static class BuildU3
 
         // ================= 飾り: 外周の街灯と旗
         LampPost(108.5f, 6f, 4f); LampPost(143.5f, 6f, 4f);
-        var bun = Prop("rock/decal_bunting.png", 126f, 25f, 1f, -6);
-        bun.transform.localScale = new Vector3(6f, 1.5f, 1f);
+        // 旗は高床の支柱 x123 と x136.5 の間に張る (以前は x117..135 で両端が空に浮いていた。2026-10-10 Audit2)
+        var bun = Prop("rock/decal_bunting.png", 129.75f, 25f, 1f, -6);
+        bun.transform.localScale = new Vector3(4.5f, 1.5f, 1f);
 
         // ================= ヒント
         // 案内文はチュートリアルの操作説明 (キーの説明) だけ残す。呼びかけ・攻略助言・場所の説明は削除 (2026-10-03 ユーザー決定, Docs/UI/UIAssignment.md「案内文」)
