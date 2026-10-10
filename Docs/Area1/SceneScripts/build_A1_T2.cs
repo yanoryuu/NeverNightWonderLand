@@ -55,6 +55,8 @@ public static class BuildT2
         // 案内文はチュートリアルの操作説明 (キーの説明) だけ残す。呼びかけ・攻略助言・場所の説明は削除 (2026-10-03 ユーザー決定, Docs/UI/UIAssignment.md「案内文」)
         Hint(72, -96, 79, -91, "[J] で攻撃!", "□ で攻撃!", "HintAttack");
 
+        // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
+        log += Depth("A1_T2") + "\n";
         return log + Finish();
     }
 }

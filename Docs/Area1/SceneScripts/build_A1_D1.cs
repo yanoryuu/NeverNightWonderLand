@@ -72,6 +72,8 @@ public static class BuildD1
         // 敵を少し増やす (2026-10-03 PendingChanges 8: 部屋の意図に合わせる。位置は enemy_probe.cs の候補から)
         Enemy(248f, -75f, true, name: "PipeFlyer");      // 縦穴の上の空中 (降りる途中で 1 体)
 
+        // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
+        log += Depth("A1_D1") + "\n";
         return log + Finish();
     }
 }

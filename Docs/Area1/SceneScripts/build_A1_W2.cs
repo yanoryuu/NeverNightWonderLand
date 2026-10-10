@@ -94,6 +94,8 @@ public static class BuildW2
         // 敵を少し増やす (2026-10-03 PendingChanges 8: 部屋の意図に合わせる。位置は enemy_probe.cs の候補から)
         Enemy(41f, 63.6f, name: "HiddenRoomWalker");     // 隠し部屋 W2s の床 (ご褒美の番。浮遊する敵は 1 体のまま)
 
+        // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
+        log += Depth("A1_W2") + "\n";
         return log + Finish();
     }
 }

@@ -136,6 +136,8 @@ public static class BuildH
         foreach (var x in new[] { 246f, 268f }) HangLamp(x, -33.8f, 0.6f);   // 渡り廊下から吊る
         HangLamp(283f, -42.8f, 0.55f);
 
+        // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
+        log += Depth("A1_H") + "\n";
         return log + Finish();
     }
 }

@@ -55,15 +55,13 @@ public static class BuildU2
     {
         var log = BuildBase("A1_U2");
 
-        // ================= 地上の見た目: 東の A1_U1 の建物 (屋根 y18) の上は空、屋根に回転木馬 (A1_U1 と同じ)
+        // ================= 地上の見た目: 東の A1_U1 の建物 (屋根 y18) の上は空
+        // (屋根の回転木馬は撤去 2026-10-10 ユーザー指示。A1_U1 も同じ)
         Clear(249, 18, 290, 80);
-        Prop("props/carousel.png", 261f, 18f, 1.5f, -6);
         // 西の A1_U3 との境の外壁は y30 まで (その上は空)
         Clear(100, 30, 150, 80);
 
-        // 遠景: 西の空に大観覧車 (目的地)。カメラにほぼ追従 = とても遠い。東端 (カメラ x240) で画面の左上、西へ歩くほど正面へ
-        ParallaxProp("props/ferris_wheel_bg.png", new Vector2(231f, 9.5f), new Vector2(0.92f, 0.95f), new Vector2(240f, 6f),
-            1.15f, OrderFarBg - 1, new Color(0.5f, 0.44f, 0.7f, 0.7f));
+        // 遠景の大観覧車 (ParallaxProp ferris_wheel_bg) は撤去 (2026-10-10 ユーザー指示「空中に浮いている観覧車のイラスト」)
 
         // ================= U2 (x150..249, y0..27): 床 y0。西端は y6 (A1_U3 への出口)、東端は y3 (A1_U1 への出口)
         Solid(150, 0, 156, 3);
@@ -166,6 +164,8 @@ public static class BuildU2
         Enemy(228f, 0.6f, name: "WalkWalker");           // 遊歩道の東寄りの床 (売店の前)
         Enemy(205f, 19f, true, name: "FlyerHigh");        // 遊歩道の上空 (足場の無い高さ)
 
+        // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
+        log += Depth("A1_U2") + "\n";
         return log + Finish();
     }
 }

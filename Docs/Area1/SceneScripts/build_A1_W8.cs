@@ -92,6 +92,8 @@ public static class BuildW8
         // 敵を少し増やす (2026-10-03 PendingChanges 8: 部屋の意図に合わせる。位置は enemy_probe.cs の候補から)
         Enemy(49f, 285f, true, name: "LadderFlyer0");    // 梯子の下の区間 (上の 2 体と間をあける)
 
+        // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
+        log += Depth("A1_W8") + "\n";
         return log + Finish();
     }
 }

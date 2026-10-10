@@ -1,7 +1,7 @@
 using UnityEngine;
 using static NeverNight.StageBuild.Area1StageBuilder;
 
-// A1_B1 「改札の番人」(B1 ボス部屋) + 「第1スピーカー室」(S1)
+// A1_B1 (部屋名なし。2026-10-10 ユーザー決定「部屋に名前は付けない」) (B1 ボス部屋。ボス = グラミネ 1 戦目) + 「第1スピーカー室」(S1)
 // 先に別の呼び出しで OpenOrCreate("A1_B1") を実行しておくこと。
 public static class BuildB1
 {
@@ -34,11 +34,18 @@ public static class BuildB1
         foreach (var x in new[] { 171f, 186f, 201f })
             Prop("props/boss_door_lamp_on.png", x, -37.5f, 0.7f, OrderProp, false, new Color(1f, 0.6f, 0.55f));
 
-        // ボス: 改札の番人 (地上型の仮ボス = Enemy ×2 + Heavy)。入ると左の扉が閉まる
-        BossRoom(new RectInt(168, -57, 35, 24), "A1_Boss1", new Vector2(192f, -55f), false,
+        // ボス: 「グラミネ第1のボス」の 1 戦目 (2026-10-10, Docs/EnemySpec.md。部屋の名前は付けない (area1_layout.json の name は空)、ボス名はグラミネに統一)。入ると左の扉が閉まる。
+        // 入ると会話 A1_Gramine_Meet (一度きり, フラグ A1_Gramine_Met) → 戦闘。HP が半分になると流れ弾 (ナイフ) が S1 のスピーカー① を壊し、
+        // 会話 A1_Gramine_Retreat の後に飛び去る (RetreatAtThreshold) = 勝ち扱い (BossArena が OnRetreated でフラグ A1_Boss1・扉開放)。
+        // 仮ボス (Enemy ×2 + Heavy) を BossRoom で置いてから UseGramineBoss で差し替える (位置・糸の数は引き継ぐ)
+        var b1Arena = BossRoom(new RectInt(168, -57, 35, 24), "A1_Boss1", new Vector2(192f, -55f), false,
             new[] { new RectInt(165, -57, 2, 9) },
-            "改札の番人を倒した! 奥のスピーカー室の扉が開いた",
-            threadDrop: 20);   // ボスの糸 20 本 → 12 粒 (PendingChanges 18。Heavy の定数は普通の敵と共用なので上書き)
+            "グラミネは奥へ去っていった",
+            threadDrop: 20);   // ボスの糸 20 本 → 12 粒 (PendingChanges 18。撤退時も同じ数を落とす)
+        var boss = UseGramineBoss(b1Arena, BossFightMode.RetreatAtThreshold).GetComponent<GramineBossBehaviour>();
+        Set(boss, "_introDialogueLabel", "A1_Gramine_Meet");
+        Set(boss, "_introDialogueFlag", "A1_Gramine_Met");
+        Set(boss, "_retreatDialogueLabel", "A1_Gramine_Retreat");
 
         // 撃破でスピーカー室への扉 (シャッター) が開く
         // 開き戸 (Drive「door」, PendingChanges 42): その場で開いて開いた扉が残る (岩 (0) の裏)
@@ -53,6 +60,9 @@ public static class BuildB1
         var speaker = SpeakerAt(221.5f, -45f, "A1_Speaker1", 1);
         Set(speaker.GetComponent<BreakableSpeaker>(), "_breakMessage",
             "スピーカー①を壊した! 音楽の一部が止んだ…… 拠点の奥の大扉に灯がひとつ点いた (1/3)");
+        // 撤退の瞬間にグラミネの流れ弾がスピーカー①を壊す (ForceBreak: フラグ・壊れた絵・大扉の灯はプレイヤーが壊した時と同じ)
+        Set(boss, "_retreatBreakTarget", speaker.GetComponent<BreakableSpeaker>());
+        Set(boss, "_retreatBreakMessage", "グラミネの流れ弾がスピーカー①を壊した…… 拠点の奥の大扉に灯がひとつ点いた (1/3)");
         var broken = Prop(SpeakerBrokenArt(1), 221.5f, -45f, 1f, OrderProp);
         broken.SetActive(false);
         var act = NewObject("SpeakerBrokenFlag", new Vector2(221.5f, -43f), LayerDefault, "Gimmicks");
@@ -68,6 +78,8 @@ public static class BuildB1
         BgGear(165.5f, -36f, 3f, 8f); BgGear(207f, -33f, 2.4f, 20f); BgGear(186f, -30.5f, 2f);
         HangLamp(215f, -36f); HangLamp(224.5f, -36f);
 
+        // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
+        log += Depth("A1_B1") + "\n";
         return log + Finish();
     }
 }

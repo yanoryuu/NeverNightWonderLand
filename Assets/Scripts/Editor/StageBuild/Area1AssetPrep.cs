@@ -76,6 +76,7 @@ namespace NeverNight.StageBuild
             log.AppendLine(PreparePlate());
             log.AppendLine(PrepareFx());
             log.AppendLine(PreparePolish());
+            log.AppendLine(PrepareAtmos(false));
             return log.ToString();
         }
 
@@ -157,7 +158,7 @@ namespace NeverNight.StageBuild
                 foreach (var guid in guids)
                 {
                     var path = AssetDatabase.GUIDToAssetPath(guid);
-                    if (!path.EndsWith(".png"))
+                    if (!path.EndsWith(".png") || path.StartsWith(AtmosArtDir + "/"))   // atmos は PrepareAtmos が設定する
                         continue;
                     total++;
                     var importer = (TextureImporter)AssetImporter.GetAtPath(path);
@@ -829,6 +830,119 @@ namespace NeverNight.StageBuild
         }
 
         public static Material PolishMat(string name) => AssetDatabase.LoadAssetAtPath<Material>($"{PolishMatDir}/{name}.mat");
+
+        // ------------------------------------------------------------------ 奥行き (atmos/) の素材
+
+        /// <summary>奥行きの層・前景・霧・光の筋・環境パーティクルの素材 (Area1Gen/atmos/)。ImportArt はここを扱わない (PrepareAtmos が設定する)。</summary>
+        public const string AtmosArtDir = ArtRoot + "/atmos";
+        public const string AtmosArtMatDir = AtmosArtDir + "/mat";
+
+        /// <summary>atmos の PNG ごとの (ピボット, 継ぎ目なしか)。無い物は中心・Clamp。</summary>
+        private static readonly Dictionary<string, (SpriteAlignment pivot, bool tile)> AtmosSpecs = new Dictionary<string, (SpriteAlignment, bool)>
+        {
+            { "ug_far_machinery.png", (SpriteAlignment.Center, true) },
+            { "ug_mid_pipes.png", (SpriteAlignment.BottomCenter, true) },
+            { "ug_fore_chain.png", (SpriteAlignment.TopCenter, false) },
+            { "ug_fore_pipe.png", (SpriteAlignment.Center, true) },
+            { "ug_fore_gear.png", (SpriteAlignment.BottomLeft, false) },   // 歯車の中心 = 画像の左下角
+            { "ug_fore_girder.png", (SpriteAlignment.Center, false) },
+            { "ug_light_shaft.png", (SpriteAlignment.TopCenter, false) },
+            { "park_far_skyline.png", (SpriteAlignment.BottomCenter, true) },
+            { "park_far_skyline_open.png", (SpriteAlignment.BottomCenter, true) },   // メリーゴーランドを除いて鏡映でつないだ版 (2026-10-10)
+            { "park_mid_trees.png", (SpriteAlignment.BottomCenter, true) },
+            { "park_mid_trees_open.png", (SpriteAlignment.BottomCenter, true) },      // 観覧車・メリーゴーランドを除いた版 (2026-10-10)
+            { "park_fore_bush.png", (SpriteAlignment.BottomCenter, false) },
+            { "park_fore_lamp.png", (SpriteAlignment.BottomCenter, false) },
+            { "park_fore_bunting.png", (SpriteAlignment.TopCenter, true) },
+            { "fog_band.png", (SpriteAlignment.Center, true) },
+            { "fill_white.png", (SpriteAlignment.Center, true) },
+        };
+
+        /// <summary>
+        /// atmos/ の PNG を全部インポートし直す (PPU546 / Sprite Single / FullRect / mipmap off / 非圧縮 / Bilinear /
+        /// AtmosSpecs のピボット、継ぎ目なしは Repeat) + 霧を流すマテリアル A1_FogDrift (A1SpriteScroll, 通常合成, 横にゆっくり)。
+        /// force=false でも設定が違う物は直す。何度流してもよい。
+        /// </summary>
+        public static string PrepareAtmos(bool force = true)
+        {
+            AssetDatabase.Refresh();
+            var files = Directory.GetFiles(AtmosArtDir, "*.png").Select(p => p.Replace('\\', '/')).ToList();
+            var changed = 0;
+            AssetDatabase.StartAssetEditing();
+            try
+            {
+                foreach (var path in files)
+                {
+                    var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+                    if (importer == null)
+                        continue;
+                    var name = Path.GetFileName(path);
+                    var spec = AtmosSpecs.TryGetValue(name, out var s) ? s : (SpriteAlignment.Center, false);
+                    var wrap = spec.Item2 ? TextureWrapMode.Repeat : TextureWrapMode.Clamp;
+                    // 縦は Clamp (横だけ継ぎ目なしの帯は、縦が Repeat だと上端に下端の色がにじんで細い線が出る)。縦横とも敷く遠景だけ Repeat
+                    var wrapV = name == "ug_far_machinery.png" ? TextureWrapMode.Repeat : TextureWrapMode.Clamp;
+                    importer.GetSourceTextureWidthAndHeight(out var w, out var h);
+                    var maxSize = 2048;
+                    while (maxSize < Mathf.Max(w, h) && maxSize < 8192) maxSize *= 2;
+                    var settings = new TextureImporterSettings();
+                    importer.ReadTextureSettings(settings);
+                    var dirty = force || importer.textureType != TextureImporterType.Sprite
+                                || !Mathf.Approximately(importer.spritePixelsPerUnit, PixelsPerUnit)
+                                || settings.spriteMeshType != SpriteMeshType.FullRect
+                                || settings.spriteAlignment != (int)spec.Item1
+                                || importer.wrapModeU != wrap || importer.wrapModeV != wrapV || importer.maxTextureSize != maxSize;
+                    if (!dirty)
+                        continue;
+                    importer.textureType = TextureImporterType.Sprite;
+                    importer.spriteImportMode = SpriteImportMode.Single;
+                    importer.spritePixelsPerUnit = PixelsPerUnit;
+                    importer.mipmapEnabled = false;
+                    importer.textureCompression = TextureImporterCompression.Uncompressed;
+                    importer.filterMode = FilterMode.Bilinear;
+                    importer.alphaIsTransparency = true;
+                    importer.maxTextureSize = maxSize;
+                    importer.wrapModeU = wrap;
+                    importer.wrapModeV = wrapV;
+                    importer.ReadTextureSettings(settings);
+                    settings.spriteMeshType = SpriteMeshType.FullRect;
+                    settings.spriteAlignment = (int)spec.Item1;
+                    settings.wrapModeU = wrap;
+                    settings.wrapModeV = wrapV;
+                    importer.SetTextureSettings(settings);
+                    importer.SaveAndReimport();
+                    changed++;
+                }
+            }
+            finally
+            {
+                AssetDatabase.StopAssetEditing();
+            }
+
+            EnsureFolder(AtmosArtMatDir);
+            var shader = Shader.Find(ScrollShaderName);
+            var log = $"[Atmos] png={files.Count} reimported={changed}";
+            if (shader == null)
+                return log + " (shader not found " + ScrollShaderName + ")";
+            foreach (var (name, scroll) in new[] { ("A1_FogDrift", new Vector2(0.008f, 0f)), ("A1_FogDriftSlow", new Vector2(-0.004f, 0f)) })
+            {
+                var path = $"{AtmosArtMatDir}/{name}.mat";
+                var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+                if (mat == null)
+                {
+                    mat = new Material(shader);
+                    AssetDatabase.CreateAsset(mat, path);
+                }
+                mat.shader = shader;
+                mat.SetVector("_Scroll", new Vector4(scroll.x, scroll.y, 0, 0));
+                mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                EditorUtility.SetDirty(mat);
+            }
+            AssetDatabase.SaveAssets();
+            return log + " mats=A1_FogDrift,A1_FogDriftSlow";
+        }
+
+        public static Material AtmosArtMat(string name) => AssetDatabase.LoadAssetAtPath<Material>($"{AtmosArtMatDir}/{name}.mat");
 
         // ------------------------------------------------------------------ util
 

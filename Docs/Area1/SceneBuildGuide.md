@@ -113,8 +113,9 @@ unity command capture_scene_view --caller plugin --skill unity-cli --width 1600 
 | `Lift(pos, offsets[], speed, wait, requiredFlag)` | 往復リフト (MovingPlatform) |
 | `Enemy(x, y, flying, scale, heavy, name)` | Enemy/FlyingEnemy プレハブ。y = 床+1 |
 | `BossRoom(arenaRect, flag, bossPos, flying, gateRects[], msg, followUpMessage="", followUpUnlessRed=false)` | BossArena + 仮ボス (2倍+Heavy) + 非アクティブのゲート。followUp = 撃破通知の後の一文 (赤ハサミ未入手時だけ等) |
-| `SpeakerAt(x, floorY, flag, design=1)` / `SavePointAt(x, floorY)` | スピーカー (Drive「speaker」の絵 1〜3 = `gimmick/speaker/speaker_0N_a/_b` を交互 (SpriteFlipbook)、壊れた絵は `Prop(SpeakerBrokenArt(N), ...)`。2026-10-08 PendingChanges 42) / セーブ (ベンチの絵) |
+| `SpeakerAt(x, floorY, flag, design=1)` / `SavePointAt(x, floorY)` | スピーカー (Drive「speaker」の絵 1〜3 = `gimmick/speaker/speaker_0N_a/_b` を交互 (SpriteFlipbook)、壊れた絵は `Prop(SpeakerBrokenArt(N), ...)`。2026-10-08 PendingChanges 42。2026-10-10〜 壊れる瞬間は `SpeakerBreakEffect` (カメラを寄せる `CameraFocus` + ヒットストップ → スロー `GamePause.SlowMotion` 1.2 秒 + 爆発のパーティクル + 金属片 `BreakDebris` + 画面揺れ)、壊れた後は鳴っている絵を消して煙 (ループ) を出し続ける。再訪時も同じ。パーティクルの素材は URP の ParticlesUnlit を SpeakerAt が `_particleMaterial` に入れる) / セーブ (ベンチの絵) |
 | `BossRoom` の地上の仮ボス | `KeepPlaceholderLook` で仮の四角に戻す (雑魚の Enemy.prefab = 野良ウマの絵と分ける。PendingChanges 42) |
+| `UseGramineBoss(arenaGo, mode, name="Boss_Gramine")` | (2026-10-10) `BossRoom` の仮ボスを「グラミネ第1のボス」(`Assets/Prefabs/Enemies/Boss_Gramine.prefab`, Docs/EnemySpec.md) に差し替える。位置・`_threadDropOverride` を引き継ぎ、`BossArena._boss` / `_arenaArea` (= トリガー) / `_mode` を設定。A1_B1 = `RetreatAtThreshold` (HP 半分で飛び去る = 勝ち扱い)、A1_AB = `FullFight`。プレハブは `SceneScripts/prep_enemy_spec.cs` で作る |
 | `FlagSwingDoor(name, rect, flagId, order=-1, flip=false, duration=0.6, doorHeight=4)` | 開き戸 (Drive「door」, `gimmick/door/door_01..04` = 閉 → 開) で通路 rect を塞ぐ FlagDoor。扉は元絵の縦横比で高さ doorHeight、その上の rect は岩 (Solid) で塞ぐ (通路の高さを扉に合わせる)。フラグでその場でコマ送りして開き、開いた扉が残る (スライドしない)。S1/S2/S3 のスピーカー室の扉 (PendingChanges 42) |
 | `LeverAt(name, x, floorY, scale=0.6, handle="lever_01.png")` + `SetLeverHandle(lever)` | レバー (Drive「lever」: 台座 `lever_02` + 傾く柄 `lever_01` / `_red` / `_teal`)。ルート = 柄の回転の中心。LeverSwitch を付けた後に SetLeverHandle で柄を渡すと、作動で柄だけが +30° → -30° に傾く (PendingChanges 42) |
 | `ThreadPickupAt(x, y, amount, pickupId)` / `KeyItemAt(x, floorY, name, flag, pickupId)` / `ConsumablePickupAt(...)` | ピックアップ。Id は `A1_Pickup_<部屋>_<n>`。糸の絵は Drive の糸巻き `PropsRoot + "/thread_spool.png"` (100 以上は ×1.25)。`Art()` は "Assets/" で始まるパスをそのまま読む (`PropsRoot` = `Assets/LocalData/StageAsset/Props`) |
@@ -270,7 +271,7 @@ public static class PlayT {
 | A1_T2 崩れた搬入路 | 幅 7 の穴 (ダッシュ必須)、穴の底から左へ戻る段 3 つ、弱い敵 1、右の棚で上の渡り板へ → ひび壁 (`A1_Hidden_T2s`, HP3) → アルコーブ → 穴を登って T2s (糸×30, `A1_Pickup_T2s_1`)。ヒント: ダッシュ/穴/攻撃/登る/ひび壁 | 0 error, 1 warn (A1_T3 未作成) |
 | A1_T3 縦の衣装ラック | T3: 床 y-96 から交互の足場 (すり抜け棚+壁の出っ張り、段差 3) で y-54 の出口 (→T4) へ、中段の踊り場に敵 1。天井 x96..102 に橙の点検口 (SkillBlock 落下, flag `A1_Slam_Uh_1` — A1_U4 側も同じフラグにすること)、上からの到着点の棚 y-45。T3b: トゲの溝 3 本 (深さ 1)+段、棚の上にまち針×3 (`A1_Pickup_T3b_1`)、回復/道具のヒント。T3c: 床の跳ね上げ戸 (FlagActivator `A1_LadderBackstage` で開いた見た目に)、到着 SpawnFromA1_D2、開かない勝手口 | 0 error |
 | A1_T4 チケット売り場の廊下 | 床 y-54→y-57。幅 6 の溝 (ダッシュ越え、底から両側へ戻れる)、閉まった窓口の屋根の棚、重装甲の敵 (×1.3, Heavy) とブレイク→裁断のヒント、ボス前のベンチ | 0 error |
-| A1_B1 改札の番人 | B1: 床 y-57 の平らな部屋、BossArena `A1_Boss1` (Enemy×2+Heavy)、入ると左のゲートが閉まる、S1 への扉 = FlagDoor(`A1_Boss1`)。S1: 渡り廊下 y-45 の上にスピーカー① (`A1_Speaker1`、壊すと speaker_broken を表示)、下は通り抜けられる | 0 error |
+| A1_B1 (部屋名なし。2026-10-10 ユーザー決定: 部屋に名前は付けない → `area1_layout.json` の name は空、StageInfo `_areaName` も空。入室時はエリア名だけ、セーブの場所は空欄) | B1: 床 y-57 の平らな部屋、BossArena `A1_Boss1` (ボス = グラミネ 1 戦目 (2026-10-10〜, `UseGramineBoss` RetreatAtThreshold: HP 半分で流れ弾がスピーカー①を壊し、会話 `A1_Gramine_Retreat` の後に飛び去る = 勝ち扱い。戦闘前に会話 `A1_Gramine_Meet`)、入ると左のゲートが閉まる、S1 への扉 = FlagDoor(`A1_Boss1`)。S1: 渡り廊下 y-45 の上にスピーカー① (`A1_Speaker1`、壊すと speaker_broken を表示)、下は通り抜けられる | 0 error |
 | A1_H 回転木馬の待合所 | ショップ画面は UI シーン ShopUI (§11)。床 y-54、ベンチ/店/鍛冶師 (2026-10-03〜: `_grantsUpgrade=true` `_upgrade=Red` `_requiredAnyFlags=[A1_MidBossUpper, A1_MidBossLower]` = **中ボスどちらかの撃破後に赤ハサミ (最初のハサミ = 二段ジャンプ) を渡す**、セリフは Utage `A1_Smith_*` (2026-10-03〜)、forge `A1_Hub` 糸30 は赤ハサミより前 (ボス1後) から受けられる)。大きな回転木馬の飾りは 2026-10-03 に撤去 (空いた床に荷物の木箱 3 と床置きの灯、奥の壁は自動の壁飾り)。左の登り → 迷子センター H2 (迷子の人形 NpcTalkPoint (Utage `A1_Doll_First`/`_Repeat`) `A1_Npc_Doll` 糸50、日誌その2 `A1_Pickup_H2_1`)、渡り廊下 y-33 → 吹き抜け (A1_U1)、床の格子 (すり抜け) → A1_D1。空色の天井 (`A1_Super_Hs1`) → Hs1 (糸の大束 ×150 `A1_Pickup_Hs1_1`、2026-10-03 に新技の秘伝書から変更)、橙の床 (`A1_Slam_Hs2_1`) → Hs2 金庫 (ハートピン③の仮アイテム `A1_Pickup_Hs2_1`、棚で拠点へ戻れる) | 0 error, 2 warn (U1/D1 未作成) |
 | A1_C1 灯の大扉の回廊 | 床 y-54。大扉 = FlagDoor(`A1_Speaker1`+`A1_Speaker2`,`A1_Speaker3`)、扉の 3 つの丸穴の灯を FlagActivator で点灯、ベンチ、床下の搬出エレベーター (TransportAt → A1_MB2 / FromA1_C1、要 `A1_ElevatorDeep`)、到着 SpawnFromA1_MB2 | 0 error, 2 warn (AB/MB2 未作成) |
 | A1_U1 メリーの吹き抜け | U1: 縦穴 (屋内)。床 y-21 の中央が拠点への穴、回転木馬の支柱 (飾り) に沿って左右交互のすり抜け足場 7 段 → 上端の乗り場 y3 (左は岩、中〜右はすり抜け)。左上にジップラインの到着点 (乗り場の絵+ケーブル, `SpawnFromA1_MB1`)。屋根 (y12..18) の上は空にして回転木馬を載せた (A1_U2 側も同じ)。U2e: 屋外、床 y3、街灯と旗。柵 = FlagDoor(`A1_FenceOpen`, 当たりは高さ 24 で跳び越え不可)、柵の奥に `ExitToA1_FP` (開いた後の戻り道)。柵の向こうは空を開けて噴水 (prop/fountain.png) を見せる予告 | 0 error, 1 warn (FP 未作成) |
@@ -554,7 +555,7 @@ UI ごとに専用プレハブ + 専用 UI シーン (`Assets/Scenes/UI/`, 名�
 
 | ボス | シーン | 糸 | 粒 |
 |---|---|---|---|
-| 改札の番人 | A1_B1 | 20 (`threadDrop: 20`) | 12 (値 1〜2) |
+| グラミネ (1 戦目) | A1_B1 | 20 (`threadDrop: 20`) | 12 (値 1〜2) |
 | ゴンドラの道化 / 歯車の重馬 | A1_MB1 / A1_MB2 | 25 (`threadDrop: 25`) | 15 (値 1〜2。2026-10-04 から) |
 | 指揮者ノクターン | A1_AB | **100** (`threadDrop: 100`。専用定数 `EnemyConsts_A1Conductor` の 40 は上書き。2026-10-04 PendingChanges 25) | **30** (値 3〜4) |
 
@@ -611,3 +612,85 @@ UI ごとに専用プレハブ + 専用 UI シーン (`Assets/Scenes/UI/`, 名�
 - すり抜け降り: `Batch5.Drop` — 降りていく W5 RingA_Gondola1 で ↓+ジャンプ長押し 7 回、押しっぱなしの間の滑空 0・乗り直し 0 (`batch5_drop_W5_noglide` = ゴンドラの下へ抜けた所)。
 - W8: スロー (`Batch5.TimeScale 0.4`) で予告 → 落下 → 鉄骨の上 (`batch5_w8_weight_warning` / `_falling` / `_landed`)。
 - 破片: `Batch5.SlowBreak(x, y, dir, slam, 0.12, 秒)` でスロー + 一時停止。A1_H の 2 段積みの木箱 (`batch5_debris_crate_midburst` / `_bounce` / `_landed`)、A1_H の落下攻撃ブロック (`batch5_debris_slam_midburst`)、A1_T2 のひび割れ壁 (`batch5_debris_wall_midburst` / `_landed`)。大ジャンプ・突進のブロックは同じ処理 (岩の破片の色違い) で、再生では未確認。
+
+## 15. 雰囲気 (ポストプロセス・環境パーティクル) (2026-10-10)
+ステージには「種類の指定」だけを置き、見た目 (Volume・パーティクル) は PlayerScene のカメラ側にまとめて持つ方式。
+調整は 1 か所 (ビルダー) で済み、ステージを作り直しても雰囲気は消えない。
+
+| 物 | 場所 | 役割 |
+|---|---|---|
+| `NeverNight.Stage.StageAtmosphere` / `AtmosphereKind` | `Assets/Scripts/Stage/Atmosphere/StageAtmosphere.cs` | ステージ側の指定 (ルートの `StageAtmosphere`、`_kind` = None/Underground/Outdoor/Boss/Haven)。`StageInfo` と同じく最後に有効になった物が `Current` |
+| `NeverNight.Stage.AtmosphereDirector` | `.../Atmosphere/AtmosphereDirector.cs` | PlayerScene の `Main Camera/Atmosphere` に置く。`StageAtmosphere.CurrentKind` を毎フレーム見て、Mood Volume のプロファイル差し替え (0.5 秒で重み 0→1) と種類ごとのパーティクルの入れ替え。指定が無いステージ (旧 GameField_old 等) では Base/Mood とも重み 0・パーティクル停止 = 従来の見た目。カメラが 1 フレームで 12 以上飛んだら (ワープ・リスポーン) パーティクルを作り直す |
+| `Area1StageBuilder.Atmosphere.cs` | `Assets/Scripts/Editor/StageBuild/` | `AtmosphereKindOf(sceneId)` / `Atmosphere(sceneId, kind?)` / `SetupPlayerAtmosphere()` / `PrepareAtmosProfiles()` / `PrepareAtmosMaterials()` / `AtmosMat(name)`、定数 `OrderAtmosMid = -12` / `OrderAtmosFront = 30` |
+| プロファイル | `Assets/Settings/Volumes/A1_Base, A1_Underground, A1_Outdoor, A1_Boss, A1_Haven` | ビルダーが作り直す (手で直しても次の Setup で上書き。値はビルダーに書く) |
+| パーティクルのマテリアル | `Area1Gen/atmos/mat/A1_AtmosDust` (通常合成) / `A1_AtmosGlow` / `A1_AtmosEmber` / `A1_AtmosSparkle` (加算、`_BaseColor` 1.8〜2.2 の HDR で Bloom に乗る) | URP Particles/Unlit。`atmos/p_soft_dot.png` / `p_glow.png` / `p_ember.png` / `p_sparkle.png` があればそれを、無ければ URP 既定の丸いぼかしを使う |
+| 手順スクリプト | `SceneScripts/atmos_apply.cs` (適用) / `atmos_probe.cs` (状態確認・プレイ中の `AtmosProbe.Play`) / `atmos_tune.cs` (プレイ中にプロファイル値・粒の大きさをその場で変えて見比べる) | |
+
+**種類の判定** (`AtmosphereKindOf`): ボスの部屋 (layout の `boss`) を含む → Boss (A1_B1 / A1_MB1 / A1_MB2 / A1_AB) / `A1_H` → Haven / 屋外の部屋を含む (`Background()` の夜空と同じ判定) → Outdoor (U1〜U4 / W1 / W4 / W5 / FP) / それ以外 → Underground。
+別の種類にしたいシーンは `Atmosphere("A1_xx", AtmosphereKind.Boss)` のように明示する (レシピに書く)。
+
+**新しいシーンを作ったら**: レシピの最後 (Finish の後) に `Area1StageBuilder.Atmosphere("A1_xx")` を 1 行。全シーンに流し直す時は:
+```bash
+run_script --file Docs/Area1/SceneScripts/atmos_apply.cs --entry AtmosApply.OpenBatch --args '[0,9]'   # 9 枚を Additive で開く
+run_script --file Docs/Area1/SceneScripts/atmos_apply.cs --entry AtmosApply.ApplyOpen                  # 適用 → 保存 → 閉じる
+# [9,9] [18,9] も同様。種類の一覧だけ: --entry AtmosApply.Kinds
+```
+**値を変えたら / テクスチャが届いたら**: ビルダーを直す → recompile 待ち → `AtmosApply.OpenPlayer` → `AtmosApply.SetupPlayer` (プロファイル・マテリアル・`Main Camera/Atmosphere` を作り直して PlayerScene を保存)。ステージ側の再適用は不要。
+
+**プロファイルの主な値** (Base は全種類共通、Mood は上書き):
+- Base: Tonemapping Neutral / Bloom threshold 0.9・intensity 0.6・scatter 0.65 (月・白い星・加算の光だけ少しにじむ) / ColorAdjustments postExposure +0.4 (Neutral で沈む分を戻して元の明るさに揃える)・contrast 8・saturation 8 / Vignette 0.2 / FilmGrain Thin1 0.1。カメラは Post Processing + Dithering on。
+- Underground: contrast 6 (元が暗いので 18 では潰れた)・colorFilter (0.93,0.95,1.06)・SMH shadows (0.92,0.94,1.1,-0.03)・Vignette 0.3 青紫。
+- Outdoor: SplitToning shadows (0.5,0.47,0.58) / highlights (0.56,0.53,0.5) balance -25 (強いとプレイヤーまで紫に染まる)・colorFilter (0.95,0.92,1)・Bloom 0.85 ラベンダー寄り・Vignette 0.24 紺。
+- Boss: colorFilter (1,0.9,0.88)・contrast 10・SMH shadows 赤寄り・Vignette 0.38 暗い赤・Bloom 0.8 暖色。
+- Haven: colorFilter (1,0.95,0.88)・Vignette 0.24 暖色・Bloom 0.75。
+- UI シーンの Canvas はすべて Screen Space Overlay なのでポストプロセスはかからない (ステージ内の World Space の HP バーにはかかる)。
+
+**環境パーティクル** (`Main Camera/Atmosphere/Particles_<種類>/…`、発生範囲はカメラ中心の 26×16 の箱、ワールド空間シミュレーション + prewarm、粒の数は各 4〜110):
+- Underground: Dust (漂う埃)・DustFront (前景の大きなぼけ、ごく少数)・Sparks (ときどき上がる火の粉)
+- Outdoor: Fireflies (瞬く暖色/薄紫の光の粒)・Motes (右へ流れる細かい粒)・Sparkle (一瞬光る星)・GlowFront (前景のぼけ)
+- Boss: Embers (舞い上がる火の粉)・EmbersFront (前景)・Ash (落ちる灰)
+- Haven: WarmMotes (暖色の光の粒)・Dust
+- 並び順: 中景 `OrderAtmosMid = -12` = 部屋の背景板 (-90) より手前・岩の塗り (Backfill -10)・飾り・地形より奥 (岩の中には出ない)。前景 `OrderAtmosFront = 30` = プレイヤー・地形より手前 (数個だけ)。
+- **視差レイヤーを足す時の注意**: 背景を -12 より手前 (例 -11〜-1) に置くと中景の粒が隠れる。遠景は -90 以下、地形のすぐ後ろの近景は -11〜-9 あたりに置けば粒が「背景と地形の間の空気」に見える。手前を速く流す視差 (factor 負) の前景物は 30 より上にすると前景の粒より手前になる。
+
+確認のスクショ: `Assets/Screenshots/Atmos/before_*.png` / `after_*.png` (D2 地下・U3 屋外・H 拠点・AB ボス、`after_U2_transition.png` は D2 → U2 の遷移で切り替わった所)。
+
+## 16. 奥行き (視差の層・霧・前景・光の筋) (2026-10-10)
+ユーザー指示「背景とマップに遠近感を持たせて、画面全体をリッチに」。§15 (ポストプロセス・環境パーティクル) の続き。
+シーンの `Background/Depth` に層をまとめて作る。**地形・当たり・ギミック・敵には触らない**。何度流しても前回の `Depth` を消して作り直す。
+
+| 物 | 場所 |
+|---|---|
+| `Area1StageBuilder.Depth(sceneId)` | `Assets/Scripts/Editor/StageBuild/Area1StageBuilder.Depth.cs`。各レシピ (`build_A1_*.cs`) の `Finish` の前に 1 行 (`log += Depth("A1_xx") + "\n";`) |
+| 素材 | `Area1Gen/atmos/` (PPU 546)。インポート設定は `Area1AssetPrep.PrepareAtmos()` (PrepareAll にも含む。ImportArt は atmos を扱わない)。ピボット: 中景・遠景の帯・茂み・街灯 = 下中央、鎖・光の筋・旗飾り = 上中央、歯車 = 左下 (歯車の中心)。横に継ぎ目なしの帯は U だけ Repeat・**V は Clamp** (V も Repeat だと上端に下端の色がにじみ細い線が出た)。霧を横に流すマテリアル `atmos/mat/A1_FogDrift` / `A1_FogDriftSlow` (A1SpriteScroll) |
+| 加工した素材 | `park_mid_trees_open.png` (= park_mid_trees から観覧車とメリーゴーランドの列を除いてつないだ 800px 周期) / `park_far_skyline_open.png` (= メリーゴーランドを除き鏡映でつないだ版) / `fill_white.png` (単色の矩形用)。どれも Python (PIL) で作成。元の 2 枚は使っていない |
+| 手順スクリプト | `SceneScripts/depth_apply.cs` (`Prep` / `Open` → `Apply` / `OpenBatch [0,9]` → `ApplyOpen` (×3 で 27 枚) / `RemoveFpWheel`)、`depth_shot.cs` (プレイ中 `At x y` = 置いてカメラを即寄せ、`Go scene` = 既定スポーンへ遷移) |
+| スクショ | `Assets/Screenshots/Depth/before_*.png` / `after_*.png`、左右比較 `sheets/depth_sheet_*.png` |
+
+**背景の種類の判定**: `Background()` が置いた物で決める。`NightSky` がある = 夜空 (屋外の部屋があるシーン + SkyBackdrop の W2/W3/W6/W8)、無い = 地下。色は `AtmosphereKindOf` (Underground / Outdoor / Boss / Haven)。
+
+**地下** (既存の `Underground` = bg_underground の 1 枚絵は消す):
+| 層 | 素材 | 視差 (x,y) | 描画順 | 色 |
+|---|---|---|---|---|
+| 遠景 `Far/Hall` | ug_far_machinery ×6 (縦横 Tiled, 行は奇数) | 0.93 | -100 | 地下 (0.48,0.4,0.5) / ボス (0.46,0.33,0.4) / 拠点 (0.54,0.42,0.4) |
+| 霞 `Far/Haze` + 各階の床に霧 `FogFar*` | fill_white / fog_band | 0.93 | -99 | 霧の色 α0.1 / α0.42 |
+| 中景 `Mid/Row*` | ug_mid_pipes ×4、11 ごとに 1 段 (段ごとに左右反転) + 段の下の暗がり (fx/shade) | 0.6 | -98 | (0.44,0.38,0.52) 等 |
+| 霧 `FogMid` / `FogMidHigh` | fog_band | 0.6 | -97 | α0.7 (段の根元) / α0.18 |
+| 光の筋 `Shafts/*` | ug_light_shaft (A1_Additive) | 0 (天井に固定) | -13 | 青白 α0.5 (拠点は暖色)。上向きの出口の口から部屋の床近くまで + 高さ 24 以上の部屋の天井の中央 |
+| 前景 `Fore/*` | 鎖 / 鉄骨 (左上) ・縦の配管 / 歯車 (右上の角)、部屋 (幅 16 以上) ごとに 1〜2 個 | (-0.3,-0.12) | 25 | (0.8,0.76,0.88) を乗算 (ほぼ黒紫)。ボス部屋には置かない |
+
+**夜空** (既存の `ParkSilhouette` は消す):
+| 層 | 素材 | 視差 (x,y) | 描画順 | メモ |
+|---|---|---|---|---|
+| 夜空 `NightSky` (既存) | | 1 | -100 | |
+| 遠景 `Far/Skyline` + 下の地面 + 霧 3 本 | park_far_skyline_open ×5.5 | (0.9, fyFar) | -99 / 霧 -98 | fyFar = 1 − 3/(屋外の部屋でカメラが動く高さ) (0.82〜0.97)。**カメラが一番上に来てもスカイラインが 3 だけ沈む** = 高い所でも画面の下に城・テントの頭と霧が残る (星空だけの平らな画面にしない)。地上では床に立った時に画面の下半分。高い所のシーン (屋外の床 y≥40 / 屋外の部屋なし) はてっぺんだけ。W4 / MB1 はレシピが眼下の園内 (bg_park_silhouette) を置いているのでスカイラインは置かず霧だけ |
+| 中景 `Mid/Trees` + 霧 2 本 | park_mid_trees_open ×6.2 | (0.55, 0.5) | -97 / 霧 -96 | 地上のシーンだけ。根元 = 床 −1 (地形の後ろ)。床は屋外の部屋の実際の床面をレイで測る (U1/FP は y3) |
+| 地平線のもや `Haze` | fog_band | (0.96, fyFar) | -98 | 地上 α0.25 / 高い所 α0.42 |
+| 前景 `Fore/Bush_*` `Lamp_*` `Bunting_*` | park_fore_bush ×1.4 (上端 = 床面、足元を隠さない) / park_fore_lamp ×2 + 灯に p_glow・p_soft_dot (加算) / park_fore_bunting (幅 40・高さ 14 以上の広場) | (-0.3, 0) / 旗 (-0.2,-0.1) | 25〜26 | 地上の屋外の部屋の幅 30 ごとに茂み + 街灯 1 組。ボス部屋には置かない |
+
+- **屋内の部屋に空や並木が映らない**: 遠景・中景はすべて -96 以下、屋内の部屋の背景板 (`IndoorBackdrop` / レシピの壁, OrderRoomBackdrop -90) より奥。U1 の吹き抜け・U2r などで確認。
+- **前景の置き方**: ParallaxLayer の anchor = 前景を見せたいカメラ位置、pos = その時の画面上の位置。factor −0.3 だとカメラが離れると画面の外へ速く出ていく (見えている間のずれは 2 単位ほど) ので、隣の部屋に入り込まない。
+- **シーン固有** (`DepthExtras`): A1_AB の ST の井戸 (`STWell`) は真っ黒な穴に見えた → 壁の色を `STWellColor` (0.36,0.4,0.6) に (レシピも同じ値)、上の噴水の排水口 (上向きの出口) から月明かりの筋、底に薄いもや。
+- **削除**: A1_FP の西の空の浮いた観覧車 `ferris_wheel_bg` (シーンとレシピから)。中景・遠景の素材からも観覧車・メリーゴーランドの影絵を除いた (A1_U1 / A1_U2 で目立たないように。全シーン共通)。
+- **環境パーティクルの素材** (§15 の宿題): `AtmosApply.OpenPlayer` → `AtmosApply.SetupPlayer` で `p_soft_dot / p_glow / p_ember / p_sparkle` に差し替え済み。粒の大きさは変えていない (スクショで大きすぎない)。
+- **注意**: プレイ中にエディタ用スクリプトを書き換えると再コンパイルでプレイが止まる (撮影中は書き換えない)。

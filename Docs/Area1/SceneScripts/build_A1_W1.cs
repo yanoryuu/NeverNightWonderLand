@@ -118,6 +118,8 @@ public static class BuildW1
         Enemy(32f, 0.6f, name: "PlatformWalker");        // 乗り場の床 (x22..43)。登り始める前の地上
         Enemy(16f, 12f, true, name: "BoardingFlyer");     // 足場の間の空中 (西の縦坑寄り)
 
+        // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
+        log += Depth("A1_W1") + "\n";
         return log + Finish();
     }
 }

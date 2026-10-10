@@ -124,6 +124,8 @@ public static class BuildT3
         // 敵を少し増やす (2026-10-03 PendingChanges 8: 部屋の意図に合わせる。位置は enemy_probe.cs の候補から)
         Enemy(108.5f, -95.4f, name: "FloorEnemy");   // 一番下の床 (x104..113)。チュートリアルなので控えめに 1 体だけ足す
 
+        // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
+        log += Depth("A1_T3") + "\n";
         return log + Finish();
     }
 }

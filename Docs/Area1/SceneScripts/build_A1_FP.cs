@@ -157,10 +157,9 @@ public static class BuildFP
         KeyItemAt(438.5f, 20.55f, "糸巻き1", "A1_Spool1", "A1_Pickup_FP2_1", "props/thread_spool.png", "拾う");
         Glow(438.5f, 20.6f, 1.8f, new Color(1f, 0.85f, 0.55f, 0.45f), -6);
 
-        // 遠景: 振り返ると西の空に大観覧車 (共通プレハブは遠すぎて映らないので遠景の絵を添える)
+        // 遠景: 共通プレハブの大観覧車 (遠すぎて映らない)。西の空に浮いて見えた遠景の観覧車の絵 (ferris_wheel_bg) は
+        // 2026-10-10 ユーザー指示で削除 (周りとなじまない)。遠景は Depth() のスカイライン・並木が受け持つ
         PlaceFerrisWheel(false, false, new Color(0.55f, 0.5f, 0.7f));
-        ParallaxProp("props/ferris_wheel_bg.png", new Vector2(338f, 16f), new Vector2(0.9f, 0.95f), new Vector2(350f, 8f),
-            1.25f, OrderFarBg - 1, new Color(0.55f, 0.48f, 0.75f, 0.75f));
 
         // ================= ヒント
         // 案内文はチュートリアルの操作説明 (キーの説明) だけ残す。呼びかけ・攻略助言・場所の説明は削除 (2026-10-03 ユーザー決定, Docs/UI/UIAssignment.md「案内文」)
@@ -169,6 +168,8 @@ public static class BuildFP
         Enemy(328f, 3.6f, name: "PlazaWalker");          // 噴水広場の床 (x319..336)
         Enemy(410f, 18f, true, name: "AvenueFlyer");      // 並木道の上空 (正門のアーチの上 = 二段ジャンプの所は避ける)
 
+        // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
+        log += Depth("A1_FP") + "\n";
         return log + Finish();
     }
 }

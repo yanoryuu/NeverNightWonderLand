@@ -233,6 +233,8 @@ public static class BuildD2
         // 敵を少し増やす (2026-10-03 PendingChanges 8: 部屋の意図に合わせる。位置は enemy_probe.cs の候補から)
         Enemy(180f, -106f, true, name: "BeltFlyerWest");  // 西寄りのベルトの上空 (配電室への分かれ道の手前)
 
+        // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
+        log += Depth("A1_D2") + "\n";
         return log + Finish();
     }
 }

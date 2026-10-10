@@ -156,6 +156,8 @@ public static class BuildD5
         // 敵を少し増やす (2026-10-03 PendingChanges 8: 部屋の意図に合わせる。位置は enemy_probe.cs の候補から)
         Enemy(228f, -129f, true, name: "MazeFlyer");     // 本道 (東) の上の空中。水没した排水溝 (D6) は敵を少なくのまま
 
+        // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
+        log += Depth("A1_D5") + "\n";
         return log + Finish();
     }
 }

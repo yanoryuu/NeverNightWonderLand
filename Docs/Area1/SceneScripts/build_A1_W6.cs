@@ -163,6 +163,8 @@ public static class BuildW6
         // 敵を少し増やす (2026-10-03 PendingChanges 8: 部屋の意図に合わせる。位置は enemy_probe.cs の候補から)
         Enemy(77f, 270f, true, name: "DetourFlyer");     // W7 逆さゴンドラの寄り道の上の空中 (機械室・セーブの周りには置かない)
 
+        // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
+        log += Depth("A1_W6") + "\n";
         return log + Finish();
     }
 }

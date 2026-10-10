@@ -5,7 +5,7 @@ using static NeverNight.StageBuild.Area1StageBuilder;
 // A1_AB 「噴水下の大音楽堂」(AB x318..372 y-72..-30) + 「噴水への大階段」(ST x342..360 y-27..-3)
 // 西 = 灯の大扉の回廊 A1_C1 (x315..318, 床 y-54) / 上 = 噴水広場 A1_FP (x345..354 y-3..0, 噴水の排水口)
 // AB: 床 y-60 の大ホール (天井 y-36)。西の入口の踊り場 y-54 (段 y-57) → ホール。東に舞台 (y-57) とパイプオルガン、左右に緞帳。
-//     エリアボス「指揮者ノクターン」= BossRoom A1_AreaBoss (FlyingEnemy ×2.5 + EnemyConsts_A1Conductor)。入ると西のゲートが閉じる。
+//     エリアボス「グラミネ第1のボス」2 戦目 = BossRoom A1_AreaBoss + UseGramineBoss (FullFight, 2026-10-10 に仮ボス「指揮者ノクターン」から差し替え)。入ると西のゲートが閉じる。
 //     前半 (HP 50% まで) = 浮遊する音符の足場 4 枚 (MovingPlatform, すり抜け, 段差 3 = 通常ジャンプで乗り継げる) で空中のボスを叩く。
 //     後半 = 音符が点滅して消え、床の昇降台 5 本 (Piston, 上向き +3/+6, 押しつぶし無し) が 2 組交互にせり上がる (BossPhaseSwitch)。
 //     撃破: 糸の大束 ×200 (ThreadPickup, A1_Pickup_AB_1) がホールの中央に出現 + 天井の点検口 (ハッチ) が開き、
@@ -170,29 +170,15 @@ public static class BuildAB
         Solid(351, -6, 357, -5);                   // L7 右 -5 (ここから跳ぶと噴水の排水口)
         MoveSpawn("A1_FP", 353.5f, -3.5f);         // 噴水から降りてくると L7 の上
 
-        // ================= ボス: 指揮者ノクターン
+        // ================= ボス: 「グラミネ第1のボス」の 2 戦目 (2026-10-10, Docs/EnemySpec.md。以前は仮ボス「指揮者ノクターン」)
+        // 第1形態 → HP 半分で第2形態 (2 秒無敵・弾消し、風船・爆弾を追加) → 倒す (FullFight)。見た目は仮の四角 (×2) のまま。
+        // 仮ボスを BossRoom で置いてから UseGramineBoss で差し替える (位置・糸の数は引き継ぐ)
         var arena = BossRoom(new RectInt(324, -60, 48, 24), Flag, new Vector2(344f, -52f), true,
             new[] { new RectInt(322, -54, 2, 9) },
-            "指揮者ノクターンを倒した! 鳴りやまなかった音楽が、ふっと止んだ……",
-            threadDrop: 100); // 糸 100 本 (→ 30 粒で闘技場いっぱいに噴き出す。専用定数 EnemyConsts_A1Conductor の 40 は上書き。PendingChanges 25)
-        var boss = GameObject.Find("Boss_" + Flag);
-        boss.name = "Boss_Nocturne";
-        boss.transform.localScale = Vector3.one * 2.5f;
+            "グラミネを倒した! 鳴りやまなかった音楽が、ふっと止んだ……",
+            threadDrop: 100); // 糸 100 本 (→ 30 粒で闘技場いっぱいに噴き出す。PendingChanges 25)
+        var boss = UseGramineBoss(arena, BossFightMode.FullFight);
         var ec = boss.GetComponent<EnemyController>();
-        Set(ec, "_consts", AssetDatabase.LoadAssetAtPath<EnemyConsts>("Assets/Prefabs/Area1/EnemyConsts_A1Conductor.asset"));
-        boss.GetComponent<SpriteRenderer>().color = new Color(0.78f, 0.62f, 1f);
-        var fpm = boss.GetComponent<FloatingPatrolMotion>();
-        if (fpm != null) { Set(fpm, "_hoverAmplitude", 1.3f); Set(fpm, "_hoverFrequency", 0.9f); }
-        // 指揮棒 (飾り)
-        var baton = new GameObject("Baton");
-        baton.transform.SetParent(boss.transform, false);
-        baton.transform.localPosition = new Vector3(0.42f, 0.18f, 0);
-        baton.transform.localRotation = Quaternion.Euler(0, 0, -35f);
-        AddSprite(baton, Art("ferris/support_leg.png"), 6, new Vector2(0.12f, 0.75f), Gold);
-        var aura = new GameObject("Aura");
-        aura.transform.SetParent(boss.transform, false);
-        aura.transform.localScale = Vector3.one * 0.9f;
-        AddSprite(aura, Art("fx/glow.png"), 4, null, new Color(0.75f, 0.45f, 1f, 0.4f));
 
         // ---- 前半: 浮遊する音符 (通常ジャンプで乗り継げる高さ: 床 -60 → -57 → -54 → -51)
         var p1 = NewObject("Phase1_Notes", new Vector2(344f, -54f), LayerDefault, "Gimmicks");
@@ -213,7 +199,7 @@ public static class BuildAB
         var phase = NewObject("BossPhase", new Vector2(344f, -48f), LayerDefault, "Gimmicks");
         AddComp<BossPhaseSwitch>(phase, ("_boss", ec), ("_defeatedFlag", Flag), ("_threshold", 0.5f),
             ("_phase1", new Object[] { p1 }), ("_phase2", new Object[] { p2 }), ("_blinkTime", 1.6f),
-            ("_phase2Message", "ノクターンが指揮棒を振り下ろした! 音符が消え、床がせり上がる……"));
+            ("_phase2Message", "音符が消え、床がせり上がる……"));
 
         // ---- 撃破後: 糸の大束 ×200 + 静止した音符の階段 (段差 5 = 二段ジャンプ) + 天井の点検口が開く
         // (2026-10-03 ユーザー決定: 赤ハサミ (二段ジャンプ) は拠点の鍛冶師が中ボス撃破後に渡すので、ここのご褒美は糸の大束に。
@@ -303,23 +289,26 @@ public static class BuildAB
         PipeRun(343.2f, -27f, 343.2f, -3f, 0.7f, -6, new Color(0.45f, 0.55f, 0.75f));
         PipeRun(358.8f, -27f, 358.8f, -3f, 0.7f, -6, new Color(0.45f, 0.55f, 0.75f));
         PipeRun(343.2f, -4.2f, 358.8f, -4.2f, 0.5f, -6, new Color(0.45f, 0.55f, 0.75f));
-        Glow(349.5f, -1f, 6f, new Color(0.65f, 0.8f, 1f, 0.45f), -6);
+        // 月明かりの光暈は岩の塗り (Backfill -10) より奥 (-11) に置く: 手前だと天井・壁の岩の上に灰色のもやが掛かって見える (2026-10-10 点検)
+        Glow(349.5f, -1f, 6f, new Color(0.65f, 0.8f, 1f, 0.45f), -11);
         for (var i = 0; i < 4; i++)
             GuideLamp(i % 2 == 0 ? 359f : 342.6f, -25f + i * 6f, i * 0.2f, new Color(0.6f, 0.85f, 1f), false, 2.2f, "STLamp");
 
         // 石の井戸の壁と、上の噴水から伝い落ちる水
         var well = NewObject("STWell", new Vector2(351f, -19.5f), LayerDefault, "Background");
-        AddSprite(well, Art("rock/rock_tex.png"), OrderRoomBackdrop + 1, new Vector2(18f / 2f, 33f / 2f), new Color(0.2f, 0.24f, 0.4f)).transform.localScale = new Vector3(2f, 2f, 1f);
+        AddSprite(well, Art("rock/rock_tex.png"), OrderRoomBackdrop + 1, new Vector2(18f / 2f, 33f / 2f), STWellColor).transform.localScale = new Vector3(2f, 2f, 1f);
         foreach (var (x, w) in new[] { (342.6f, 0.35f), (359.4f, 0.3f) })
         {
             var fall = NewObject("Trickle", new Vector2(x, -15f), LayerDefault, "Props");
             AddSprite(fall, Art("fx/water.png"), -6, new Vector2(w, 24f), new Color(0.6f, 0.82f, 1f, 0.2f));
         }
-        Glow(349.5f, -27.5f, 4f, new Color(0.6f, 0.8f, 1f, 0.2f), -9);
+        Glow(349.5f, -27.5f, 4f, new Color(0.6f, 0.8f, 1f, 0.2f), -11);
 
         // ================= ヒント
         // 案内文はチュートリアルの操作説明 (キーの説明) だけ残す。呼びかけ・攻略助言・場所の説明は削除 (2026-10-03 ユーザー決定, Docs/UI/UIAssignment.md「案内文」)
 
+        // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
+        log += Depth("A1_AB") + "\n";
         return log + Finish();
     }
 }

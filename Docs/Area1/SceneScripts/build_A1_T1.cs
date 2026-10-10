@@ -42,6 +42,8 @@ public static class BuildT1
         Hint(19, -72, 27, -67, "[E] で調べる", "スティック/十字キーの ↑ で調べる", "HintInteract");
         // 案内文はチュートリアルの操作説明 (キーの説明) だけ残す。呼びかけ・攻略助言・場所の説明は削除 (2026-10-03 ユーザー決定, Docs/UI/UIAssignment.md「案内文」)
 
+        // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
+        log += Depth("A1_T1") + "\n";
         return log + Finish();
     }
 }

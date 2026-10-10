@@ -1119,9 +1119,14 @@ namespace NeverNight.StageBuild
             var size = sr.sprite.bounds.size;
             Box(go, new Vector2(size.x * 0.75f, size.y * 0.9f), false, new Vector2(sr.sprite.bounds.center.x, size.y * 0.45f));
             AddComp<SpriteFlipbook>(go, ("_frames", new Object[] { a, Art(SpeakerArt(design, "b")) }), ("_fps", 3f), ("_phase", x * 0.37f));
-            AddComp<BreakableSpeaker>(go, ("_flagId", flagId));
+            // 壊れる演出 (SpeakerBreakEffect) と壊れた後の煙のパーティクルの素材 = URP 既定の ParticlesUnlit (丸いぼかし)
+            AddComp<BreakableSpeaker>(go, ("_flagId", flagId), ("_particleMaterial", ParticleMaterial));
             return go;
         }
+
+        /// <summary>パーティクルの既定素材 (URP の ParticlesUnlit。風の線・スピーカーの爆発と煙で使う)。</summary>
+        public static Material ParticleMaterial => AssetDatabase.LoadAssetAtPath<Material>(
+            "Packages/com.unity.render-pipelines.universal/Runtime/Materials/ParticlesUnlit.mat");
 
         /// <summary>スピーカーの絵のパス (design 1〜3, state = a / b / broken)。</summary>
         public static string SpeakerArt(int design, string state) => $"{GimmickRoot}/speaker/speaker_0{design}_{state}.png";
@@ -1160,6 +1165,41 @@ namespace NeverNight.StageBuild
                 ("_gates", gateObjs.ToArray()), ("_defeatMessage", defeatMessage),
                 ("_followUpMessage", followUpMessage ?? ""), ("_followUpUnlessUpgrade", followUpUnlessRed),
                 ("_followUpUpgrade", ScissorUpgrade.Red));
+            return go;
+        }
+
+        /// <summary>グラミネ第1のボスのプレハブ (Docs/EnemySpec.md「ボス」, SceneScripts/prep_enemy_spec.cs で作成)。</summary>
+        public const string GramineBossPrefabPath = "Assets/Prefabs/Enemies/Boss_Gramine.prefab";
+
+        /// <summary>
+        /// <see cref="BossRoom"/> が置いた仮ボスを「グラミネ第1のボス」(GramineBossBehaviour) に差し替える (2026-10-10, Docs/EnemySpec.md)。
+        /// 位置・糸の上書き (_threadDropOverride) は仮ボスから引き継ぎ、BossArena._boss をつなぎ替え、
+        /// ボスの闘技場の範囲 (_arenaArea) = BossArena のトリガー、戦い方 (_mode) = mode。見た目はプレハブの仮の四角 (×2) のまま。
+        /// 返り値 = 新しいボス。
+        /// </summary>
+        public static GameObject UseGramineBoss(GameObject arena, BossFightMode mode, string name = "Boss_Gramine")
+        {
+            var ba = arena.GetComponent<BossArena>() ?? throw new ArgumentException("BossArena が無い: " + arena.name);
+            var so = new SerializedObject(ba);
+            var old = so.FindProperty("_boss").objectReferenceValue as EnemyController;
+            var pos = old != null ? old.transform.position : (Vector3)(Vector2)arena.transform.position;
+            var threadDrop = old != null ? new SerializedObject(old).FindProperty("_threadDropOverride").intValue : 0;
+            if (old != null)
+                Object.DestroyImmediate(old.gameObject);
+
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(GramineBossPrefabPath)
+                         ?? throw new InvalidOperationException(GramineBossPrefabPath + " がありません (SceneScripts/prep_enemy_spec.cs)");
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, ActiveScene);
+            go.transform.SetParent(Group("Enemies"), true);
+            go.transform.position = pos;
+            go.name = name;
+            var ec = go.GetComponent<EnemyController>();
+            if (threadDrop > 0)
+                Set(ec, "_threadDropOverride", threadDrop);
+            var gb = go.GetComponent<GramineBossBehaviour>();
+            Set(gb, "_mode", mode);
+            Set(gb, "_arenaArea", arena.GetComponent<Collider2D>());
+            Set(ba, "_boss", ec);
             return go;
         }
 
@@ -1717,8 +1757,7 @@ namespace NeverNight.StageBuild
             pr.velocityScale = 0.06f;
             pr.lengthScale = 3f;
             pr.sortingOrder = OrderGimmick + 1;
-            pr.sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(
-                "Packages/com.unity.render-pipelines.universal/Runtime/Materials/ParticlesUnlit.mat");
+            pr.sharedMaterial = ParticleMaterial;
 
             AddComp<WindArea>(go, ("_velocity", velocity), ("_groundedMultiplier", groundedMultiplier),
                 ("_pattern", gust ? 1 : 0), ("_gustOnTime", on), ("_gustOffTime", off), ("_phaseOffset", phase),
@@ -2711,7 +2750,7 @@ namespace NeverNight.StageBuild
             if (infos.Length != 1)
                 Err($"StageInfo が {infos.Length} 個 (1 個必要)");
             else if (string.IsNullOrEmpty(new SerializedObject(infos[0]).FindProperty("_areaName").stringValue))
-                Warn("StageInfo の _areaName が空 (タイトルが出ない)");
+                Ok("StageInfo: 部屋名なし (area1_layout.json の name が空。入室時はエリア名だけ、セーブの場所は空欄)");
             else
                 Ok($"StageInfo: {new SerializedObject(infos[0]).FindProperty("_areaName").stringValue}");
             foreach (var canvas in Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None))

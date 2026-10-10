@@ -136,6 +136,8 @@ public static class BuildMB1
 
         // ================= ヒント
 
+        // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
+        log += Depth("A1_MB1") + "\n";
         return log + Finish();
     }
 }
