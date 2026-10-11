@@ -22,7 +22,6 @@ public static class BuildD3
     static readonly Color Red = new Color(1f, 0.32f, 0.3f);
     const string EnemyPrefab = "Assets/Prefabs/Enemy.prefab";
     const string RatConsts = "Assets/Prefabs/Area1/EnemyConsts_A1Rat.asset";
-    const string ClingerConsts = "Assets/Prefabs/Area1/EnemyConsts_A1Clinger.asset";
 
     public const float GearR = 3.5f;       // 足場の軌道半径 (足場の上面 = 軌道上の点)
     public const float GearOmega = 20f;    // deg/s
@@ -108,18 +107,6 @@ public static class BuildD3
         Glow(x + (flip ? -0.15f : 0.15f), y + 0.05f, 1.5f, new Color(1f, 0.7f, 0.4f, 0.3f * glow), -7);
     }
 
-    // 壁に張り付く敵 (浮遊敵を壁沿いにゆっくり上下させ、近づくと飛びかかる)
-    static GameObject Clinger(string name, float x, float y, bool faceLeft)
-    {
-        var e = Enemy(x, y, true, 0.9f, false, name);
-        Set(e.GetComponent<EnemyController>(), "_consts", AssetDatabase.LoadAssetAtPath<EnemyConsts>(ClingerConsts));
-        var fp = e.GetComponent<FloatingPatrolMotion>();
-        if (fp != null) { Set(fp, "_hoverAmplitude", 2.4f); Set(fp, "_hoverFrequency", 0.7f); }
-        var sr = e.GetComponent<SpriteRenderer>();
-        if (sr != null) sr.color = new Color(0.8f, 0.95f, 0.75f);
-        return e;
-    }
-
     static WaveArena.SpawnEntry Rat(float ox, float oy, float scale = 0.6f, bool big = false) =>
         new WaveArena.SpawnEntry
         {
@@ -156,9 +143,7 @@ public static class BuildD3
         Gear("G5", new Vector2(255f, -179.5f), -GearOmega, 120f, tA);
         Gear("G6", new Vector2(249f, -188.5f), GearOmega, 0f, tB);
 
-        // ================= 壁に張り付く敵 ×2
-        Clinger("WallClingerW", 244.4f, -162.5f, false);
-        Clinger("WallClingerE", 265.6f, -182f, true);
+        // 壁に張り付く敵 ×2 は 2026-10-12 ユーザー指示で削除
 
         // ================= D3a 歯車の横穴 (床 y-135, 天井 y-131)
         Solid(270, -144, 288, -135);
