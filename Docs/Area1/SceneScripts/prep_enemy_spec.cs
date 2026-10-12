@@ -7,9 +7,9 @@ using UnityEngine;
 //   プレハブ: Assets/Prefabs/Enemies/<名前>.prefab
 //     地上 1〜4・7 = Enemy.prefab (野良ウマの絵) の Variant / 飛行 5・6 = FlyingEnemy.prefab の Variant /
 //     ボス = Enemy.prefab の Variant ×2 (地上の仮ボスと同じ仮の四角 = BossRoom の KeepPlaceholderLook と同じ処置)
-//   見た目 (絵・色) は変えない (7 ポップコーン投げだけは専用の絵 popduck + ポップコーンの爆弾 PopcornBomb.prefab にする)。部品の並び順 = CompositeEnemyBehaviour の優先度。
+//   見た目 (絵・色) は変えない (専用の絵がある 2 厚着の敵 = armadillo、7 ポップコーン投げ = popduck + ポップコーンの爆弾 PopcornBomb.prefab だけ替える)。部品の並び順 = CompositeEnemyBehaviour の優先度。
 // run_script --file Docs/Area1/SceneScripts/prep_enemy_spec.cs --entry PrepEnemySpec.Run
-//   (7 ポップコーン投げだけ作り直す: --entry PrepEnemySpec.RunPopcorn)
+//   (2 厚着の敵だけ作り直す: --entry PrepEnemySpec.RunBundled / 7 ポップコーン投げだけ: --entry PrepEnemySpec.RunPopcorn)
 public static class PrepEnemySpec
 {
     const string Dir = "Assets/Prefabs/Enemies";
@@ -41,14 +41,7 @@ public static class PrepEnemySpec
             Set(go.AddComponent<PatrolMotion>(), ("_phase", (int)EnemyPhaseFilter.SearchOnly), ("_turnAtLedge", true));
         });
 
-        // ---- 2 Bundled: 防御値が大きいだけ。発見したらプレイヤーの方へ歩く
-        Variant("Enemy_Bundled", false, bundled, go =>
-        {
-            go.AddComponent<CompositeEnemyBehaviour>();
-            Set(go.AddComponent<ChaseMotion>(), ("_phase", (int)EnemyPhaseFilter.AlertOnly), ("_stopAtLedge", true));
-            Set(go.AddComponent<PatrolMotion>(), ("_phase", (int)EnemyPhaseFilter.SearchOnly), ("_turnAtLedge", true));
-            go.AddComponent<EnemyPerception>();
-        });
+        Bundled(bundled);
 
         // ---- 3 Charger: 突進
         Variant("Enemy_Charger", false, charger, go =>
@@ -110,6 +103,30 @@ public static class PrepEnemySpec
         return Log.ToString();
     }
 
+    /// <summary>2 厚着の敵 (Bundled) だけ作る/更新する。</summary>
+    public static string RunBundled()
+    {
+        Log.Clear();
+        Bundled(Consts("Bundled", 20, 14, 1.2f, 1.2f, 6f, 2));
+        AssetDatabase.SaveAssets();
+        return Log.ToString();
+    }
+
+    // ---- 2 Bundled: 防御値が大きいだけ。発見したらプレイヤーの方へ歩く。絵 = リボンで包まれたアルマジロ
+    static void Bundled(EnemyConsts bundled)
+    {
+        var armadillo = PopcornSprite(ArmadilloArt, ArmadilloPpu, ArmadilloPivot);
+        Variant("Enemy_Bundled", false, bundled, go =>
+        {
+            go.AddComponent<CompositeEnemyBehaviour>();
+            Set(go.AddComponent<ChaseMotion>(), ("_phase", (int)EnemyPhaseFilter.AlertOnly), ("_stopAtLedge", true));
+            Set(go.AddComponent<PatrolMotion>(), ("_phase", (int)EnemyPhaseFilter.SearchOnly), ("_turnAtLedge", true));
+            go.AddComponent<EnemyPerception>();
+            // 当たり判定: 甲羅に合わせて横長 (頭は少しはみ出す)
+            UseSingleArt(go, armadillo, ArmadilloArt, new Vector2(1.4f, 1.1f));
+        });
+    }
+
     /// <summary>7 ポップコーン投げ (PopcornThrower) だけ作る/更新する。</summary>
     public static string RunPopcorn()
     {
@@ -140,30 +157,10 @@ public static class PrepEnemySpec
             Set(lob, ("_phase", (int)EnemyPhaseFilter.Always), ("_explosionMaterial", particles));
 
             // 見た目: 野良ウマの絵+アニメ → ポップコーン頭のアヒルの 1 枚絵 (左向き。アニメ無し)
-            var vis = go.transform.Find("Visual");
-            if (duck == null || vis == null)
-            {
-                Log.AppendLine($"WARN popduck の絵 ({DuckArt}) か Visual が無いので、見た目は野良ウマのまま");
+            // 当たり判定: 胴体に合わせて細く高く
+            var vis = UseSingleArt(go, duck, DuckArt, new Vector2(0.6f, 1.1f));
+            if (vis == null)
                 return;
-            }
-
-            var anim = vis.GetComponent<Animator>();
-            if (anim != null)
-                Object.DestroyImmediate(anim, true);
-            var enemyAnim = go.GetComponent<EnemyAnimator>();
-            if (enemyAnim != null)
-                Object.DestroyImmediate(enemyAnim, true);
-
-            // 絵の原点 (pivot) = 足元の中央。当たり判定の下端 (y = -0.5、床+0.6 に置いた時の接地面) に合わせる
-            vis.localPosition = new Vector3(0f, -0.5f, 0f);
-            var sr = vis.GetComponent<SpriteRenderer>();
-            sr.sprite = duck;
-            sr.flipX = false;
-            Set(go.GetComponent<EnemyController>(), ("_visualFacesLeft", true));
-            // 当たり判定: 胴体に合わせて細く高く。下端は今までどおり -0.5 (エリア1 の配置 = 床+0.6 で接地)
-            var box = go.GetComponent<BoxCollider2D>();
-            box.size = new Vector2(0.6f, 1.1f);
-            box.offset = new Vector2(0f, 0.05f);
             Set(lob, ("_squashTarget", vis), ("_muzzleOffset", new Vector2(0.25f, 0.2f)));
             if (bomb != null)
                 Set(lob, ("_bombPrefab", bomb));
@@ -178,6 +175,45 @@ public static class PrepEnemySpec
     static readonly Vector2 DuckPivot = new(0.539f, 0.139f);
     const string BombArtDir = "Assets/LocalData/Character/popbomb";
     const string BombPrefabPath = Dir + "/PopcornBomb.prefab";
+
+    // ---- 厚着の敵 (Bundled) の絵 = アルマジロ (2026-10-12 ユーザー支給「アルマジロ.png」→ armadillo.png、余白を切った 2916x2104)
+    const string ArmadilloArt = "Assets/LocalData/Character/armadillo.png";
+    // 高さ 2104px → 1.36 units (野良ウマ 1.66 より少し低く、横に広い 1.88)
+    const float ArmadilloPpu = 1550f;
+    // 足元の中央 (足の下端 y≈2030px、甲羅の中央 x≈1460px)
+    static readonly Vector2 ArmadilloPivot = new(0.5f, 0.035f);
+
+    /// <summary>
+    /// 地上の敵 (Enemy.prefab の Variant) の見た目を、野良ウマの絵+アニメから 1 枚絵 (左向き・アニメ無し) に替える。
+    /// 絵の原点 (pivot) = 足元の中央を当たり判定の下端 (y = -0.5、床+0.6 に置いた時の接地面) に合わせ、
+    /// 当たり判定は下端 -0.5 のまま colliderSize にする。絵か Visual が無ければ何もせず null。
+    /// </summary>
+    static Transform UseSingleArt(GameObject go, Sprite sprite, string artPath, Vector2 colliderSize)
+    {
+        var vis = go.transform.Find("Visual");
+        if (sprite == null || vis == null)
+        {
+            Log.AppendLine($"WARN {go.name}: 絵 ({artPath}) か Visual が無いので、見た目は野良ウマのまま");
+            return null;
+        }
+
+        var anim = vis.GetComponent<Animator>();
+        if (anim != null)
+            Object.DestroyImmediate(anim, true);
+        var enemyAnim = go.GetComponent<EnemyAnimator>();
+        if (enemyAnim != null)
+            Object.DestroyImmediate(enemyAnim, true);
+
+        vis.localPosition = new Vector3(0f, -0.5f, 0f);
+        var sr = vis.GetComponent<SpriteRenderer>();
+        sr.sprite = sprite;
+        sr.flipX = false;
+        Set(go.GetComponent<EnemyController>(), ("_visualFacesLeft", true));
+        var box = go.GetComponent<BoxCollider2D>();
+        box.size = colliderSize;
+        box.offset = new Vector2(0f, colliderSize.y * 0.5f - 0.5f);
+        return vis;
+    }
 
     /// <summary>絵を Sprite (単体・指定 PPU・指定 pivot) で取り込み直して返す (設定が同じなら何もしない)。</summary>
     static Sprite PopcornSprite(string path, float ppu, Vector2 pivot)

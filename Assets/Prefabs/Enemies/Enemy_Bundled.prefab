@@ -16,6 +16,22 @@ PrefabInstance:
       propertyPath: m_Name
       value: Enemy_Bundled
       objectReference: {fileID: 0}
+    - target: {fileID: 3148904069268005744, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3257292380262061806, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+      propertyPath: m_Size.x
+      value: 1.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 3257292380262061806, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+      propertyPath: m_Size.y
+      value: 1.1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3257292380262061806, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+      propertyPath: m_Offset.y
+      value: 0.050000012
+      objectReference: {fileID: 0}
     - target: {fileID: 5486051141972722456, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -56,7 +72,13 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    - target: {fileID: 8832130178461730246, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: c54c70f44cca5bc4bac06cbe11cd829a, type: 3}
+    m_RemovedComponents:
+    - {fileID: 8864540780939529004, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+    - {fileID: 3565835543605701006, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
@@ -108,6 +130,10 @@ MonoBehaviour:
   _groundLayer:
     serializedVersion: 2
     m_Bits: 0
+  _keepDistance: 0
+  _retreatDistance: 0
+  _retreatSpeed: 0
+  _spacingTolerance: 0.4
 --- !u!114 &7627003872680988905
 MonoBehaviour:
   m_ObjectHideFlags: 0
