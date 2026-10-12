@@ -28,5 +28,6 @@ public class GameLifetimeScope : LifetimeScope
         builder.Register(_ => new PlayerItemInventoryModel(consts), Lifetime.Singleton);
         builder.Register<PlayerAttackLoadoutModel>(Lifetime.Singleton);
         builder.Register<PlayerRuntime>(Lifetime.Singleton);
+        builder.Register<BossBattleModel>(Lifetime.Singleton);
     }
 }

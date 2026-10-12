@@ -178,6 +178,7 @@ public static class BuildAB
             "グラミネを倒した! 鳴りやまなかった音楽が、ふっと止んだ……",
             threadDrop: 100); // 糸 100 本 (→ 30 粒で闘技場いっぱいに噴き出す。PendingChanges 25)
         var boss = UseGramineBoss(arena, BossFightMode.FullFight);
+        Set(arena.GetComponent<BossArena>(), "_hpFrame", BossHpFrame.Last); // HUD のボス HP バーは 2 戦目の枠 (lasthp)
         var ec = boss.GetComponent<EnemyController>();
 
         // ---- 前半: 浮遊する音符 (通常ジャンプで乗り継げる高さ: 床 -60 → -57 → -54 → -51)

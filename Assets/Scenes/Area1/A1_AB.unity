@@ -210762,6 +210762,7 @@ MonoBehaviour:
   _followUpMessage: 
   _followUpUnlessUpgrade: 0
   _followUpUpgrade: 2
+  _hpFrame: 1
 --- !u!4 &1833190273
 Transform:
   m_ObjectHideFlags: 0
