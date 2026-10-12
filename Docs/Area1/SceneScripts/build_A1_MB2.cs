@@ -1,11 +1,14 @@
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using static NeverNight.StageBuild.Area1StageBuilder;
 
 // A1_MB2 「歯車の重馬」(MB2 x378..438 y-207..-168) + 「第3スピーカー」(S3 x441..462 y-201..-180) + 搬出エレベーター (E1, 天井の縦坑 x408..417)
 // 西 = 整備員の休憩所 A1_D4 (x375..378, 床 y-198) / 上 = 搬出エレベーター → A1_C1 の床下 (TransportInteractable, 要 A1_ElevatorDeep)
 // MB2: 床 y-198 の真ん中に、床に半分埋まった大歯車 (中心 (408,-209), 縁 R13 = 床から 2 盛り上がったこぶ)。
 //      縁は歯車と一緒に回る踏み板 20 枚 (1 つの Kinematic の剛体の子の当たり = 傾きながら東へ流れる足場)。
-//      中ボス = 地上型の仮ボス (Enemy ×2 + Heavy, 真鍮色、腹に歯車) がこぶの上を行き来する。足場の傾きと流れを読みながら戦う。
+//      中ボス = 「歯車の重馬」(Boss_Horse.prefab = HorseBossBehaviour, 絵 bigHorse ×2、腹に歯車。先に prep_midboss_horse.cs を流しておくこと)。
+//      こぶの上も駆け回り、突進・往復突進・飛び越し後ろ蹴り・フェイント突進・竿立ち踏みつけで翻弄する。足場の傾きと流れを読みながら戦う。
 //      回避用に左右の配管 (y-195 / -192) と、こぶの上の搬出エレベーターの乗り場の鉄骨 (y-189)。
 //      BossArena A1_MidBossLower: 入ると西の口が閉じる。撃破で東の扉 (FlagDoor) が上がって S3 へ。
 // S3: 床 y-195 の小部屋。スピーカー③ (A1_Speaker3) → FlagActivator が A1_ElevatorDeep を立てる → 縦坑のかごが乗り場まで下りてくる。
@@ -91,6 +94,38 @@ public static class BuildMB2
         return root;
     }
 
+    /// <summary>中ボス「歯車の重馬」のプレハブ (Docs/Area1/SceneScripts/prep_midboss_horse.cs で作成)。</summary>
+    const string HorseBossPrefabPath = "Assets/Prefabs/Enemies/Boss_Horse.prefab";
+
+    /// <summary>
+    /// BossRoom が置いた仮ボスを「歯車の重馬」(Boss_Horse.prefab = HorseBossBehaviour) に差し替える (UseGramineBoss と同じ手順)。
+    /// 位置・名前 (撃破記録の ID になる)・糸の上書き (_threadDropOverride) は仮ボスから引き継ぎ、BossArena._boss をつなぎ替え、
+    /// ボスの闘技場の範囲 (_arenaArea) = BossArena のトリガー。返り値 = 新しいボス。
+    /// </summary>
+    static GameObject UseHorseBoss(GameObject arena)
+    {
+        var ba = arena.GetComponent<BossArena>() ?? throw new System.ArgumentException("BossArena が無い: " + arena.name);
+        var old = new SerializedObject(ba).FindProperty("_boss").objectReferenceValue as EnemyController;
+        var pos = old != null ? old.transform.position : arena.transform.position;
+        var name = old != null ? old.name : "Boss_A1_MidBossLower";
+        var threadDrop = old != null ? new SerializedObject(old).FindProperty("_threadDropOverride").intValue : 0;
+        if (old != null)
+            Object.DestroyImmediate(old.gameObject);
+
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(HorseBossPrefabPath)
+                     ?? throw new System.InvalidOperationException(HorseBossPrefabPath + " がありません (SceneScripts/prep_midboss_horse.cs)");
+        var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, SceneManager.GetActiveScene());
+        go.transform.SetParent(Group("Enemies"), true);
+        go.transform.position = pos;
+        go.name = name;
+        var ec = go.GetComponent<EnemyController>();
+        if (threadDrop > 0)
+            Set(ec, "_threadDropOverride", threadDrop);
+        Set(go.GetComponent<HorseBossBehaviour>(), "_arenaArea", arena.GetComponent<Collider2D>());
+        Set(ba, "_boss", ec);
+        return go;
+    }
+
     public static string Run()
     {
         var log = BuildBase("A1_MB2");
@@ -118,7 +153,8 @@ public static class BuildMB2
             "ハサミがかすかに震えた。……拠点の鍛冶屋なら、何か分かるかもしれない", followUpUnlessRed: true,
             threadDrop: 25,    // 中ボスの糸 25 本 → 12 粒 (PendingChanges 18)
             groundBossArt: "Assets/LocalData/Character/bigHorse.png");   // 絵 = bigHorse (大きな馬。PendingChanges 43。取り込み設定は prep_newart.cs)
-        var boss = GameObject.Find("Boss_A1_MidBossLower");
+        // 仮ボス (Enemy ×2 + Heavy) を「歯車の重馬」(HorseBossBehaviour, 2026-10-12 作り直し) に差し替える。位置・糸・名前は引き継ぐ
+        var boss = UseHorseBoss(arena);
         if (boss != null)
         {
             // 脇腹の歯車 (「歯車の重馬」の印)。Visual の子にして弾み・傾きに付いていく
@@ -188,6 +224,8 @@ public static class BuildMB2
 
         // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
         log += Depth("A1_MB2") + "\n";
+        // 雰囲気 (§15): 作り直しで消えないよう StageAtmosphere をレシピで置く (2026-10-12)
+        log += Atmosphere("A1_MB2") + "\n";
         return log + Finish();
     }
 }
