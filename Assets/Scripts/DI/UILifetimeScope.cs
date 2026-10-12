@@ -13,6 +13,7 @@ public class UILifetimeScope : LifetimeScope
 {
     [Header("HUD Views (未割り当ての項目はスキップ)")]
     [SerializeField] private PlayerHpBarView _hpBarView;
+    [SerializeField] private BossHpBarView _bossHpBarView;
     [SerializeField] private HealGaugeView _healGaugeView;
     [SerializeField] private AttackLoadoutView _attackLoadoutView;
     [SerializeField] private SpecialCooldownView _specialCooldownView;
@@ -30,6 +31,12 @@ public class UILifetimeScope : LifetimeScope
         {
             builder.RegisterComponent(_hpBarView).As<IPlayerHpBarView>();
             builder.RegisterEntryPoint<PlayerHpBarPresenter>();
+        }
+
+        if (_bossHpBarView != null)
+        {
+            builder.RegisterComponent(_bossHpBarView).As<IBossHpBarView>();
+            builder.RegisterEntryPoint<BossHpBarPresenter>();
         }
 
         if (_healGaugeView != null)
