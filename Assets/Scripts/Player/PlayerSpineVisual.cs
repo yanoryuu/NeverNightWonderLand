@@ -7,7 +7,8 @@ using UnityEngine;
 /// 本クラスはそのパラメータを読み取り、対応する Spine アニメーションへ振り分ける。
 /// 攻撃 → ダッシュ → 空中 → 地上 の優先順位で判定する (Warrior.controller の AnyState 遷移と同じ)。
 /// Animator のパラメータで足りない情報 (近接コンボの段・二段ジャンプ) だけは <see cref="PlayerController"/> から直接読む。
-/// ・近接コンボ: 段ごとに攻撃モーションを切り替え、振りの長さに合わせて再生速度を変える
+/// ・近接コンボ: 段ごとに攻撃モーションを切り替え、振りの部分を振りの長さに合わせた速さで再生する。
+///   残りの余韻は攻撃後に止まっていれば等速で流す (動き出せば途中で切り替える)
 /// ・空中: 上昇 → 頂点 → 落下、二段ジャンプは専用モーション
 /// ・止まった状態で着地したら着地モーションを 1 回流す (動き出せば途中で切り替える)
 ///
@@ -68,8 +69,15 @@ public class PlayerSpineVisual : MonoBehaviour
     [Tooltip("近接コンボのモーションへ切り替える時のブレンド時間 (sec)。振りが短いので短めにする")]
     [SerializeField] private float _attackMixDuration = 0.04f;
 
-    [Tooltip("近接コンボのモーションを、振りの長さ (攻撃プロファイルの Duration) に収まる速さで再生する")]
+    [Tooltip("近接コンボのモーションの「振り」の部分を、振りの長さ (攻撃プロファイルの Duration) に収まる速さで再生する")]
     [SerializeField] private bool _fitAttackToSwing = true;
+
+    [Tooltip("近接コンボの段ごとの「振り終わり」の時刻 (sec)。攻撃中はここまでを Duration に収めて再生し、" +
+             "残り (余韻) は攻撃が終わった後に止まっていれば等速で流す。0 以下ならモーション全体を振りとみなす")]
+    [SerializeField] private float[] _comboSwingEnds = { 0.27f, 0.37f, 0.3f };
+
+    [Tooltip("近接コンボのモーションの再生速度の上限 (倍)。0 以下なら上限なし。振りが終わりきらなくても、続きは余韻として流れる")]
+    [SerializeField] private float _maxAttackTimeScale = 2f;
 
     [Tooltip("この時間 (sec) 以上空中にいてから着地した時だけ着地モーションを流す。小さな段差で毎回流れないように")]
     [SerializeField] private float _landingMinAirTime = 0.2f;
@@ -98,6 +106,8 @@ public class PlayerSpineVisual : MonoBehaviour
     private float _airTime;
     private bool _landingActive;      // 着地モーションを流している間 true
     private bool _doubleJumpActive;   // 二段ジャンプから落下に移るまで true
+    private bool _inComboSwing;       // 直前のフレームで近接コンボを振っていたら true
+    private bool _attackTailActive;   // 攻撃の余韻を流している間 true
     private int _lastSwingCount;
     private int _lastDoubleJumpCount;
 
@@ -179,11 +189,25 @@ public class PlayerSpineVisual : MonoBehaviour
         var mix = _mixDuration;
 
         var swingIndex = _player != null ? _player.MeleeSwingIndex : -1;
-        if (swingIndex >= 0 && _comboAttackAnimations != null && _comboAttackAnimations.Length > 0)
+        var inComboSwing = swingIndex >= 0 && _comboAttackAnimations != null && _comboAttackAnimations.Length > 0;
+
+        // 振り終えた瞬間: 攻撃モーションの続き (余韻) を等速に戻す。止まっていれば待機の代わりに最後まで流す
+        if (!inComboSwing && _inComboSwing)
         {
-            wanted = _comboAttackAnimations[swingIndex % _comboAttackAnimations.Length];
+            _attackTailActive = true;
+            var current = _skeleton.AnimationState.GetTrack(0);
+            if (current != null && current.Animation.Name == _currentAnimation)
+                current.TimeScale = 1f;
+        }
+        _inComboSwing = inComboSwing;
+
+        if (inComboSwing)
+        {
+            var comboSlot = swingIndex % _comboAttackAnimations.Length;
+            wanted = _comboAttackAnimations[comboSlot];
             mix = _attackMixDuration;
             _landingActive = false;
+            _attackTailActive = false;
 
             // 段が変わったら同じモーションでも頭から振り直す
             if (_player.MeleeSwingCount != _lastSwingCount)
@@ -193,35 +217,44 @@ public class PlayerSpineVisual : MonoBehaviour
             }
 
             if (_fitAttackToSwing && _player.MeleeSwingDuration > 0f)
-            {
-                var clip = _skeleton.Skeleton?.Data?.FindAnimation(wanted);
-                if (clip != null && clip.Duration > 0f)
-                    timeScale = clip.Duration / _player.MeleeSwingDuration;
-            }
+                timeScale = ResolveSwingTimeScale(wanted, comboSlot, _player.MeleeSwingDuration);
         }
         else if (isAttacking)
         {
             wanted = _attackAnimation;
             _landingActive = false;
+            _attackTailActive = false;
         }
         else if (isDashing)
         {
             wanted = _dashAnimation;
             _landingActive = false;
+            _attackTailActive = false;
         }
         else if (!isGrounded)
         {
             wanted = ResolveAirborne(yVelocity);
+            _attackTailActive = false;
         }
         else if (speed > _runSpeedThreshold)
         {
             wanted = _runAnimation;
             _landingActive = false;
+            _attackTailActive = false;
         }
         else
         {
             wanted = _idleAnimation;
-            if (_landingActive && Exists(_landingAnimation))
+            if (_attackTailActive)
+            {
+                // 余韻を流し終えたら待機へ戻す
+                var current = _skeleton.AnimationState.GetTrack(0);
+                if (current != null && current.Animation.Name == _currentAnimation && !current.IsComplete)
+                    wanted = _currentAnimation;
+                else
+                    _attackTailActive = false;
+            }
+            else if (_landingActive && Exists(_landingAnimation))
             {
                 // 着地モーションを流し終えたら待機へ戻す
                 var current = _skeleton.AnimationState.GetTrack(0);
@@ -245,6 +278,26 @@ public class PlayerSpineVisual : MonoBehaviour
         }
 
         ApplyAnimation(wanted, frozen, immediate: false, restart, timeScale, mix);
+    }
+
+    /// <summary>
+    /// 近接コンボのモーションの再生速度。振り終わりまでを振りの長さに収める (余韻は攻撃後に等速で流す)。
+    /// 等速より遅くはせず、上限 (<see cref="_maxAttackTimeScale"/>) を超える分は余韻に回す。
+    /// </summary>
+    private float ResolveSwingTimeScale(string animationName, int comboSlot, float swingDuration)
+    {
+        var clip = _skeleton.Skeleton?.Data?.FindAnimation(animationName);
+        if (clip == null || clip.Duration <= 0f)
+            return 1f;
+
+        var swingEnd = clip.Duration;
+        if (_comboSwingEnds != null && comboSlot < _comboSwingEnds.Length && _comboSwingEnds[comboSlot] > 0f)
+            swingEnd = Mathf.Min(_comboSwingEnds[comboSlot], clip.Duration);
+
+        var timeScale = Mathf.Max(1f, swingEnd / swingDuration);
+        if (_maxAttackTimeScale > 0f)
+            timeScale = Mathf.Min(timeScale, _maxAttackTimeScale);
+        return timeScale;
     }
 
     /// <summary>空中のモーション。二段ジャンプ → 上昇 → 頂点 → 落下 の順で、骨格に無いものは次の候補へ落とす。</summary>
