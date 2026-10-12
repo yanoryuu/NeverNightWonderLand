@@ -6,6 +6,7 @@ using UnityEngine.UI;
 /// 敵頭上のステータス表示 (World Space Canvas)。
 /// 防御値ゲージ(白)・HPゲージ(赤)・ブレイク中の「BREAK!」表示を敵の状態に追従させる。
 /// 敵 Prefab の子として配置され、敵の破棄と共に消える。
+/// ボス (BossArena の _boss) は HP を HUD のボス HP バーで出すので、HP ゲージ (赤) を HideHpGauge で隠す。
 /// </summary>
 public class EnemyStatusGaugeView : MonoBehaviour
 {
@@ -22,6 +23,21 @@ public class EnemyStatusGaugeView : MonoBehaviour
     [SerializeField] private GameObject _breakLabel;
 
     private readonly CompositeDisposable _disposables = new();
+
+    /// <summary>表示している敵 (未設定なら親の EnemyController)。</summary>
+    public EnemyController Target => _enemy != null ? _enemy : GetComponentInParent<EnemyController>();
+
+    /// <summary>HP ゲージ (赤, 背景ごと) を隠す。防御値ゲージとブレイク表示は残す。</summary>
+    public void HideHpGauge()
+    {
+        if (_hpFill == null)
+            return;
+
+        // 背景 (HpBg) ごと隠す。フィルが直下に置かれている時はフィルだけ
+        var parent = _hpFill.transform.parent;
+        var target = parent != null && parent != transform ? parent : _hpFill.transform;
+        target.gameObject.SetActive(false);
+    }
 
     private void Start()
     {

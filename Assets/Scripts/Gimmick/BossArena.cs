@@ -10,7 +10,8 @@ using VContainer.Unity;
 /// ゲートは非アクティブで配置しておき、入場時に有効化される。
 /// 任意: _followUpMessage を設定すると、撃破通知に続けてもう 1 つ通知を出す (世界観の一文。例: 鍛冶屋への誘導)。
 /// _followUpUnlessUpgrade を true にすると、プレイヤーが _followUpUpgrade のハサミを既に持っている時は出さない。
-/// 入場から撃破 (撤退) までの間、BossBattleModel にボスを登録して HUD の画面下にボス HP バーを出す (枠は _hpFrame)。
+/// 入場から撃破 (撤退) までの間、BossBattleModel にボスを登録して HUD の画面上にボス HP バーを出す (枠は _hpFrame)。
+/// HP は HUD に出すので、ボス本人の頭上の HP ゲージ (赤) は隠す (防御値ゲージは残す。手下の頭上ゲージはそのまま)。
 /// </summary>
 [RequireComponent(typeof(Collider2D))]
 public class BossArena : MonoBehaviour
@@ -66,6 +67,13 @@ public class BossArena : MonoBehaviour
         _boss.OnDied += OnBossDied;
         // 撤退 (倒れずに飛び去る。グラミネ第1のボスの 1 戦目) も撃破と同じく勝ち扱いにする
         _boss.OnRetreated += OnBossDied;
+
+        // ボスの HP は HUD のバーに出すので、頭上の赤いゲージは二重になる。ボス本人のゲージだけ隠す
+        foreach (var gauge in _boss.GetComponentsInChildren<EnemyStatusGaugeView>(true))
+        {
+            if (gauge.Target == _boss)
+                gauge.HideHpGauge();
+        }
 
         // ボスの糸は闘技場 (このトリガーの範囲) いっぱいに散らす (PendingChanges 25)
         var b = GetComponent<Collider2D>().bounds;
