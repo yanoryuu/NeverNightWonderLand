@@ -63928,99 +63928,99 @@ MonoBehaviour:
   _flagId: A1_RatNest
   _waves:
   - Spawns:
-    - Prefab: {fileID: 1509248326331450344, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+    - Prefab: {fileID: 4737414842257745952, guid: c45ffa47b03572c44a52ed4b0a870220, type: 3}
       Consts: {fileID: 11400000, guid: dfcba8331318ed84ba6d4a4de2bc392a, type: 2}
-      Tint: {r: 0.72, g: 0.66, b: 0.6, a: 1}
+      Tint: {r: 1, g: 1, b: 1, a: 1}
       Point: {fileID: 0}
       Offset: {x: -7, y: -5.8}
       Scale: 0.6
-    - Prefab: {fileID: 1509248326331450344, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+    - Prefab: {fileID: 4737414842257745952, guid: c45ffa47b03572c44a52ed4b0a870220, type: 3}
       Consts: {fileID: 11400000, guid: dfcba8331318ed84ba6d4a4de2bc392a, type: 2}
-      Tint: {r: 0.72, g: 0.66, b: 0.6, a: 1}
+      Tint: {r: 1, g: 1, b: 1, a: 1}
       Point: {fileID: 0}
       Offset: {x: -1, y: -5.8}
       Scale: 0.6
-    - Prefab: {fileID: 1509248326331450344, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+    - Prefab: {fileID: 4737414842257745952, guid: c45ffa47b03572c44a52ed4b0a870220, type: 3}
       Consts: {fileID: 11400000, guid: dfcba8331318ed84ba6d4a4de2bc392a, type: 2}
-      Tint: {r: 0.72, g: 0.66, b: 0.6, a: 1}
+      Tint: {r: 1, g: 1, b: 1, a: 1}
       Point: {fileID: 0}
       Offset: {x: 5, y: -5.8}
       Scale: 0.6
-    - Prefab: {fileID: 1509248326331450344, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+    - Prefab: {fileID: 4737414842257745952, guid: c45ffa47b03572c44a52ed4b0a870220, type: 3}
       Consts: {fileID: 11400000, guid: dfcba8331318ed84ba6d4a4de2bc392a, type: 2}
-      Tint: {r: 0.72, g: 0.66, b: 0.6, a: 1}
+      Tint: {r: 1, g: 1, b: 1, a: 1}
       Point: {fileID: 0}
       Offset: {x: 9, y: -5.8}
       Scale: 0.6
     Preplaced: []
     Delay: 1
   - Spawns:
-    - Prefab: {fileID: 1509248326331450344, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+    - Prefab: {fileID: 4737414842257745952, guid: c45ffa47b03572c44a52ed4b0a870220, type: 3}
       Consts: {fileID: 11400000, guid: dfcba8331318ed84ba6d4a4de2bc392a, type: 2}
-      Tint: {r: 0.72, g: 0.66, b: 0.6, a: 1}
+      Tint: {r: 1, g: 1, b: 1, a: 1}
       Point: {fileID: 0}
       Offset: {x: -6.5, y: -1.8}
       Scale: 0.6
-    - Prefab: {fileID: 1509248326331450344, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+    - Prefab: {fileID: 4737414842257745952, guid: c45ffa47b03572c44a52ed4b0a870220, type: 3}
       Consts: {fileID: 11400000, guid: dfcba8331318ed84ba6d4a4de2bc392a, type: 2}
-      Tint: {r: 0.72, g: 0.66, b: 0.6, a: 1}
+      Tint: {r: 1, g: 1, b: 1, a: 1}
       Point: {fileID: 0}
       Offset: {x: 6, y: -1.8}
       Scale: 0.6
-    - Prefab: {fileID: 1509248326331450344, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+    - Prefab: {fileID: 4737414842257745952, guid: c45ffa47b03572c44a52ed4b0a870220, type: 3}
       Consts: {fileID: 11400000, guid: dfcba8331318ed84ba6d4a4de2bc392a, type: 2}
-      Tint: {r: 0.72, g: 0.66, b: 0.6, a: 1}
+      Tint: {r: 1, g: 1, b: 1, a: 1}
       Point: {fileID: 0}
       Offset: {x: 0, y: 1.6}
       Scale: 0.6
-    - Prefab: {fileID: 1509248326331450344, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+    - Prefab: {fileID: 4737414842257745952, guid: c45ffa47b03572c44a52ed4b0a870220, type: 3}
       Consts: {fileID: 11400000, guid: dfcba8331318ed84ba6d4a4de2bc392a, type: 2}
-      Tint: {r: 0.72, g: 0.66, b: 0.6, a: 1}
+      Tint: {r: 1, g: 1, b: 1, a: 1}
       Point: {fileID: 0}
       Offset: {x: -3, y: -5.8}
       Scale: 0.6
-    - Prefab: {fileID: 1509248326331450344, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+    - Prefab: {fileID: 4737414842257745952, guid: c45ffa47b03572c44a52ed4b0a870220, type: 3}
       Consts: {fileID: 11400000, guid: dfcba8331318ed84ba6d4a4de2bc392a, type: 2}
-      Tint: {r: 0.72, g: 0.66, b: 0.6, a: 1}
+      Tint: {r: 1, g: 1, b: 1, a: 1}
       Point: {fileID: 0}
       Offset: {x: 8, y: -5.8}
       Scale: 0.6
     Preplaced: []
     Delay: 1.5
   - Spawns:
-    - Prefab: {fileID: 1509248326331450344, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+    - Prefab: {fileID: 4737414842257745952, guid: c45ffa47b03572c44a52ed4b0a870220, type: 3}
       Consts: {fileID: 11400000, guid: 6305099dcf7671f45a2cc923660c574c, type: 2}
-      Tint: {r: 0.75, g: 0.62, b: 0.6, a: 1}
+      Tint: {r: 1, g: 1, b: 1, a: 1}
       Point: {fileID: 0}
       Offset: {x: 2, y: -5.8}
       Scale: 1.1
-    - Prefab: {fileID: 1509248326331450344, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+    - Prefab: {fileID: 4737414842257745952, guid: c45ffa47b03572c44a52ed4b0a870220, type: 3}
       Consts: {fileID: 11400000, guid: dfcba8331318ed84ba6d4a4de2bc392a, type: 2}
-      Tint: {r: 0.72, g: 0.66, b: 0.6, a: 1}
+      Tint: {r: 1, g: 1, b: 1, a: 1}
       Point: {fileID: 0}
       Offset: {x: -8, y: -5.8}
       Scale: 0.6
-    - Prefab: {fileID: 1509248326331450344, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+    - Prefab: {fileID: 4737414842257745952, guid: c45ffa47b03572c44a52ed4b0a870220, type: 3}
       Consts: {fileID: 11400000, guid: dfcba8331318ed84ba6d4a4de2bc392a, type: 2}
-      Tint: {r: 0.72, g: 0.66, b: 0.6, a: 1}
+      Tint: {r: 1, g: 1, b: 1, a: 1}
       Point: {fileID: 0}
       Offset: {x: -4, y: -5.8}
       Scale: 0.6
-    - Prefab: {fileID: 1509248326331450344, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+    - Prefab: {fileID: 4737414842257745952, guid: c45ffa47b03572c44a52ed4b0a870220, type: 3}
       Consts: {fileID: 11400000, guid: dfcba8331318ed84ba6d4a4de2bc392a, type: 2}
-      Tint: {r: 0.72, g: 0.66, b: 0.6, a: 1}
+      Tint: {r: 1, g: 1, b: 1, a: 1}
       Point: {fileID: 0}
       Offset: {x: 8, y: -5.8}
       Scale: 0.6
-    - Prefab: {fileID: 1509248326331450344, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+    - Prefab: {fileID: 4737414842257745952, guid: c45ffa47b03572c44a52ed4b0a870220, type: 3}
       Consts: {fileID: 11400000, guid: dfcba8331318ed84ba6d4a4de2bc392a, type: 2}
-      Tint: {r: 0.72, g: 0.66, b: 0.6, a: 1}
+      Tint: {r: 1, g: 1, b: 1, a: 1}
       Point: {fileID: 0}
       Offset: {x: -6.5, y: -1.8}
       Scale: 0.6
-    - Prefab: {fileID: 1509248326331450344, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+    - Prefab: {fileID: 4737414842257745952, guid: c45ffa47b03572c44a52ed4b0a870220, type: 3}
       Consts: {fileID: 11400000, guid: dfcba8331318ed84ba6d4a4de2bc392a, type: 2}
-      Tint: {r: 0.72, g: 0.66, b: 0.6, a: 1}
+      Tint: {r: 1, g: 1, b: 1, a: 1}
       Point: {fileID: 0}
       Offset: {x: 6, y: -1.8}
       Scale: 0.6

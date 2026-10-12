@@ -9,7 +9,8 @@ using UnityEngine;
 //     ボス = Enemy.prefab の Variant ×2 (地上の仮ボスと同じ仮の四角 = BossRoom の KeepPlaceholderLook と同じ処置)
 //   見た目 (絵・色) は変えない (専用の絵がある 2 厚着の敵 = armadillo、7 ポップコーン投げ = popduck + ポップコーンの爆弾 PopcornBomb.prefab だけ替える)。部品の並び順 = CompositeEnemyBehaviour の優先度。
 // run_script --file Docs/Area1/SceneScripts/prep_enemy_spec.cs --entry PrepEnemySpec.Run
-//   (2 厚着の敵だけ作り直す: --entry PrepEnemySpec.RunBundled / 7 ポップコーン投げだけ: --entry PrepEnemySpec.RunPopcorn)
+//   (2 厚着の敵だけ作り直す: --entry PrepEnemySpec.RunBundled / 7 ポップコーン投げだけ: --entry PrepEnemySpec.RunPopcorn /
+//    ネズミの巣のネズミ (Enemy_Rat): --entry PrepEnemySpec.RunRat。先に SceneScripts/prep_consts_D.cs で定数を作っておく)
 public static class PrepEnemySpec
 {
     const string Dir = "Assets/Prefabs/Enemies";
@@ -127,6 +128,22 @@ public static class PrepEnemySpec
         });
     }
 
+    /// <summary>
+    /// ネズミ (A1_D3 のネズミの巣 = WaveArena A1_RatNest で湧く小ネズミ・大ネズミ) のプレハブを作る/更新する。
+    /// うごきは Enemy.prefab のまま (部品を足さない)。強さは湧かせる側 (build_A1_D3.cs の Rat()) が定数で上書きし、大きさも Scale で変える
+    /// (小ネズミ ×0.6 = 高さ約 0.8 / 大ネズミ ×1.1 = 高さ約 1.46)。
+    /// </summary>
+    public static string RunRat()
+    {
+        Log.Clear();
+        var rat = PopcornSprite(RatArt, RatPpu, RatPivot);
+        var consts = AssetDatabase.LoadAssetAtPath<EnemyConsts>("Assets/Prefabs/Area1/EnemyConsts_A1Rat.asset");
+        // 当たり判定: 胴体に合わせて横長 (鼻先・しっぽ・ひげははみ出す)
+        Variant("Enemy_Rat", false, consts, go => UseSingleArt(go, rat, RatArt, new Vector2(1.0f, 0.9f)));
+        AssetDatabase.SaveAssets();
+        return Log.ToString();
+    }
+
     /// <summary>7 ポップコーン投げ (PopcornThrower) だけ作る/更新する。</summary>
     public static string RunPopcorn()
     {
@@ -182,6 +199,13 @@ public static class PrepEnemySpec
     const float ArmadilloPpu = 1550f;
     // 足元の中央 (足の下端 y≈2030px、甲羅の中央 x≈1460px)
     static readonly Vector2 ArmadilloPivot = new(0.5f, 0.035f);
+
+    // ---- ネズミの絵 (2026-10-12 ユーザー支給「ネズミ.png」→ rat.png、余白を切った 2650x1593、左向き)
+    const string RatArt = "Assets/LocalData/Character/rat.png";
+    // 高さ 1593px → 1.33 units (×1 の時。小ネズミ ×0.6 で約 0.8)
+    const float RatPpu = 1200f;
+    // 足元 = 胴体の下端の中央 (x≈1335px, y≈1577px)
+    static readonly Vector2 RatPivot = new(0.504f, 0.01f);
 
     /// <summary>
     /// 地上の敵 (Enemy.prefab の Variant) の見た目を、野良ウマの絵+アニメから 1 枚絵 (左向き・アニメ無し) に替える。

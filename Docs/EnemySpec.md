@@ -1,4 +1,4 @@
-# 敵の挙動仕様 (雑魚7種 + グラミネ第1のボス)
+# 敵の挙動仕様 (雑魚7種 + ネズミ + グラミネ第1のボス)
 
 2026-10-10 ユーザーと決定。ボスの元資料 = タスク表 https://docs.google.com/spreadsheets/d/1d6dfv9uyjigFStk4ztBUUFEw7dfQUJ-u3G9WEV5srT0 (タブ「タスク」)。
 数値はたたき台。基準 = プレイヤー: 歩き 8 / ダッシュ 20 / ジャンプ高さ 3.33 (二段 6.63) / HP 10。
@@ -58,6 +58,10 @@
 - 再使用まで 3 秒 (投げてから)。被弾・ブレイクで予備動作は中断。
 - HP 10 / 防御値 3 / 接触ダメージ 1 / 巡回速さ 1.5 / 後ずさり速さ 2。
 - 実装: `Enemy_PopcornThrower.prefab` = `EnemyPerception` + `ChaseMotion` (間合い `_keepDistance` 6 / `_retreatDistance` 3 / `_retreatSpeed` 2) + `PatrolMotion` + `EnemyLobAction` (ポップコーン = `EnemyLobBomb`)。
+
+### ネズミ (A1_D3 のネズミの巣で湧く)
+- うごきは基本の地上の敵 (Enemy.prefab) のまま。小ネズミ = ×0.6・Rat 定数 (HP3 / 防御1)、大ネズミ = ×1.1・Heavy 定数。湧き方は `Docs/Area1/SceneBuildGuide.md` の A1_D3。
+- 見た目 = `Assets/LocalData/Character/rat.png` (2026-10-12 デザイナー支給、左向きの 1 枚絵)。プレハブ `Enemy_Rat.prefab` (作成 `prep_enemy_spec.cs` の `RunRat`)。高さ ×1 で 1.33 (小ネズミ 約 0.8)、当たり判定は胴体 1.0×0.9。
 
 ### エリア1 への配置
 地上の雑魚 (1〜4・7) のエリア1 の配置表と確認結果は `Docs/Area1/SceneBuildGuide.md` §17 (ビルダーの `GroundFoe()`、2026-10-10)。

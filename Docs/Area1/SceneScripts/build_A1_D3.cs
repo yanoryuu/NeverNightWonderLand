@@ -20,7 +20,8 @@ public static class BuildD3
     static readonly Color BgPipe = new Color(0.42f, 0.37f, 0.5f);
     static readonly Color Guide = new Color(0.4f, 1f, 0.78f);
     static readonly Color Red = new Color(1f, 0.32f, 0.3f);
-    const string EnemyPrefab = "Assets/Prefabs/Enemy.prefab";
+    // ネズミの絵のプレハブ (2026-10-12 野良ウマの縮小・拡大から差し替え。作成 SceneScripts/prep_enemy_spec.cs --entry PrepEnemySpec.RunRat)
+    const string RatPrefab = "Assets/Prefabs/Enemies/Enemy_Rat.prefab";
     const string RatConsts = "Assets/Prefabs/Area1/EnemyConsts_A1Rat.asset";
 
     public const float GearR = 3.5f;       // 足場の軌道半径 (足場の上面 = 軌道上の点)
@@ -110,9 +111,9 @@ public static class BuildD3
     static WaveArena.SpawnEntry Rat(float ox, float oy, float scale = 0.6f, bool big = false) =>
         new WaveArena.SpawnEntry
         {
-            Prefab = AssetDatabase.LoadAssetAtPath<GameObject>(EnemyPrefab),
+            Prefab = AssetDatabase.LoadAssetAtPath<GameObject>(RatPrefab),
             Consts = AssetDatabase.LoadAssetAtPath<EnemyConsts>(big ? "Assets/Scripts/Enemy/EnemyConsts_Heavy.asset" : RatConsts),
-            Tint = big ? new Color(0.75f, 0.62f, 0.6f) : new Color(0.72f, 0.66f, 0.6f),
+            Tint = Color.white,   // 専用の絵なので色は付けない (大ネズミは大きさだけで見分ける)
             Offset = new Vector2(ox, oy),
             Scale = scale,
         };
