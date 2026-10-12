@@ -96,12 +96,11 @@ public static class PlayD3
         .Where(g => g.scene.IsValid() && (g.name == "Gate" || g.name.EndsWith("Door") || g.name == "NestGate"))
         .Select(g => $"{g.name}:active={g.activeInHierarchy}@({g.transform.position.x:F1},{g.transform.position.y:F1})"));
 
-    // 闘技場の外 (壁際の敵) 以外を消す: 名前が Clinger の物は残す
+    // シーンの敵をすべて消す (以前は壁の敵だけ残していたが、壁の敵は 2026-10-12 に削除)
     public static string KillArena()
     {
         var n = 0;
-        foreach (var e in Object.FindObjectsByType<EnemyController>(FindObjectsSortMode.None))
-            if (!e.name.StartsWith("WallClinger")) { Object.Destroy(e.gameObject); n++; }
+        foreach (var e in Object.FindObjectsByType<EnemyController>(FindObjectsSortMode.None)) { Object.Destroy(e.gameObject); n++; }
         return $"killed {n}";
     }
 

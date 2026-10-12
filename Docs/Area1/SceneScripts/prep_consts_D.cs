@@ -6,7 +6,6 @@ using UnityEngine;
 public static class PrepConstsD
 {
     public const string RatPath = "Assets/Prefabs/Area1/EnemyConsts_A1Rat.asset";
-    public const string ClingerPath = "Assets/Prefabs/Area1/EnemyConsts_A1Clinger.asset";
 
     static string Make(string path, int hp, int guard, float speed, float patrol, int contact, float chaseRange, float chaseSpeed, int drop)
     {
@@ -31,9 +30,8 @@ public static class PrepConstsD
     {
         // 小ネズミ (D7 の群れ): 打たれ弱く、すばしこく寄ってくる
         var a = Make(RatPath, 3, 1, 3f, 2.5f, 1, 5f, 4.2f, 1);
-        // 壁に張り付く敵 (D3): 壁沿いにゆっくり上下し、近づくと飛びかかる
-        var b = Make(ClingerPath, 6, 3, 0.4f, 0.2f, 1, 3.6f, 4.5f, 2);
+        // 壁に張り付く敵 (D3) は 2026-10-12 ユーザー指示で削除
         AssetDatabase.SaveAssets();
-        return a + " / " + b;
+        return a;
     }
 }
