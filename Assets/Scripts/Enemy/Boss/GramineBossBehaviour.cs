@@ -342,6 +342,12 @@ public class GramineBossBehaviour : EnemyBehaviour
     /// <summary>浮遊の構えか。</summary>
     public bool IsFloating => _stance == Stance.Floating;
 
+    /// <summary>
+    /// 動きの合図 (Animator の trigger と同じ名前: Rise / Descend / Knife / Sweep / Dive / Spin / StompJump / StompFall /
+    /// StompLand / Balloon / Bomb / PhaseShift / Retreat)。Spine の見た目 (GramineSpineVisual) が受け取る。
+    /// </summary>
+    public event System.Action<string> Cue;
+
     /// <summary>戦い方 (1 戦目/2 戦目) を実行時に切り替える (Start より前に呼ぶこと)。</summary>
     public BossFightMode Mode
     {
@@ -874,7 +880,7 @@ public class GramineBossBehaviour : EnemyBehaviour
         _step = Step.Rise;
         _timer = 2f;
         _rb.gravityScale = 0f;
-        Animation?.SetTrigger("Rise");
+        PlayCue("Rise");
     }
 
     private void TickRise(float dt)
@@ -897,7 +903,7 @@ public class GramineBossBehaviour : EnemyBehaviour
         _timer = 2f;
         _rb.gravityScale = _groundGravityScale;
         _rb.linearVelocity = Vector2.zero;
-        Animation?.SetTrigger("Descend");
+        PlayCue("Descend");
     }
 
     private void TickDescend()
@@ -950,7 +956,7 @@ public class GramineBossBehaviour : EnemyBehaviour
         _step = Step.KnifeWindup;
         _timer = _knifeWindup;
         AddGlow(HandPosition(), 0.7f);
-        Animation?.SetTrigger("Knife");
+        PlayCue("Knife");
     }
 
     private void FireKnives()
@@ -989,7 +995,7 @@ public class GramineBossBehaviour : EnemyBehaviour
         _sweepCenter = center + new Vector2(_facing * _sweepRange * 0.5f, 0f);
         _sweepSize = new Vector2(_sweepRange, _sweepHeight);
         AddTelegraph("SweepRange", BossKit.SquareSprite, _dangerColor, _sweepCenter, _sweepSize);
-        Animation?.SetTrigger("Sweep");
+        PlayCue("Sweep");
     }
 
     #endregion
@@ -1003,7 +1009,7 @@ public class GramineBossBehaviour : EnemyBehaviour
         _step = Step.DiveWindup;
         _timer = _diveWindup;
         AddGlow(_col.bounds.center, 1.4f);
-        Animation?.SetTrigger("Dive");
+        PlayCue("Dive");
     }
 
     private void BeginDiveDash()
@@ -1057,7 +1063,7 @@ public class GramineBossBehaviour : EnemyBehaviour
         _step = Step.SpinWindup;
         _timer = _spinWindup;
         AddGlow(_col.bounds.center, 1.2f);
-        Animation?.SetTrigger("Spin");
+        PlayCue("Spin");
     }
 
     #endregion
@@ -1070,7 +1076,7 @@ public class GramineBossBehaviour : EnemyBehaviour
         _step = Step.StompJump;
         _rb.bodyType = RigidbodyType2D.Kinematic; // 天井をすり抜けて画面外へ
         _rb.linearVelocity = Vector2.zero;
-        Animation?.SetTrigger("StompJump");
+        PlayCue("StompJump");
     }
 
     /// <summary>画面外 (カメラの上端と闘技場の天井の高い方のさらに上) の高さ。</summary>
@@ -1126,6 +1132,14 @@ public class GramineBossBehaviour : EnemyBehaviour
         _rb.position = start;
         transform.position = start;
         _step = Step.StompFall;
+        PlayCue("StompFall");
+    }
+
+    /// <summary>動きの合図: Animator の trigger (あれば) と <see cref="Cue"/> の購読者 (Spine の見た目) に送る。</summary>
+    private void PlayCue(string name)
+    {
+        Animation?.SetTrigger(name);
+        Cue?.Invoke(name);
     }
 
     private void TickStompFall(float dt)
@@ -1150,7 +1164,7 @@ public class GramineBossBehaviour : EnemyBehaviour
         _rb.linearVelocity = Vector2.zero;
         SetStance(Stance.Ground);
         CameraShake.Shake(_stompShake.x, _stompShake.y);
-        Animation?.SetTrigger("StompLand");
+        PlayCue("StompLand");
         EnterRecover(_stompRecoverTime);
     }
 
@@ -1163,7 +1177,7 @@ public class GramineBossBehaviour : EnemyBehaviour
         StartCooldown(AttackId.Balloon, _balloonCooldown);
         _step = Step.BalloonCast;
         _timer = _balloonCastTime;
-        Animation?.SetTrigger("Balloon");
+        PlayCue("Balloon");
     }
 
     /// <summary>
@@ -1230,7 +1244,7 @@ public class GramineBossBehaviour : EnemyBehaviour
         StartCooldown(AttackId.Bomb, _bombCooldown);
         _step = Step.BombCast;
         _timer = _bombCastTime;
-        Animation?.SetTrigger("Bomb");
+        PlayCue("Bomb");
     }
 
     /// <summary>プレイヤーの周りに散らして爆弾を投げる (落下点どうしは最小間隔を空ける)。</summary>
@@ -1283,7 +1297,7 @@ public class GramineBossBehaviour : EnemyBehaviour
         _step = Step.PhaseShift;
         _timer = _phaseShiftTime;
         CameraShake.Shake(_phaseShiftShake.x, _phaseShiftShake.y);
-        Animation?.SetTrigger("PhaseShift");
+        PlayCue("PhaseShift");
     }
 
     private void EndPhaseShift()
@@ -1312,7 +1326,7 @@ public class GramineBossBehaviour : EnemyBehaviour
         BossHazard.ClearAll();
         _step = Step.RetreatTaunt;
         _timer = _retreatTauntTime;
-        Animation?.SetTrigger("Retreat");
+        PlayCue("Retreat");
 
         // 流れ弾が対象を壊してから飛び去る (届くまで留まる)
         var travel = FireStrayShot();

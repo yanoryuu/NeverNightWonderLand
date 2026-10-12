@@ -82,6 +82,7 @@ public static class PrepEnemySpec
         });
 
         // ---- ボス: 地上の仮ボスと同じ仮の四角 ×2。うごきは GramineBossBehaviour だけ (EnemyController の自動付与を止める)
+        //      見た目の Spine は prep_gramine_spine.cs が付ける (ここで作り直したら続けて流す)
         Variant("Boss_Gramine", false, boss, go =>
         {
             go.transform.localScale = Vector3.one * 2f;

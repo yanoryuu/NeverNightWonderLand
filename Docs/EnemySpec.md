@@ -77,6 +77,13 @@
 
 - **HP 500 / 防御値 20** / ブレイク 3 秒 / 接触ダメージ 1 (2026-10-10 ユーザー指示「弱すぎる、最低でも HP500」。防御値は同日 40 → 20)。
   定数 = `Assets/Prefabs/Enemies/EnemyConsts_BossGramine.asset`、プレハブ = `Assets/Prefabs/Enemies/Boss_Gramine.prefab` (作成 `Docs/Area1/SceneScripts/prep_enemy_spec.cs`)。
+- **見た目 = Spine** (2026-10-12 デザイナー支給 `Assets/Motion/gramine`、PR #13)。子 `SpineVisual` (SkeletonRenderer + SkeletonAnimation) + ルートの `GramineSpineVisual`。
+  作成 = `Docs/Area1/SceneScripts/prep_gramine_spine.cs` (`--args '[0.055, -0.5]'`。prep_enemy_spec.cs でプレハブを作り直したら続けて流す)。高さ 約 2.7 (主人公の約 2.3 倍)、足元 = 当たり判定の下端。
+  - 動き: 浮遊 = idle_floating / 地上 = idle_normal をループ。踏みつけ = jump → stomp_fall → landing → to idle。撤退・第2形態への移行 = smile。
+    ナイフ・ステッキ横払い・斜め急降下・スピン・風船・爆弾はまだモーションが無いので、待機のまま予告の光だけで伝える。
+  - 向き: L も R も素の絵は左向き。右向きは R を骨格ごと左右反転して使う (R は反転前提の作り)。
+  - 仮の四角は描画だけ止めて残し、向き (flipX) と色を骨格へ写す。四角の色は白、被弾の光は薄い赤 (1, 0.55, 0.55)、ブレイクは黄色。
+  - ボスのうごき (`GramineBossBehaviour`) は動きの合図を `Cue` イベントで出す (Animator の trigger と同じ名前 + StompFall)。
 - プレイヤーが闘技場 (BossArena のトリガー) に一度入るまでは攻撃しない (入口の手前で被弾して隣の部屋へ押し戻されないように)。
 
 ### 登場
