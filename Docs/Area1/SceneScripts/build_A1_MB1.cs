@@ -11,6 +11,38 @@ using static NeverNight.StageBuild.Area1StageBuilder;
 // 先に別の呼び出しで OpenOrCreate("A1_MB1") を実行しておくこと。
 public static class BuildMB1
 {
+    /// <summary>中ボス「カップ」のプレハブ (SceneScripts/prep_midboss_cups.cs で作成)。</summary>
+    const string CupsBossPrefabPath = "Assets/Prefabs/Enemies/Boss_Cups.prefab";
+
+    /// <summary>
+    /// BossRoom が置いた仮ボスを中ボス「カップ」(Boss_Cups.prefab) に差し替える (Area1StageBuilder.UseGramineBoss と同じ作法)。
+    /// 位置・糸の上書き (_threadDropOverride) は仮ボスから引き継ぎ、BossArena._boss = ルート (合体後のカップ) の EnemyController、
+    /// カップの闘技場の範囲 (CupBossBehaviour._arenaArea) = BossArena のトリガー。返り値 = 新しいボス。
+    /// </summary>
+    static GameObject UseCupsBoss(GameObject arena, string name = "Boss_Cups")
+    {
+        var ba = arena.GetComponent<BossArena>() ?? throw new System.ArgumentException("BossArena が無い: " + arena.name);
+        var so = new UnityEditor.SerializedObject(ba);
+        var old = so.FindProperty("_boss").objectReferenceValue as EnemyController;
+        var pos = old != null ? old.transform.position : arena.transform.position;
+        var threadDrop = old != null ? new UnityEditor.SerializedObject(old).FindProperty("_threadDropOverride").intValue : 0;
+        if (old != null)
+            Object.DestroyImmediate(old.gameObject);
+
+        var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(CupsBossPrefabPath)
+                     ?? throw new System.InvalidOperationException(CupsBossPrefabPath + " がありません (SceneScripts/prep_midboss_cups.cs)");
+        var go = (GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(prefab, UnityEngine.SceneManagement.SceneManager.GetActiveScene());
+        go.transform.SetParent(Group("Enemies"), true);
+        go.transform.position = new Vector3(pos.x, pos.y, 0f);
+        go.name = name;
+        var ec = go.GetComponent<EnemyController>();
+        if (threadDrop > 0)
+            Set(ec, "_threadDropOverride", threadDrop);
+        Set(go.GetComponent<CupBossBehaviour>(), "_arenaArea", arena.GetComponent<Collider2D>());
+        Set(ba, "_boss", ec);
+        return go;
+    }
+
     static readonly Color Steel = new Color(0.95f, 0.86f, 0.98f);
     static readonly Color Post = new Color(0.55f, 0.48f, 0.66f);
 
@@ -70,14 +102,14 @@ public static class BuildMB1
         MoveSpawn("A1_W8", 60f, 344.5f);
         SetDefaultSpawn(60f, 344.5f);
 
-        // ================= 中ボス (浮遊型の仮ボス = FlyingEnemy ×2 + Heavy)
+        // ================= 中ボス (BossRoom が置いた浮遊型の仮ボスを、下の UseCupsBoss で「カップ」に差し替える)
         var arenaGo = BossRoom(new RectInt(20, 340, 63, 32), "A1_MidBossUpper", new Vector2(54f, 357f), true, new RectInt[0],
-            "ゴンドラの道化を倒した! 東のスピーカー塔の扉が開いた",
+            "カップを倒した! 東のスピーカー塔の扉が開いた",
             // 赤ハサミを未入手なら拠点の鍛冶屋への誘導の一文 (PendingChanges 11b, 呼びかけ調にしない)
             "ハサミがかすかに震えた。……拠点の鍛冶屋なら、何か分かるかもしれない", followUpUnlessRed: true,
             threadDrop: 25);   // 中ボスの糸 25 本 → 12 粒 (PendingChanges 18)
-        var boss = Group("Enemies").GetComponentsInChildren<EnemyController>(true).First(e => e.name.StartsWith("Boss_"));
-        boss.name = "Boss_GondolaClown";
+        // 仮ボスを中ボス「カップ」(Boss_Cups.prefab, Docs/EnemySpec.md「上の中ボス「カップ」」) に差し替える
+        UseCupsBoss(arenaGo);
         // ゲート: 戦闘中は格子に錠 (↓+ジャンプで逃げられない。落ちれば W8 へ戻る)
         var lockGo = NewObject("GrateLock", new Vector2(51f, 344f), LayerGround, "Gimmicks");
         var lockArt = new GameObject("Beam");
@@ -138,6 +170,8 @@ public static class BuildMB1
 
         // 奥行き (§16): 視差の層・霧・前景・光の筋 (Background/Depth を作り直す)
         log += Depth("A1_MB1") + "\n";
+        // 雰囲気 (§15): 作り直しで消えないよう StageAtmosphere をレシピで置く (2026-10-12)
+        log += Atmosphere("A1_MB1") + "\n";
         return log + Finish();
     }
 }

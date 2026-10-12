@@ -1,0 +1,169 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &9064222442081974729
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 832493409884627304, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+      propertyPath: _consts
+      value: 
+      objectReference: {fileID: 11400000, guid: 920f9379399c3a740a499b83a2a320d4, type: 2}
+    - target: {fileID: 832493409884627304, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+      propertyPath: _superArmor
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1509248326331450344, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+      propertyPath: m_Name
+      value: Boss_Horse
+      objectReference: {fileID: 0}
+    - target: {fileID: 5486051141972722456, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 5486051141972722456, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 5486051141972722456, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 5486051141972722456, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5486051141972722456, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5486051141972722456, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5486051141972722456, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5486051141972722456, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5486051141972722456, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5486051141972722456, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5486051141972722456, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5486051141972722456, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5486051141972722456, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8832130178461730246, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: defb6daacd834a048b5ee7129c63471f, type: 3}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1509248326331450344, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5772582099128038424}
+  m_SourcePrefab: {fileID: 100100000, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+--- !u!4 &6231207101418117817 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3148904069268005744, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+  m_PrefabInstance: {fileID: 9064222442081974729}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &7582789715548289569 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1509248326331450344, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+  m_PrefabInstance: {fileID: 9064222442081974729}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &5772582099128038424
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7582789715548289569}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5153fbed46180ad458940f89cb6ad5f2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _arenaArea: {fileID: 0}
+  _arenaHalfWidth: 12
+  _wallSearchSlack: 5
+  _groundMask:
+    serializedVersion: 2
+    m_Bits: 0
+  _poseTarget: {fileID: 6231207101418117817}
+  _gallopSpeed: 6
+  _keepDistanceMin: 4
+  _keepDistanceMax: 7
+  _crossOverChance: 0.35
+  _idleTimeMin: 0.6
+  _idleTimeMax: 0.9
+  _attacksPerBreather: 2
+  _breatherTime: 1
+  _firstAttackDelay: 1
+  _idleAfterInterrupt: 0.6
+  _glowColor: {r: 1, g: 0.95, b: 0.5, a: 0.85}
+  _dangerColor: {r: 1, g: 0.2, b: 0.2, a: 0.3}
+  _chargeDamage: 2
+  _chargePawTime: 0.4
+  _chargeSpeed: 16
+  _chargeStaggerTime: 0.5
+  _chargeMaxTime: 4
+  _chargeMinRunway: 3
+  _chargeCooldown: 1.5
+  _shuttleTurnTime: 0.15
+  _shuttleRuns: 3
+  _shuttleStaggerTime: 1.2
+  _shuttleCooldown: 7
+  _kickDamage: 2
+  _leapCrouchTime: 0.25
+  _leapTime: 0.7
+  _leapApexHeight: 4
+  _leapLandBeyond: 2.5
+  _leapRange: {x: 0.5, y: 8}
+  _kickWindup: 0.25
+  _kickActiveTime: 0.15
+  _kickRange: 2
+  _kickRecover: 0.4
+  _leapCooldown: 3.5
+  _feintDamage: 2
+  _feintTriggerRange: 3
+  _feintHopDistance: 3
+  _feintHopTime: 0.3
+  _feintDashSpeed: 18
+  _feintDashDistance: 8
+  _feintRecover: 0.35
+  _feintCooldown: 2.5
+  _stompDamage: 1
+  _rearTime: 0.5
+  _rearAngle: 28
+  _shockwaveSpeed: 10
+  _shockwaveSize: {x: 0.6, y: 0.8}
+  _shockwaveColor: {r: 1, g: 0.75, b: 0.35, a: 0.85}
+  _stompRecover: 0.6
+  _stompShake: {x: 0.2, y: 0.25}
+  _stompCooldown: 4
+  _kickAngle: 18
+  _staggerWobble: 7
+  _wallShake: {x: 0.15, y: 0.2}
