@@ -148,27 +148,47 @@ DialogueScene に適用済みの調整 (参考):
 
 ---
 
-## 5. 立ち絵の表示 (未セットアップ・手順のみ)
+## 5. 立ち絵の表示 (2026-10-11 セットアップ済み)
 
-立ち絵は Character シートへの登録で表示できる。画像素材が用意できたら以下の手順。
+セリフ行の Arg1 (話者名) が Character シートに登録されていれば、その立ち絵が出る。未登録の話者 (迷子の人形・地図売り・グラミネ / ？？？ など) は名前だけ。
 
-1. 画像を `Assets/Dialogue/Resources/Dialogue/Texture/Character/` に置く
-2. `Dialogue.xls` の **Character シート**にキャラを登録する
+### 登録済みのキャラ (`Dialogue.xls` の Character シート)
 
-   | CharacterName | Pattern | NameText | FileName |
-   |---|---|---|---|
-   | Annaijin | 通常 | 案内人 | annaijin_normal.png |
-   | Annaijin | 笑顔 | | annaijin_smile.png |
+| CharacterName (= 話者名) | FileName | Scale | 備考 |
+|---|---|---|---|
+| 慈 | `jihi` | 0.48 | 主人公。Drive「Aくん立ち絵」。セリフ行の Arg3 に `Char_Left` (左に立つ) |
+| シネレア | `cinerea` | 0.48 | Drive「シネレア立ち絵」 |
+| オリゼ | `oryze` | 0.4 | Drive「オリゼ立ち絵」。まだセリフは無い |
+| Bちゃん | `b_chan` | 0.48 | Drive「Bちゃん立ち絵」。まだ会話に出ない (誰かは未定) |
+| 木馬の鍛冶師 / 鍛冶師 | `smith_batta` | 0.75 (Y 260) | 今の鍛冶屋の立ち絵 (`Assets/LocalData/Character/blacksmith_batta.png` のコピー)。金床がセリフ枠の上に見えるよう上げている |
 
-3. シナリオのセリフ行の **Arg2** に表情パターンを書く
+- 画像は `Assets/Dialogue/Resources/Dialogue/Texture/Character/<FileName>.png`。Drive の原画 (4700〜7000px) は透明な余白を切り落とし、高さ 2048px に縮めて置いた (取り込み: Default・ミップマップ無し・Max Size 2048)
+- Pivot はすべて `Bottom` (足元基準)。大きさは Scale 列で合わせる
+- 表情差分を足す時は同じ CharacterName で Pattern 列に名前を書いた行を足し、セリフ行の Arg2 にそのパターン名を書く (`<Off>` で消す)
 
-   | Command | Arg1 | Arg2 | Text |
-   |---|---|---|---|
-   | | Annaijin | 笑顔 | ようこそ、ネバーナイト・ワンダーランドへ。 |
-   | | Annaijin | \<Off\> | (立ち絵を消す) |
+### 立ち位置 (Layer シート)
 
-- 立ち絵は一度出すと会話終了まで維持される。`<Off>` または `CharacterOff` コマンドで消す
-- 立ち位置 (左右) を分けたい場合は Layer シートにキャラ用レイヤーを定義して Arg3 で指定
+| LayerName | Type | X | Y | Order |
+|---|---|---|---|---|
+| Char_Right | Character | 520 | -580 | 101 |
+| Char_Left | Character | -520 | -580 | 100 |
+
+- 先頭の `Char_Right` が既定のキャラレイヤー。Arg3 が空のキャラは右に立つ。**慈のセリフ行だけ Arg3 = `Char_Left`** (左)。慈のセリフを足す時は Arg3 に `Char_Left` を書くこと
+- 1 つのレイヤーには立ち絵が 1 人しか立たない (右に別のキャラが来ると入れ替わる)
+- 立ち絵は会話の終わり (`EndScenario`) に Utage が自動で消す
+
+### 話していないキャラを暗くする
+
+DialogueScene の AdvEngine に `AdvCharacterGrayOutController` (Utage 標準) を付けている。話者以外の立ち絵を `(0.45, 0.45, 0.5)` に暗くする (地の文の行では変えない)。
+
+### セリフ枠・名前枠 (2026-10-11)
+
+DialogueScene の `MessageWindow` の枠を Drive の素材に差し替えた (`Assets/LocalData/UI/Dialogue/`)。
+
+- セリフ枠 `dialogue_message_window.png` (1740×281 = 原寸。9 スライス 上下 50 / 左右 100)。`MessageWindow` は高さ 281・y 165
+- 名前枠 `dialogue_name_plate.png` (389×120 を 300×92 に、9 スライス 40)。`Name` は (-640, 140)、名前の文字は 32 で中央寄せ
+
+確認のスクリーンショット: `Assets/Screenshots/Dialogue/portrait_v2.png` (慈とシネレア) / `portrait_smith2.png` (鍛冶師) / `portrait_meet.png` (グラミネ登場で慈が暗くなる)
 
 ---
 
@@ -192,6 +212,7 @@ DialogueScene に適用済みの調整 (参考):
 - **会話が表示されない** → コンソールの赤エラーを確認して Claude Code に相談 (DialogueScene の調整が壊れている場合は MCP 経由で再調整する)
 - **ラベルが見つからないという警告** → 再インポート忘れ。「NeverNight > 会話シナリオを再インポート」を実行
 - **インポートで例外** → `Dialogue.xls` の破損を疑う。テンプレートからコピーで復元 (上記 §1 注意欄)
+- **「Utage のシナリオプロジェクトが未設定です」** → 新しい worktree で開いたエディタでは宴のユーザー設定が空。Tools > Utage > Scenario Data Builder で `Assets/Dialogue/Dialogue.project` を選ぶ (スクリプトなら `AdvScenarioDataBuilderWindow.ProjectData = <Dialogue.project>`) してから再インポート
 
 ### 2026-10-03 のバグ修正: 会話が表示されない / 会話を 2 つ開ける
 
