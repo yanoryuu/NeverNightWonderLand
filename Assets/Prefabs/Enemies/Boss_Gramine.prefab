@@ -301,6 +301,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1509248326331450344, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1038211186123369456}
+    - targetCorrespondingSourceObject: {fileID: 1509248326331450344, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1977157361044315264}
   m_SourcePrefab: {fileID: 100100000, guid: 219a030578dc9df4f9526f9301b50a61, type: 3}
 --- !u!4 &1257714276734423417 stripped
 Transform:
@@ -454,6 +457,7 @@ MonoBehaviour:
   _skeleton: {fileID: 6864771202136872080}
   _placeholder: {fileID: 5097986138523477532}
   _flipXMeansLeft: 1
+  _mirrorRight: 1
   _idleGround: guramine_idle_normal
   _idleFloating: guramine_idle_floating
   _jump: guramine_jump
@@ -462,3 +466,19 @@ MonoBehaviour:
   _stompToIdle: guramine_attack_stomp_to idle
   _smile: guramine_smile
   _mixDuration: 0.12
+--- !u!114 &1977157361044315264
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5307491410672259465}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: adf0c351f5fcf2f4eaac4643e343adc4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _cueSet: {fileID: 11400000, guid: 96653fe9e8cd3bc4d99684e775542a29, type: 2}
+  _characterId: "\u6575: Boss_Gramine"
+  _skeleton: {fileID: 0}
+  _animator: {fileID: 0}

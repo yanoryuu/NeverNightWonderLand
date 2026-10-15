@@ -4,7 +4,8 @@ using Spine.Unity;
 using UnityEngine;
 
 /// <summary>
-/// アニメ・エフェクト調整シーン (AnimEffectTuningScene) で選べるキャラクターとエフェクトの一覧。
+/// アニメ・エフェクト調整シーン (AnimEffectTuningScene) で選べるキャラクターの一覧
+/// (エフェクトの一覧はゲームでも使うので <see cref="AnimEffectCueSet.Effects"/> にある)。
 /// キャラクターは「プレハブ」か「Spine の骨格データ」のどちらかで登録する。
 /// プレハブはシーンに出したあと、見た目以外のスクリプト・物理を外して人形として扱う
 /// (Spine / Animator / SpriteFlipbook のアニメーションは自動で一覧に出る)。
@@ -26,7 +27,7 @@ public class AnimTuningCatalog : ScriptableObject
     [Serializable]
     public class CharacterEntry
     {
-        [Tooltip("一覧に出す名前。エフェクト設定 (AnimEffectCueSet) の紐付けにも使うので、後から変えない")]
+        [Tooltip("一覧に出す名前。エフェクト設定 (AnimEffectCueSet) とゲームの AnimEffectEmitter の紐付けにも使うので、後から変えない")]
         public string Id = "character";
         [Tooltip("敵などのプレハブ。Spine 骨格データと両方入れた時はプレハブを優先する")]
         public GameObject Prefab;
@@ -46,21 +47,5 @@ public class AnimTuningCatalog : ScriptableObject
         public string SpriteRendererPath = "";
     }
 
-    [Serializable]
-    public class EffectEntry
-    {
-        [Tooltip("一覧に出す名前。エフェクト設定の紐付けに使うので、後から変えない")]
-        public string Id = "effect";
-        [Tooltip("パーティクル・Spine・Animator・SpriteFlipbook 入りのプレハブ")]
-        public GameObject Prefab;
-        [Tooltip("プレハブの代わりに連番の絵で出す時に入れる")]
-        public SpriteClip Frames = new();
-        [Tooltip("連番の絵の描画順 (キャラより手前に出すなら大きく)")]
-        public int SortingOrder = 50;
-    }
-
     public List<CharacterEntry> Characters = new();
-    public List<EffectEntry> Effects = new();
-
-    public EffectEntry FindEffect(string id) => Effects.Find(e => e.Id == id);
 }

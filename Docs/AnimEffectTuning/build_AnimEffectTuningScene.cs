@@ -6,9 +6,9 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 
 // アニメ・エフェクト調整シーン Assets/Scenes/Test/AnimEffectTuningScene.unity と、
-// その一覧アセット Assets/Data/AnimTuning/AnimTuningCatalog.asset / AnimEffectCueSet.asset を作る。
-// 何度流してもよい。シーンは作り直す。カタログはキャラ・エフェクトを Id ごとに上書き/追加する (手で足した分は残る)。
-// エフェクト設定 (CueSet) は既にあれば触らない (調整した値を消さないため)。
+// その一覧アセット Assets/Data/AnimTuning/AnimTuningCatalog.asset (キャラ) / AnimEffectCueSet.asset (エフェクトと調整した値) を作る。
+// 何度流してもよい。シーンは作り直す。キャラとエフェクトは Id ごとに上書き/追加する (手で足した分は残る)。
+// 調整した値 (CueSet の Entries) は触らない。
 // run_script --file Docs/AnimEffectTuning/build_AnimEffectTuningScene.cs --entry BuildAnimEffectTuning.Run
 public static class BuildAnimEffectTuning
 {
@@ -35,24 +35,22 @@ public static class BuildAnimEffectTuning
             AssetDatabase.CreateAsset(cueSet, CueSetPath);
         }
 
-        FillCatalog(catalog);
+        FillCatalog(catalog, cueSet);
         EditorUtility.SetDirty(catalog);
+        EditorUtility.SetDirty(cueSet);
         AssetDatabase.SaveAssets();
 
         BuildScene(catalog, cueSet);
-        return $"catalog: {catalog.Characters.Count} characters / {catalog.Effects.Count} effects, scene: {ScenePath}";
+        return $"catalog: {catalog.Characters.Count} characters / {cueSet.Effects.Count} effects, scene: {ScenePath}";
     }
 
-    static void FillCatalog(AnimTuningCatalog catalog)
+    static void FillCatalog(AnimTuningCatalog catalog, AnimEffectCueSet cueSet)
     {
-        // Spine の骨格 (プレハブに付く前でも確認できるよう、骨格データ単体でも出す)
-        Character(catalog, "Spine: グラミネ", c =>
-        {
-            c.Prefab = null;
-            c.Spine = AssetDatabase.LoadAssetAtPath<SkeletonDataAsset>("Assets/Motion/gramine/gramine_SkeletonData.asset");
-            c.Scale = 0.055f; // ボスのプレハブ (GramineSpineVisual) と同じ大きさ
-            c.FacesLeft = true; // L/R どちらも素の向きは左
-        });
+        // グラミネは Boss_Gramine のプレハブに Spine が付いたので、骨格データ単体の登録は外す
+        // (ゲームで使う値はプレハブの Id に紐付くため、同じキャラが 2 つあると調整先を間違える)
+        catalog.Characters.RemoveAll(c => c.Id == "Spine: グラミネ");
+
+        // Spine の骨格 (プレハブではなく骨格データ単体で出す)
         Character(catalog, "Spine: 慈 (プレイヤー)", c =>
         {
             c.Prefab = null;
@@ -68,9 +66,9 @@ public static class BuildAnimEffectTuning
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             if (prefab.GetComponent<EnemyController>() == null)
                 continue;
-            Character(catalog, "敵: " + prefab.name, c => c.Prefab = prefab);
+            Character(catalog, "敵: " + prefab.name, c => EnemyPrefab(c, prefab));
         }
-        Character(catalog, "敵: 野良ウマ (Animator)", c => c.Prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy.prefab"));
+        Character(catalog, "敵: 野良ウマ (Animator)", c => EnemyPrefab(c, AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy.prefab")));
 
         // コードで絵を差し替えているもの: ポップコーン爆弾 (EnemyLobBomb の飛行 / ひび / 破裂の絵)
         var bomb = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemies/PopcornBomb.prefab");
@@ -94,12 +92,22 @@ public static class BuildAnimEffectTuning
                     new() { Name = "破裂", Frames = burst, Fps = 12f },
                 };
             });
-            Effect(catalog, "ポップコーン破裂", e =>
+            Effect(cueSet, "ポップコーン破裂", e =>
             {
                 e.Prefab = null;
-                e.Frames = new AnimTuningCatalog.SpriteClip { Name = "ポップコーン破裂", Frames = burst, Fps = 12f };
+                e.Frames = burst;
+                e.Fps = 12f;
             });
         }
+    }
+
+    static void EnemyPrefab(AnimTuningCatalog.CharacterEntry c, GameObject prefab)
+    {
+        c.Prefab = prefab;
+        // 素の絵が左向きの敵 (EnemyController._visualFacesLeft) は右向き基準にそろえる。
+        // Spine のグラミネ (GramineSpineVisual) は骨格の素の向きが左 (向きは実行時に骨格側で反転する)
+        c.FacesLeft = prefab.GetComponent<GramineSpineVisual>() != null
+                      || new SerializedObject(prefab.GetComponent<EnemyController>()).FindProperty("_visualFacesLeft").boolValue;
     }
 
     static void Character(AnimTuningCatalog catalog, string id, System.Action<AnimTuningCatalog.CharacterEntry> fill)
@@ -113,13 +121,13 @@ public static class BuildAnimEffectTuning
         fill(entry);
     }
 
-    static void Effect(AnimTuningCatalog catalog, string id, System.Action<AnimTuningCatalog.EffectEntry> fill)
+    static void Effect(AnimEffectCueSet cueSet, string id, System.Action<AnimEffectCueSet.Effect> fill)
     {
-        var entry = catalog.Effects.Find(e => e.Id == id);
+        var entry = cueSet.FindEffect(id);
         if (entry == null)
         {
-            entry = new AnimTuningCatalog.EffectEntry { Id = id };
-            catalog.Effects.Add(entry);
+            entry = new AnimEffectCueSet.Effect { Id = id };
+            cueSet.Effects.Add(entry);
         }
         fill(entry);
     }

@@ -56,7 +56,7 @@ public class AnimTuningStage : MonoBehaviour
 
     /// <summary>今のアニメに付いているエフェクト設定。</summary>
     public AnimEffectCueSet.AnimationCues CurrentCues =>
-        _cueSet != null && CharacterEntry != null && Clip != null ? _cueSet.Find(CharacterEntry.Id, Clip.Name) : null;
+        _cueSet != null && CharacterEntry != null && Clip != null ? _cueSet.Find(CharacterEntry.Id, Clip.Key) : null;
 
     private readonly List<EffectInstance> _effects = new();
     private Transform _characterPivot;
@@ -97,7 +97,9 @@ public class AnimTuningStage : MonoBehaviour
         Character.AddSpriteClips(entry.SpriteClips, entry.SpriteRendererPath);
         var t = Character.Root.transform;
         t.localPosition = entry.Offset;
-        t.localScale = new Vector3(entry.FacesLeft ? -entry.Scale : entry.Scale, entry.Scale, 1f);
+        // プレハブのルートの大きさ (ゲームと同じ大きさ) に倍率を掛ける
+        var baseScale = entry.Prefab != null ? entry.Prefab.transform.localScale : Vector3.one;
+        t.localScale = Vector3.Scale(baseScale, new Vector3(entry.FacesLeft ? -entry.Scale : entry.Scale, entry.Scale, 1f));
 
         if (Character.Clips.Count > 0)
             SelectClip(0);
@@ -116,11 +118,11 @@ public class AnimTuningStage : MonoBehaviour
     {
         ClearEffects();
         var cues = CurrentCues;
-        if (cues == null || _catalog == null)
+        if (cues == null)
             return;
         foreach (var cue in cues.Cues)
         {
-            var entry = _catalog.FindEffect(cue.EffectId);
+            var entry = _cueSet.FindEffect(cue.EffectId);
             _effects.Add(new EffectInstance(cue, entry, _effectRoot));
         }
     }
@@ -205,7 +207,11 @@ public class AnimTuningStage : MonoBehaviour
         _effects.Clear();
     }
 
-    private void OnDestroy() => ClearEffects();
+    private void OnDestroy()
+    {
+        ClearEffects();
+        Character?.Destroy(); // Animator 用の PlayableGraph を残さない
+    }
 
     private void OnDrawGizmos()
     {
@@ -237,8 +243,9 @@ public class AnimTuningStage : MonoBehaviour
         private readonly AnimTuningPuppet _puppet;
         private readonly AnimTuningPuppet.ITuningClip _clip;
         private readonly ParticleSystem[] _particles;
+        private readonly Vector3 _baseScale = Vector3.one;
 
-        public EffectInstance(AnimEffectCueSet.Cue cue, AnimTuningCatalog.EffectEntry entry, Transform parent)
+        public EffectInstance(AnimEffectCueSet.Cue cue, AnimEffectCueSet.Effect entry, Transform parent)
         {
             Cue = cue;
             EffectId = cue.EffectId;
@@ -247,11 +254,12 @@ public class AnimTuningStage : MonoBehaviour
 
             if (entry.Prefab != null)
                 _puppet = AnimTuningPuppet.FromPrefab(entry.Prefab, parent);
-            else if (entry.Frames != null && entry.Frames.Frames.Length > 0)
-                _puppet = AnimTuningPuppet.FromFrames(entry.Frames, entry.SortingOrder, parent);
+            else if (entry.Frames != null && entry.Frames.Length > 0)
+                _puppet = AnimTuningPuppet.FromFrames(entry.Id, entry.Frames, entry.Fps, entry.SortingOrder, parent);
             if (_puppet == null)
                 return;
 
+            _baseScale = _puppet.Root.transform.localScale;
             _clip = _puppet.Clips.Count > 0 ? _puppet.Clips[0] : null;
             // 入れ子のパーティクルは親の Simulate でまとめて進める
             _particles = _puppet.Root.GetComponentsInChildren<ParticleSystem>(true)
@@ -284,7 +292,7 @@ public class AnimTuningStage : MonoBehaviour
             var t = go.transform;
             t.localPosition = Cue.Offset;
             t.localRotation = Quaternion.Euler(0f, 0f, Cue.Rotation);
-            t.localScale = Vector3.one * Cue.Scale;
+            t.localScale = _baseScale * Cue.Scale; // ゲーム (AnimEffectPlayer) と同じくプレハブの大きさに掛ける
 
             foreach (var ps in _particles)
                 ps.Simulate(localTime, true, true, true);

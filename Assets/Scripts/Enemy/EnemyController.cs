@@ -499,6 +499,9 @@ public class EnemyController : MonoBehaviour, IDamageable
             _state = State.Acting;
     }
 
+    /// <summary>今右を向いているか (見た目の絵の向きから決める)。</summary>
+    public bool FacingRight => _sprite == null || _sprite.flipX == _visualFacesLeft;
+
     /// <summary>移動せずに向きだけ変える (direction の符号: 正 = 右)。</summary>
     public void Face(float direction)
     {
