@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -9,6 +10,7 @@ using UnityEngine;
 /// エフェクトの追加と「オフセット (X / Y)・開始タイミング・大きさ・回転」の調整を行う。
 /// オフセットはシーンビューの丸いハンドルをドラッグしても動かせる。開始タイミングはタイムラインの印をドラッグしても動かせる。
 /// 値は AnimEffectCueSet アセットに直接書くので、再生を止めても残る。
+/// ゲームでは、キャラのプレハブに付けた AnimEffectEmitter が同じ値でエフェクトを出す (「このキャラのプレハブに付ける」で付けられる)。
 /// </summary>
 public class AnimEffectTunerWindow : EditorWindow
 {
@@ -76,7 +78,7 @@ public class AnimEffectTunerWindow : EditorWindow
     {
         EditorGUILayout.HelpBox(
             "調整シーンを再生している間に使います。\n" +
-            "キャラとエフェクトの一覧は AnimTuningCatalog、調整した値は AnimEffectCueSet に入ります。", MessageType.Info);
+            "キャラの一覧は AnimTuningCatalog、エフェクトの一覧と調整した値は AnimEffectCueSet に入ります。", MessageType.Info);
 
         if (GUILayout.Button("調整シーンを開いて再生", GUILayout.Height(28)))
         {
@@ -153,7 +155,7 @@ public class AnimEffectTunerWindow : EditorWindow
             var clip = stage.Character.Clips[i];
             if (_clipFilter.Length > 0 && clip.Name.IndexOf(_clipFilter, System.StringComparison.OrdinalIgnoreCase) < 0)
                 continue;
-            var cueCount = cueSet != null ? cueSet.Find(charId, clip.Name)?.Cues.Count ?? 0 : 0;
+            var cueCount = cueSet != null ? cueSet.Find(charId, clip.Key)?.Cues.Count ?? 0 : 0;
             var label = $"{clip.Name}  ({clip.Duration:0.00}s){(cueCount > 0 ? $"  ✦{cueCount}" : "")}";
             var selected = i == stage.ClipIndex;
             if (GUILayout.Toggle(selected, label, "Button") && !selected)
@@ -294,10 +296,11 @@ public class AnimEffectTunerWindow : EditorWindow
             return;
 
         EditorGUILayout.LabelField("エフェクト", EditorStyles.boldLabel);
-        var effectIds = catalog.Effects.Select(e => e.Id).ToArray();
+        DrawEmitterStatus(stage);
+        var effectIds = cueSet.Effects.Select(e => e.Id).ToArray();
         if (effectIds.Length == 0)
         {
-            EditorGUILayout.HelpBox("カタログにエフェクトが登録されていません (Effects に追加してください)。", MessageType.Warning);
+            EditorGUILayout.HelpBox("エフェクトが登録されていません (AnimEffectCueSet の Effects に追加してください)。", MessageType.Warning);
             return;
         }
 
@@ -316,6 +319,7 @@ public class AnimEffectTunerWindow : EditorWindow
                     string effectId;
                     Vector2 offset;
                     float delay, scale, rotation;
+                    bool follow;
                     using (new EditorGUILayout.HorizontalScope())
                     {
                         if (GUILayout.Button(selected ? "●" : "○", GUILayout.Width(24)))
@@ -335,6 +339,7 @@ public class AnimEffectTunerWindow : EditorWindow
                     }
                     scale = EditorGUILayout.Slider("大きさ", cue.Scale, 0.05f, 5f);
                     rotation = EditorGUILayout.Slider("回転", cue.Rotation, -180f, 180f);
+                    follow = EditorGUILayout.Toggle(new GUIContent("キャラに付いて動く", "ON: 出した後もキャラに付いて動く / OFF: 出した場所に残る (ゲームでの動き)"), cue.FollowCharacter);
                     if (EditorGUI.EndChangeCheck())
                     {
                         Undo.RecordObject(cueSet, "Edit Effect Cue");
@@ -344,6 +349,7 @@ public class AnimEffectTunerWindow : EditorWindow
                         cue.Delay = Mathf.Max(0f, delay);
                         cue.Scale = scale;
                         cue.Rotation = rotation;
+                        cue.FollowCharacter = follow;
                         stage.SelectedCue = i;
                         EditorUtility.SetDirty(cueSet);
                         if (rebuild)
@@ -381,7 +387,7 @@ public class AnimEffectTunerWindow : EditorWindow
             if (GUILayout.Button("＋ エフェクトを追加 (今の時間に)", GUILayout.Height(24)))
             {
                 Undo.RecordObject(cueSet, "Add Effect Cue");
-                var target = cueSet.Find(stage.CharacterEntry.Id, stage.Clip.Name, create: true);
+                var target = cueSet.Find(stage.CharacterEntry.Id, stage.Clip.Key, create: true);
                 target.Cues.Add(new AnimEffectCueSet.Cue
                 {
                     EffectId = effectIds[0],
@@ -394,6 +400,41 @@ public class AnimEffectTunerWindow : EditorWindow
             }
             if (GUILayout.Button("保存", GUILayout.Width(60), GUILayout.Height(24)))
                 AssetDatabase.SaveAssetIfDirty(cueSet);
+        }
+    }
+
+    /// <summary>ゲームでこの値が使われるか (キャラのプレハブに AnimEffectEmitter が付いているか) を出し、付けるボタンを出す。</summary>
+    private static void DrawEmitterStatus(AnimTuningStage stage)
+    {
+        var entry = stage.CharacterEntry;
+        var prefab = entry.Prefab;
+        if (prefab == null)
+        {
+            EditorGUILayout.HelpBox("このキャラはプレハブが無いので、ゲームでは出ません (敵のプレハブの方で調整してください)。", MessageType.None);
+            return;
+        }
+
+        var emitter = prefab.GetComponent<AnimEffectEmitter>();
+        if (emitter != null && emitter.CharacterId == entry.Id)
+        {
+            EditorGUILayout.LabelField($"ゲームで出す: {prefab.name} に AnimEffectEmitter が付いています", EditorStyles.miniLabel);
+            return;
+        }
+
+        var path = AssetDatabase.GetAssetPath(prefab);
+        if (EmitterAttacher.IsPending(path, entry.Id))
+        {
+            EditorGUILayout.HelpBox($"再生を止めたら {prefab.name} に AnimEffectEmitter を付けます。", MessageType.Info);
+            return;
+        }
+
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            EditorGUILayout.HelpBox(emitter == null
+                ? $"{prefab.name} に AnimEffectEmitter が無いので、ゲームではまだ出ません。"
+                : $"{prefab.name} の AnimEffectEmitter のキャラ Id が「{emitter.CharacterId}」になっています。", MessageType.Info);
+            if (GUILayout.Button("このキャラの\nプレハブに付ける", GUILayout.Width(110), GUILayout.Height(38)))
+                EmitterAttacher.Request(path, entry.Id, AssetDatabase.GetAssetPath(stage.CueSet));
         }
     }
 
@@ -433,4 +474,92 @@ public class AnimEffectTunerWindow : EditorWindow
     }
 
     #endregion
+}
+
+/// <summary>
+/// プレハブへの AnimEffectEmitter の取り付け。調整は再生中に行うが、再生中にプレハブを書き換えると
+/// Unity が警告を出すので、ボタンでは予約だけして、再生を止めた (編集モードに戻った) 時にまとめて書き込む。
+/// 予約はドメインのリロードをまたいでも消えないよう SessionState に持つ。
+/// </summary>
+[InitializeOnLoad]
+public static class EmitterAttacher
+{
+    private const string Key = "NeverNight.AnimEffectTuner.PendingEmitters";
+
+    static EmitterAttacher()
+    {
+        EditorApplication.playModeStateChanged += state =>
+        {
+            if (state == PlayModeStateChange.EnteredEditMode)
+                ApplyPending();
+        };
+        // 編集モードで読み込まれた時に残っていれば (再生中にエディタが落ちた等) ここで付ける
+        if (!EditorApplication.isPlayingOrWillChangePlaymode)
+            EditorApplication.delayCall += ApplyPending;
+    }
+
+    /// <summary>prefabPath のプレハブに付ける。再生中なら止めた時に付ける。</summary>
+    public static void Request(string prefabPath, string characterId, string cueSetPath)
+    {
+        if (!EditorApplication.isPlaying)
+        {
+            Attach(prefabPath, characterId, cueSetPath);
+            return;
+        }
+        var list = Load();
+        list.RemoveAll(p => p[0] == prefabPath);
+        list.Add(new[] { prefabPath, characterId, cueSetPath });
+        Save(list);
+    }
+
+    public static bool IsPending(string prefabPath, string characterId) =>
+        Load().Exists(p => p[0] == prefabPath && p[1] == characterId);
+
+    private static void ApplyPending()
+    {
+        var list = Load();
+        if (list.Count == 0)
+            return;
+        Save(new List<string[]>());
+        foreach (var p in list)
+            Attach(p[0], p[1], p[2]);
+    }
+
+    private static List<string[]> Load()
+    {
+        var raw = SessionState.GetString(Key, "");
+        var list = new List<string[]>();
+        foreach (var line in raw.Split('\n'))
+        {
+            var parts = line.Split('\t');
+            if (parts.Length == 3)
+                list.Add(parts);
+        }
+        return list;
+    }
+
+    private static void Save(List<string[]> list) =>
+        SessionState.SetString(Key, string.Join("\n", list.Select(p => string.Join("\t", p))));
+
+    private static void Attach(string path, string characterId, string cueSetPath)
+    {
+        var cueSet = AssetDatabase.LoadAssetAtPath<AnimEffectCueSet>(cueSetPath);
+        var root = PrefabUtility.LoadPrefabContents(path);
+        try
+        {
+            var emitter = root.GetComponent<AnimEffectEmitter>();
+            if (emitter == null)
+                emitter = root.AddComponent<AnimEffectEmitter>();
+            var so = new SerializedObject(emitter);
+            so.FindProperty("_cueSet").objectReferenceValue = cueSet;
+            so.FindProperty("_characterId").stringValue = characterId;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            PrefabUtility.SaveAsPrefabAsset(root, path);
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+        Debug.Log($"[AnimEffectTuner] {path} に AnimEffectEmitter (キャラ Id: {characterId}) を付けました");
+    }
 }

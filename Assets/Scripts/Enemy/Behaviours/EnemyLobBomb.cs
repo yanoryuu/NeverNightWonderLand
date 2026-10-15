@@ -115,6 +115,9 @@ public class EnemyLobBomb : MonoBehaviour, IDamageable
     public bool IsLanded => _phase == Phase.Fuse;
 
     /// <summary>絵が設定されているか (無ければ丸い仮表示の動き)。</summary>
+    // 調整シーンで決めたエフェクトを出す (プレハブに付いている時だけ)。連番アニメの名前 飛行 / 破裂 / ひび で呼ぶ
+    private AnimEffectEmitter _effects;
+
     private bool HasArt => _flyingSprite != null && _sprite != null;
 
     private bool HasBurstArt => HasArt && _burstSprites != null && _burstSprites.Length > 0;
@@ -192,6 +195,7 @@ public class EnemyLobBomb : MonoBehaviour, IDamageable
 
         col.isTrigger = true;
         _sprite = GetComponentInChildren<SpriteRenderer>();
+        _effects = GetComponent<AnimEffectEmitter>();
         if (HasArt)
         {
             _sprite.sprite = _flyingSprite;
@@ -222,6 +226,8 @@ public class EnemyLobBomb : MonoBehaviour, IDamageable
 
         var player = FindFirstObjectByType<PlayerController>();
         _player = player != null ? player.transform : null;
+        if (_effects != null)
+            _effects.Play("飛行");
     }
 
     private void FixedUpdate()
@@ -465,6 +471,8 @@ public class EnemyLobBomb : MonoBehaviour, IDamageable
             _sprite.sortingOrder = _flash.sortingOrder + 1; // パーティクルの順を決めた後で、絵を閃光の手前へ
         if (_shakeAmplitude > 0f)
             CameraShake.Shake(_shakeAmplitude, _shakeTime);
+        if (_effects != null)
+            _effects.Play("破裂");
     }
 
     /// <summary>
@@ -491,6 +499,8 @@ public class EnemyLobBomb : MonoBehaviour, IDamageable
         _mark = null;
         _sprite.enabled = true;
         _sprite.sprite = _crackSprite != null ? _crackSprite : _flyingSprite;
+        if (_effects != null)
+            _effects.Play("ひび");
     }
 
     private void OnDestroy()

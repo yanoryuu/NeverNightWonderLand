@@ -19,7 +19,10 @@ public sealed class AnimTuningPuppet
     /// <summary>時刻を指定して姿勢を決めるアニメ 1 本。</summary>
     public interface ITuningClip
     {
+        /// <summary>一覧での表示名。</summary>
         string Name { get; }
+        /// <summary>エフェクト設定の紐付けに使う名前 (ゲームの AnimEffectEmitter が見るアニメ名と同じ。左右の向き違いは 1 つにまとめる)。</summary>
+        string Key { get; }
         float Duration { get; }
         /// <summary>time 秒目の姿勢にする (0〜Duration)。</summary>
         void Apply(float time);
@@ -51,6 +54,7 @@ public sealed class AnimTuningPuppet
         go.transform.localPosition = Vector3.zero;
 
         var flipbooks = ReadFlipbooks(go);
+        HideSpinePlaceholder(go);
         StripToVisual(go);
 
         go.transform.SetParent(parent, false);
@@ -80,14 +84,14 @@ public sealed class AnimTuningPuppet
     }
 
     /// <summary>連番の絵を描く空の人形 (エフェクト用)。</summary>
-    public static AnimTuningPuppet FromFrames(AnimTuningCatalog.SpriteClip frames, int sortingOrder, Transform parent)
+    public static AnimTuningPuppet FromFrames(string name, Sprite[] frames, float fps, int sortingOrder, Transform parent)
     {
-        var go = new GameObject(frames.Name);
+        var go = new GameObject(name);
         go.transform.SetParent(parent, false);
         var sr = go.AddComponent<SpriteRenderer>();
         sr.sortingOrder = sortingOrder;
         var puppet = new AnimTuningPuppet(go);
-        puppet.AddSpriteClip(frames.Name, sr, frames.Frames, frames.Fps);
+        puppet.AddSpriteClip(name, name, sr, frames, fps);
         return puppet;
     }
 
@@ -107,7 +111,7 @@ public sealed class AnimTuningPuppet
             return;
 
         foreach (var c in clips)
-            AddSpriteClip(c.Name, sr, c.Frames, c.Fps);
+            AddSpriteClip(c.Name, c.Name, sr, c.Frames, c.Fps);
     }
 
     public void Destroy()
@@ -148,6 +152,19 @@ public sealed class AnimTuningPuppet
                 result.Add((fb.GetComponent<SpriteRenderer>(), frames, fps));
         }
         return result;
+    }
+
+    /// <summary>
+    /// Spine で描く敵は、ルートの仮の四角 (EnemyController の SpriteRenderer) の描画を実行時に止めている
+    /// (GramineSpineVisual)。人形ではそのスクリプトを外すので、ここで同じように隠す。
+    /// </summary>
+    private static void HideSpinePlaceholder(GameObject go)
+    {
+        if (go.GetComponent<EnemyController>() == null || go.GetComponentInChildren<SkeletonAnimation>(true) == null)
+            return;
+        var placeholder = go.GetComponent<SpriteRenderer>();
+        if (placeholder != null)
+            placeholder.forceRenderingOff = true;
     }
 
     private static bool IsVisualScript(MonoBehaviour mb) =>
@@ -220,8 +237,14 @@ public sealed class AnimTuningPuppet
             if (data == null)
                 continue;
             var prefix = showSource ? $"[Spine {sa.name}] " : "";
+            // 左右の向き違い (L/名前_L と R/名前_R) は同じ動きなので 1 つだけ出す (エフェクトは右向き基準で 1 回調整すればよい)
+            var keys = new HashSet<string>();
             foreach (var anim in data.Animations)
-                _clips.Add(new SpineClip(prefix + anim.Name, sa, anim));
+            {
+                var key = AnimEffectCueSet.NormalizeAnimation(anim.Name);
+                if (keys.Add(key))
+                    _clips.Add(new SpineClip(prefix + key, key, sa, anim));
+            }
         }
 
         foreach (var animator in animators)
@@ -236,18 +259,18 @@ public sealed class AnimTuningPuppet
             _graphs.Add(graph);
             var prefix = showSource ? $"[Animator {animator.name}] " : "";
             foreach (var clip in clips)
-                _clips.Add(new AnimatorClip(prefix + clip.name, graph, output, clip));
+                _clips.Add(new AnimatorClip(prefix + clip.name, clip.name, graph, output, clip));
         }
 
         foreach (var (renderer, frames, fps) in flipbooks)
-            AddSpriteClip($"[Flipbook {renderer.name}]", renderer, frames, fps);
+            AddSpriteClip($"[Flipbook {renderer.name}]", $"Flipbook {renderer.name}", renderer, frames, fps);
     }
 
-    private void AddSpriteClip(string name, SpriteRenderer renderer, Sprite[] frames, float fps)
+    private void AddSpriteClip(string name, string key, SpriteRenderer renderer, Sprite[] frames, float fps)
     {
         if (renderer == null || frames == null || frames.Length == 0)
             return;
-        _clips.Add(new SpriteClip(name, renderer, frames, fps));
+        _clips.Add(new SpriteClip(name, key, renderer, frames, fps));
     }
 
     #endregion
@@ -260,14 +283,16 @@ public sealed class AnimTuningPuppet
         private readonly Spine.Animation _animation;
         private Spine.TrackEntry _entry;
 
-        public SpineClip(string name, SkeletonAnimation skeleton, Spine.Animation animation)
+        public SpineClip(string name, string key, SkeletonAnimation skeleton, Spine.Animation animation)
         {
             Name = name;
+            Key = key;
             _skeleton = skeleton;
             _animation = animation;
         }
 
         public string Name { get; }
+        public string Key { get; }
         public float Duration => Mathf.Max(_animation.Duration, 1f / 30f);
 
         public void Restart() => _entry = null;
@@ -292,15 +317,17 @@ public sealed class AnimTuningPuppet
         private readonly AnimationClip _clip;
         private AnimationClipPlayable _playable;
 
-        public AnimatorClip(string name, PlayableGraph graph, AnimationPlayableOutput output, AnimationClip clip)
+        public AnimatorClip(string name, string key, PlayableGraph graph, AnimationPlayableOutput output, AnimationClip clip)
         {
             Name = name;
+            Key = key;
             _graph = graph;
             _output = output;
             _clip = clip;
         }
 
         public string Name { get; }
+        public string Key { get; }
         public float Duration => Mathf.Max(_clip.length, 1f / 30f);
 
         public void Apply(float time)
@@ -321,15 +348,17 @@ public sealed class AnimTuningPuppet
         private readonly Sprite[] _frames;
         private readonly float _fps;
 
-        public SpriteClip(string name, SpriteRenderer renderer, Sprite[] frames, float fps)
+        public SpriteClip(string name, string key, SpriteRenderer renderer, Sprite[] frames, float fps)
         {
             Name = name;
+            Key = key;
             _renderer = renderer;
             _frames = frames;
             _fps = Mathf.Max(fps, 0.01f);
         }
 
         public string Name { get; }
+        public string Key { get; }
         public float Duration => _frames.Length / _fps;
 
         public void Apply(float time)
